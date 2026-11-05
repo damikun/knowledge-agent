@@ -1,0 +1,36 @@
+# Build context filter for images built from the repository root (src/KnowledgeAgent.Api/Dockerfile).
+# The web image is built with web/ as its context and uses web/.dockerignore.
+
+# Build output
+**/bin/
+**/obj/
+artifacts/
+**/*.user
+**/*.suo
+
+# Test output
+TestResults/
+**/TestResults/
+**/*.trx
+**/coverage*/
+
+# Node / web
+**/node_modules/
+web/dist/
+web/dist-widget/
+web/coverage/
+**/*.tsbuildinfo
+
+# Secrets and local settings
+.env
+.env.*
+!.env.example
+**/*.local.json
+**/appsettings.*.local.json
+
+# Tooling / VCS
+.git/
+.vs/
+.idea/
+.vscode/
+**/.DS_Store

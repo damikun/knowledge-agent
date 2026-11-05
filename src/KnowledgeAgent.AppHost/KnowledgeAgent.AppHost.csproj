@@ -1,0 +1,18 @@
+<Project Sdk="Aspire.AppHost.Sdk/13.6.4">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>knowledge-agent-apphost-8d2e41</UserSecretsId>
+    <Description>Aspire AppHost: local development orchestration of the whole stack.</Description>
+    <!-- ASPIRE010: orchestrator and dashboard come from NuGet instead of the Aspire CLI bundle, so `dotnet run` needs only the SDK. -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" />
+    <PackageReference Include="Aspire.Hosting.JavaScript" />
+    <PackageReference Include="Inngest.Aspire.Hosting" />
+    <PackageReference Include="Aspire.Hosting.Keycloak" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\KnowledgeAgent.Api\KnowledgeAgent.Api.csproj" />
+  </ItemGroup>
+</Project>

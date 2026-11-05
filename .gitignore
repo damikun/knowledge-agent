@@ -1,0 +1,32 @@
+# Build output
+artifacts/
+bin/
+obj/
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/*
+!.vscode/extensions.json
+TestResults/
+*.trx
+coverage*/
+
+# Node / web
+node_modules/
+web/dist/
+web/dist-widget/
+web/coverage/
+*.tsbuildinfo
+
+# Env / secrets
+.env
+*.local.json
+appsettings.*.local.json
+
+# OS
+.DS_Store
+
+# Local notes and docs, not part of the repository
+docs/architecture.md
+docs/configuration.md

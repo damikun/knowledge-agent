@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/KnowledgeAgent/KnowledgeAgent.csproj" />
+    <Project Path="src/KnowledgeAgent.Api/KnowledgeAgent.Api.csproj" />
+    <Project Path="src/KnowledgeAgent.AppHost/KnowledgeAgent.AppHost.csproj" />
+    <Project Path="src/KnowledgeAgent.Eval/KnowledgeAgent.Eval.csproj" />
+    <Project Path="src/KnowledgeAgent.ServiceDefaults/KnowledgeAgent.ServiceDefaults.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KnowledgeAgent.Tests/KnowledgeAgent.Tests.csproj" />
+    <Project Path="tests/KnowledgeAgent.Api.Tests/KnowledgeAgent.Api.Tests.csproj" />
+    <Project Path="tests/KnowledgeAgent.TestKit/KnowledgeAgent.TestKit.csproj" />
+  </Folder>
+</Solution>

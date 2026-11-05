@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <UserSecretsId>knowledge-agent-api-5f1c2a</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\KnowledgeAgent\KnowledgeAgent.csproj" />
+    <ProjectReference Include="..\KnowledgeAgent.ServiceDefaults\KnowledgeAgent.ServiceDefaults.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="KnowledgeAgent.Api.Tests" />
+  </ItemGroup>
+</Project>

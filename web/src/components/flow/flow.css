@@ -1,0 +1,62 @@
+/* base.css has only layout rules; colors come from --ka-* tokens so light and dark both work. */
+@import '@xyflow/react/dist/base.css';
+
+.ka-flow.react-flow {
+  --xy-background-color: transparent;
+  --xy-background-pattern-dots-color: var(--ka-border);
+  --xy-edge-stroke: var(--ka-border-strong);
+  --xy-edge-stroke-width: 1.25;
+  --xy-attribution-background-color: transparent;
+}
+
+.ka-flow .react-flow__edge.ka-edge-muted .react-flow__edge-path {
+  stroke: var(--ka-border);
+}
+
+.ka-flow .react-flow__edge.ka-edge-dashed .react-flow__edge-path {
+  stroke-dasharray: 5 4;
+}
+
+.ka-flow .react-flow__edge-text {
+  fill: var(--ka-fg-muted);
+  font-size: 11px;
+}
+
+.ka-flow .react-flow__edge-textbg {
+  fill: var(--ka-canvas);
+}
+
+.ka-flow-arrow {
+  fill: var(--ka-border-strong);
+}
+
+/* The cards draw their own frame; the wrapper only carries focus. */
+.ka-flow .react-flow__node {
+  border-radius: 0.75rem;
+  cursor: pointer;
+}
+
+.ka-flow .react-flow__node:focus-visible {
+  outline: 2px solid var(--ka-focus);
+  outline-offset: 2px;
+}
+
+/* Handles only anchor the edges; nothing can be connected. */
+.ka-flow .react-flow__handle {
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+}
+
+.ka-flow .react-flow__attribution a {
+  color: var(--ka-fg-muted);
+}
+
+@media (forced-colors: active) {
+  .ka-flow .react-flow__node:focus-visible {
+    outline-color: Highlight;
+  }
+}

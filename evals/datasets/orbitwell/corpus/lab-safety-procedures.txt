@@ -1,0 +1,121 @@
+ORBITWELL ROBOTICS
+LAB SAFETY PROCEDURES
+
+Document: HSE-PRO-007, revision 5
+Applies to: Robotics Lab, Building C, ground floor (rooms C0.10 to C0.24), Brno HQ
+Owner: Lab Safety team, lab-safety@orbitwell.example
+Lab Manager office: room C0.10
+
+
+SECTION 1: PURPOSE AND SCOPE
+
+These procedures apply to everyone who enters the Robotics Lab: employees, contractors, students and visitors. They complement the machine-specific instructions posted at each workstation. Where a machine instruction and this document differ, the stricter rule applies. If you are unsure whether a task is safe, stop and ask the Lab Manager.
+
+
+SECTION 2: LAB ACCESS
+
+Lab hours are Monday to Friday, 07:00 to 19:00. Work outside lab hours needs written permission from the Lab Manager and is never done alone.
+
+Access is controlled by badge. Your badge is activated for the lab only after you have completed the Lab Safety Induction and passed its test. Access is suspended automatically if the yearly induction refresher is overdue.
+
+Two-person rule: nobody may work alone in Zone R or Zone P. A second trained person must be in the lab and within calling distance at all times.
+
+Visitors sign the visitor log at the lab entrance, wear a visitor vest and are escorted at all times. One escort may accompany at most 3 visitors. Visitors stay on the marked visitor walkway unless the Lab Manager approves otherwise.
+
+Food and drinks are not allowed in the lab, except in the break corner next to room C0.11.
+
+Report damaged fences, guards, door interlocks or floor markings to the Lab Manager immediately.
+
+
+SECTION 3: LAB ZONES AND PERSONAL PROTECTIVE EQUIPMENT
+
+The lab is divided into four zones, marked by the colour of the floor markings. The minimum personal protective equipment (PPE) for each zone is:
+
+Zone E, electronics benches (green markings): safety glasses when soldering or cutting component leads, and an ESD wrist strap connected at the bench.
+
+Zone R, robot cells R1 to R6 (yellow markings): S3 safety shoes and safety glasses at all times. No loose clothing, scarves or jewellery; tie back long hair.
+
+Zone M, mechanical workshop (orange markings): safety glasses, hearing protection (noise can exceed 85 dB(A)) and S3 safety shoes. Never wear gloves when operating rotating machines such as the lathe or the drill press.
+
+Zone P, power electronics and battery test (red markings): arc-rated face shield, insulating gloves rated for 1,000 V and S3 safety shoes. Only authorised electrical staff may work in Zone P.
+
+PPE is issued free of charge by the lab stores in room C0.13. Damaged PPE must be replaced before work continues.
+
+
+SECTION 4: WORKING IN ROBOT CELLS (ZONE R)
+
+Before you enter a cell, put the robot into stop or teach mode from the pendant and check the cell status light. Never enter a cell while the robot is in automatic mode; the door interlocks stop the robot, but they are a safeguard, not a working method.
+
+Teach mode rules:
+In teach mode a maximum of two people may be inside a robot cell: the operator holding the enabling device and one observer. The observer stays outside the reach of the arm and keeps a clear view of the nearest emergency stop.
+Robot speed in teach mode is limited to 250 mm/s.
+The three-position enabling device must never be taped, blocked or bypassed.
+Leave the cell and close the door before switching the robot back to automatic mode.
+
+Collaborative applications without a fence are allowed only where the risk assessment for that cell explicitly permits it. The sign on each cell states the permitted operating modes.
+
+
+SECTION 5: EMERGENCY STOP AND SAFETY DEVICE TESTS
+
+Emergency stop buttons: every emergency stop button in Zone R is tested weekly, on Monday before the first robot in the cell is started. Press the button while the robot moves at reduced speed, confirm that it stops, reset it and record the result in the cell logbook.
+
+Enabling devices: checked daily before the first use in teach mode.
+
+Light curtains, safety laser scanners and door interlocks: tested monthly, on the first working day of the month.
+
+If any test fails, stop using the cell, apply lockout/tagout as described in section 6, inform the Lab Manager and record the failure in the HSE log.
+
+
+SECTION 6: LOCKOUT/TAGOUT
+
+Lockout/tagout is mandatory for maintenance, cleaning, tool changes and any other task that requires a body part inside the hazard zone of a robot or machine.
+
+Step 1: Notify everyone affected that the equipment will be shut down.
+Step 2: Identify all energy sources: electrical supply and DC bus, compressed air for grippers, gravity acting on a raised arm or payload, and energy stored in springs or capacitors.
+Step 3: Shut the robot down with the normal stop sequence on the pendant.
+Step 4: Isolate the energy: switch off the main disconnect on the control box and close and vent the compressed-air supply valve.
+Step 5: Lock and tag: fit your personal red padlock and a yellow danger tag with your name, the date and your phone extension to every isolation point. Each person working on the equipment applies their own lock; for three or more people use the group lockout box.
+Step 6: Release stored energy: lower or support the arm and payload, bleed the pneumatic lines to 0 bar and wait until the DC bus indicator on the control box has gone out.
+Step 7: Verify zero energy: try to start the robot from the pendant and confirm with a voltage tester that no hazardous voltage is present.
+Step 8: Carry out the work.
+Step 9: Restore: remove tools, refit guards and make sure everyone is clear. Each person removes only their own lock and tag. An abandoned lock may be removed only by the Lab Manager after confirming that its owner is not on site, and the removal must be recorded in the HSE log.
+
+
+SECTION 7: FIRST AID
+
+First-aid kits are located at:
+(a) the Zone R entrance, next to door C0.12;
+(b) the Zone M workshop wall, next to room C0.17;
+(c) the Zone P corridor, next to the eyewash station outside room C0.21. This kit also contains burn dressings.
+
+The automated external defibrillator (AED) hangs in the Building C lobby, next to the lift.
+
+If chemicals or battery electrolyte get into the eyes, use the eyewash station outside room C0.21 and rinse for at least 20 minutes.
+
+Names and extensions of trained first aiders are posted on the board at the lab entrance. Report every injury, however minor, to the Lab Manager. Near misses must be recorded in the HSE log by the end of the same shift.
+
+
+SECTION 8: EMERGENCIES AND EVACUATION
+
+Site emergency line: internal extension 2222, staffed 24/7 by security reception. Public emergency number: 112.
+
+When the fire alarm sounds (continuous siren): stop work, press the emergency stop of your robot if it is safe to do so, and leave the building by the nearest marked exit. Do not use the lift.
+
+Assembly point: Assembly Point 3, in the north car park next to the bicycle shelter.
+
+Lab wardens in orange vests take a roll call using the visitor log and the badge list. Tell a warden if you know that someone is missing. Do not re-enter the building until the fire warden gives the all-clear.
+
+Electrical accident: do not touch the injured person until the power has been isolated. Call extension 2222 and start first aid once it is safe.
+
+
+SECTION 9: QUICK REFERENCE
+
+Lab hours: 07:00 to 19:00, Monday to Friday
+Zone R PPE: S3 safety shoes and safety glasses
+Maximum occupancy in teach mode: 2 people
+Teach mode speed limit: 250 mm/s
+Emergency stop test: weekly, Monday before the first robot start
+Light curtains, scanners and interlocks: monthly
+Emergency extension: 2222
+Assembly point: Assembly Point 3, north car park
+Lab Safety team: lab-safety@orbitwell.example

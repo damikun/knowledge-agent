@@ -1,0 +1,115 @@
+# Every push builds and tests, which includes the retrieval gate on the golden set. The real-model run with the LLM
+# judge costs tokens and only runs when started by hand (Run workflow, judge = true).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      judge:
+        description: Also run the golden set with the configured LLM and the LLM judge (needs secrets; costs tokens)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+
+jobs:
+  dotnet:
+    name: .NET build and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Build
+        run: dotnet build KnowledgeAgent.slnx --configuration Release
+
+      # Includes GoldenSetGateTests, the retrieval gate on the golden set, in memory and on PostgreSQL and ClickHouse.
+      - name: Test
+        run: dotnet test --solution KnowledgeAgent.slnx --configuration Release --no-build
+
+  web:
+    name: Portal lint, tests and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - run: npm ci
+      - run: npm test
+
+      # Lint, then the portal and the embeddable widget (frame and loader), which the API image serves.
+      - run: npm run build
+
+  images:
+    name: Container images build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # The API image also builds the widget, so a broken Dockerfile shows here rather than in Compose.
+      - name: API image
+        run: docker build --file src/KnowledgeAgent.Api/Dockerfile --tag knowledge-agent-api:ci .
+
+      - name: Portal image
+        run: docker build --tag knowledge-agent-web:ci web
+
+  eval-llm:
+    name: Golden set with the real model and the LLM judge
+    if: github.event_name == 'workflow_dispatch' && inputs.judge
+    needs: dotnet
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      # The embedding model: Claude has none, so a run with only Anthropic needs Voyage (or OpenAI).
+      VOYAGE_API_KEY: ${{ secrets.VOYAGE_API_KEY }}
+      # Optional: record the run as a Langfuse experiment.
+      Langfuse__BaseUrl: ${{ vars.LANGFUSE_BASE_URL }}
+      Langfuse__PublicKey: ${{ secrets.LANGFUSE_PUBLIC_KEY }}
+      Langfuse__SecretKey: ${{ secrets.LANGFUSE_SECRET_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Golden-set eval with the LLM judge
+        run: >-
+          dotnet run --project src/KnowledgeAgent.Eval --configuration Release --
+          --judge --gate --report-dir artifacts/evals/llm
+
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-llm
+          path: artifacts/evals/llm
+          if-no-files-found: ignore

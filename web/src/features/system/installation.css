@@ -1,0 +1,35 @@
+.ka-installation.react-flow {
+  --xy-edge-stroke: var(--ka-fg-muted);
+  --xy-edge-stroke-width: 1.25;
+}
+
+.ka-installation .react-flow__edge-path {
+  stroke: var(--ka-fg-muted);
+}
+
+.ka-installation .react-flow__edge.ka-edge-muted .react-flow__edge-path {
+  stroke: var(--ka-border);
+}
+
+.ka-installation .react-flow__edge-text {
+  fill: var(--ka-fg-muted);
+  font-size: 11px;
+}
+
+.ka-installation .react-flow__edge-textbg {
+  fill: var(--ka-surface);
+}
+
+.ka-installation-arrow {
+  fill: var(--ka-fg-muted);
+}
+
+/* Frames take no clicks or focus; React Flow sets pointer-events inline, hence !important. */
+.ka-installation .react-flow__node-frame {
+  cursor: default;
+  pointer-events: none !important;
+}
+
+.ka-installation .react-flow__node-frame:focus-visible {
+  outline: none;
+}

@@ -1,0 +1,49 @@
+<?xml version="1.0"?>
+<!--
+  Low-memory settings for a laptop-sized, single-node ClickHouse that is shared by the Knowledge Agent
+  vector store (database "knowledge") and Langfuse (database "default").
+
+  Mounted by docker-compose.yml and the Aspire AppHost into /etc/clickhouse-server/config.d/.
+  Optional: remove the mount (or this file) on a machine with plenty of RAM.
+  Based on https://clickhouse.com/docs/operations/tips and the ClickHouse "limited resources" guidance.
+-->
+<clickhouse>
+    <!-- Default is trace level, which writes a lot of log data. -->
+    <logger>
+        <level>warning</level>
+        <size>100M</size>
+        <count>2</count>
+    </logger>
+
+    <!-- Hard cap for the whole server relative to the container/VM memory (default 0.9). -->
+    <max_server_memory_usage_to_ram_ratio>0.5</max_server_memory_usage_to_ram_ratio>
+
+    <!-- Caches are allocated on demand; smaller caps keep the resident size small. -->
+    <mark_cache_size>268435456</mark_cache_size>                 <!-- 256 MiB (default 5 GiB) -->
+    <index_mark_cache_size>67108864</index_mark_cache_size>      <!-- 64 MiB (default 5 GiB) -->
+    <uncompressed_cache_size>67108864</uncompressed_cache_size>  <!-- 64 MiB (default 8 GiB) -->
+    <query_condition_cache_size>16777216</query_condition_cache_size>
+
+    <!-- Fewer concurrently running query threads. -->
+    <concurrent_threads_soft_limit_num>8</concurrent_threads_soft_limit_num>
+
+    <!-- System log tables are useful in production but cost memory, CPU and disk on a dev box.
+         query_log is kept for troubleshooting (with a short TTL). -->
+    <query_log>
+        <ttl>event_date + INTERVAL 3 DAY DELETE</ttl>
+    </query_log>
+    <trace_log remove="1"/>
+    <query_thread_log remove="1"/>
+    <query_views_log remove="1"/>
+    <part_log remove="1"/>
+    <text_log remove="1"/>
+    <metric_log remove="1"/>
+    <error_log remove="1"/>
+    <query_metric_log remove="1"/>
+    <asynchronous_metric_log remove="1"/>
+    <processors_profile_log remove="1"/>
+    <background_schedule_pool_log remove="1"/>
+    <opentelemetry_span_log remove="1"/>
+    <asynchronous_insert_log remove="1"/>
+    <latency_log remove="1"/>
+</clickhouse>

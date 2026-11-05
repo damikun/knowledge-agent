@@ -1,0 +1,6 @@
+{
+  "type": "text",
+  "config": {},
+  "labels": ["production"],
+  "tags": ["knowledge-agent"]
+}

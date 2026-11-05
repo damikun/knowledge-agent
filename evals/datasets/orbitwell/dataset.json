@@ -1,0 +1,545 @@
+{
+  "name": "orbitwell-golden",
+  "description": "Golden questions over the fictional Orbitwell Robotics corpus, covering single-source, identifier, multi-source, paraphrase and unanswerable cases for scoring retrieval, citations and answers.",
+  "corpus": [
+    {
+      "file": "corpus/employee-handbook.md",
+      "title": "Orbitwell Robotics Employee Handbook"
+    },
+    {
+      "file": "corpus/travel-and-expense-policy.md",
+      "title": "Travel and Expense Policy"
+    },
+    {
+      "file": "corpus/information-security-policy.md",
+      "title": "Information Security Policy"
+    },
+    {
+      "file": "corpus/ow-x7-arm-manual.md",
+      "title": "OW-X7 Collaborative Robot Arm User Manual"
+    },
+    {
+      "file": "corpus/ow-x7-release-notes.md",
+      "title": "OW-X7 Firmware Release Notes"
+    },
+    {
+      "file": "corpus/support-sla.md",
+      "title": "Customer Support Service Level Agreement"
+    },
+    {
+      "file": "corpus/onboarding-guide.md",
+      "title": "New Hire Onboarding Guide"
+    },
+    {
+      "file": "corpus/fleet-api-reference.md",
+      "title": "Orbitwell Fleet API Reference"
+    },
+    {
+      "file": "corpus/lab-safety-procedures.txt",
+      "title": "Lab Safety Procedures"
+    },
+    {
+      "file": "corpus/quarterly-report-q2-2026.md",
+      "title": "Q2 2026 Quarterly Business Update"
+    }
+  ],
+  "items": [
+    {
+      "id": "hr-vacation-days-after-four-years",
+      "question": "How many days of paid vacation do I get per year once I've been with Orbitwell for more than four years?",
+      "answerable": true,
+      "expectedSources": [
+        "employee-handbook.md"
+      ],
+      "expectedFacts": [
+        "27 days"
+      ],
+      "referenceAnswer": "From the first day of your fifth year of service you get 27 days of paid vacation per year (2.25 days accrued per month), up from 22 days in years 1 to 4.",
+      "tags": [
+        "single-source",
+        "hr"
+      ]
+    },
+    {
+      "id": "hr-vacation-carry-over-limit-and-expiry",
+      "question": "How much unused vacation can I take with me into next year, and when do leftover 2026 days run out?",
+      "answerable": true,
+      "expectedSources": [
+        "employee-handbook.md"
+      ],
+      "expectedFacts": [
+        "6 days",
+        "31 March 2027"
+      ],
+      "referenceAnswer": "You can carry over at most 6 days of unused vacation, and days carried over from 2026 must be taken by 31 March 2027.",
+      "tags": [
+        "single-source",
+        "hr"
+      ]
+    },
+    {
+      "id": "travel-private-car-mileage-rate",
+      "question": "What do I get reimbursed per kilometre when I drive my own car on a business trip?",
+      "answerable": true,
+      "expectedSources": [
+        "travel-and-expense-policy.md"
+      ],
+      "expectedFacts": [
+        "€0.32"
+      ],
+      "referenceAnswer": "Private car use is reimbursed at €0.32 per km plus motorway tolls and parking, but it needs prior approval and is only allowed when it is cheaper than rail or a rental car.",
+      "tags": [
+        "single-source",
+        "travel"
+      ]
+    },
+    {
+      "id": "travel-expense-approval-thresholds",
+      "question": "Who has to approve an expense report that totals €3,000, and what amount range does that approver cover?",
+      "answerable": true,
+      "expectedSources": [
+        "travel-and-expense-policy.md"
+      ],
+      "expectedFacts": [
+        "director",
+        "€1,200",
+        "€5,000"
+      ],
+      "referenceAnswer": "A €3,000 report needs your department director, who approves reports from €1,200.01 to €5,000; line managers approve up to €1,200 and reports above €5,000 go to the Head of Finance.",
+      "tags": [
+        "single-source",
+        "travel"
+      ]
+    },
+    {
+      "id": "security-passphrase-minimum-length",
+      "question": "How long does my passphrase have to be, and is the rule different for admin accounts?",
+      "answerable": true,
+      "expectedSources": [
+        "information-security-policy.md"
+      ],
+      "expectedFacts": [
+        "16 characters",
+        "24 characters"
+      ],
+      "referenceAnswer": "Standard accounts need a passphrase of at least 16 characters; privileged accounts such as domain, Fleet production or network administration need at least 24 characters.",
+      "tags": [
+        "single-source",
+        "security"
+      ]
+    },
+    {
+      "id": "security-phishing-simulation-cadence",
+      "question": "How often does the security team send out fake phishing emails to test us?",
+      "answerable": true,
+      "expectedSources": [
+        "information-security-policy.md"
+      ],
+      "expectedFacts": [
+        "six weeks|6 weeks"
+      ],
+      "referenceAnswer": "The Information Security Office runs simulated phishing campaigns every six weeks, and results are reported per department, never per person.",
+      "tags": [
+        "single-source",
+        "security"
+      ]
+    },
+    {
+      "id": "product-ow-x7-payload-and-reach",
+      "question": "What's the maximum payload of the OW-X7 arm and how far can it reach?",
+      "answerable": true,
+      "expectedSources": [
+        "ow-x7-arm-manual.md"
+      ],
+      "expectedFacts": [
+        "7 kg",
+        "917 mm"
+      ],
+      "referenceAnswer": "The OW-X7 carries a payload of up to 7 kg and has a reach of 917 mm.",
+      "tags": [
+        "single-source",
+        "product"
+      ]
+    },
+    {
+      "id": "product-ow-x7-error-e-319",
+      "question": "The OW-X7 pendant is showing error E-319. What does it mean and how do I clear it?",
+      "answerable": true,
+      "expectedSources": [
+        "ow-x7-arm-manual.md"
+      ],
+      "expectedFacts": [
+        "checksum mismatch",
+        "safety password"
+      ],
+      "referenceAnswer": "E-319 is a safety configuration checksum mismatch: the active safety configuration does not match the checksum stored in the safety controller. Review the configuration under Settings → Safety and re-confirm it with the safety password; after restoring a backup, compare the checksum with the value recorded in your risk assessment.",
+      "tags": [
+        "single-source",
+        "identifier",
+        "product"
+      ]
+    },
+    {
+      "id": "product-firmware-3-4-0-highlights",
+      "question": "When was OW-X7 firmware 3.4.0 released and what new features does it bring?",
+      "answerable": true,
+      "expectedSources": [
+        "ow-x7-release-notes.md"
+      ],
+      "expectedFacts": [
+        "22 June 2026",
+        "conveyor tracking"
+      ],
+      "referenceAnswer": "Firmware 3.4.0 was released on 22 June 2026. It adds conveyor tracking (up to two conveyors, requires an OW-CB2 revision C or later), path blending with a blend-radius parameter, Fleet remote diagnostics, and a pendant dark theme plus Slovak and Hungarian languages.",
+      "tags": [
+        "single-source",
+        "identifier",
+        "product"
+      ]
+    },
+    {
+      "id": "support-standard-p3-response-time",
+      "question": "How fast will Orbitwell support first respond to a P3 ticket if we're on the Standard tier?",
+      "answerable": true,
+      "expectedSources": [
+        "support-sla.md"
+      ],
+      "expectedFacts": [
+        "2 business days"
+      ],
+      "referenceAnswer": "On the Standard tier, the first response to a P3 (Normal) ticket comes within 2 business days, counted within Standard support hours (Monday–Friday 08:00–17:00 CET).",
+      "tags": [
+        "single-source",
+        "support"
+      ]
+    },
+    {
+      "id": "support-fleet-uptime-and-credits",
+      "question": "What availability does Orbitwell promise for the Fleet dashboard each month, and what credit do we get if it drops under 95%?",
+      "answerable": true,
+      "expectedSources": [
+        "support-sla.md"
+      ],
+      "expectedFacts": [
+        "99.9%",
+        "50%"
+      ],
+      "referenceAnswer": "Orbitwell commits to 99.9% monthly uptime for the Fleet dashboard and API; if monthly uptime falls below 95.0%, the service credit is 50% of that month's Fleet subscription fee, requested within 45 days.",
+      "tags": [
+        "single-source",
+        "support"
+      ]
+    },
+    {
+      "id": "onboarding-laptop-pickup-room",
+      "question": "Where do I pick up my laptop on my first day?",
+      "answerable": true,
+      "expectedSources": [
+        "onboarding-guide.md"
+      ],
+      "expectedFacts": [
+        "B2.17"
+      ],
+      "referenceAnswer": "At the IT Service Point in room B2.17 (Building B, second floor), open Monday to Friday 08:00–16:30; laptop pickup is scheduled for 11:00 on your first day.",
+      "tags": [
+        "single-source",
+        "identifier",
+        "onboarding"
+      ]
+    },
+    {
+      "id": "onboarding-security-training-deadline",
+      "question": "As a new employee, how long do I have to finish the mandatory security awareness course?",
+      "answerable": true,
+      "expectedSources": [
+        "onboarding-guide.md"
+      ],
+      "expectedFacts": [
+        "10 working days"
+      ],
+      "referenceAnswer": "The SEC-100 security awareness training must be completed in Orbitwell Academy within 10 working days of your start date; until then your Orbitwell ID only gives access to email and Orbitwell Academy.",
+      "tags": [
+        "single-source",
+        "onboarding"
+      ]
+    },
+    {
+      "id": "api-webhook-signature-header",
+      "question": "Which HTTP header carries the signature on Orbitwell Fleet webhooks, and how is the signature computed?",
+      "answerable": true,
+      "expectedSources": [
+        "fleet-api-reference.md"
+      ],
+      "expectedFacts": [
+        "X-Orbitwell-Signature",
+        "HMAC-SHA256"
+      ],
+      "referenceAnswer": "Webhook deliveries carry the X-Orbitwell-Signature header (t=<timestamp>,v1=<signature>), where v1 is the hex-encoded HMAC-SHA256 of '{t}.{raw request body}' keyed with the webhook signing secret; deliveries older than 300 seconds should be rejected.",
+      "tags": [
+        "single-source",
+        "identifier",
+        "api"
+      ]
+    },
+    {
+      "id": "api-pagination-and-page-size",
+      "question": "How do I page through long lists in the Fleet API, and how many items can one page hold at most?",
+      "answerable": true,
+      "expectedSources": [
+        "fleet-api-reference.md"
+      ],
+      "expectedFacts": [
+        "next_cursor",
+        "200"
+      ],
+      "referenceAnswer": "List endpoints use cursor pagination: pass the next_cursor value from each response as the cursor parameter until next_cursor is null. The limit parameter defaults to 50 and allows at most 200 items per page.",
+      "tags": [
+        "single-source",
+        "api"
+      ]
+    },
+    {
+      "id": "safety-evacuation-assembly-point",
+      "question": "If the fire alarm goes off while I'm in the robotics lab, where should I gather outside?",
+      "answerable": true,
+      "expectedSources": [
+        "lab-safety-procedures.txt"
+      ],
+      "expectedFacts": [
+        "Assembly Point 3",
+        "north car park"
+      ],
+      "referenceAnswer": "Leave by the nearest marked exit without using the lift and go to Assembly Point 3 in the north car park, next to the bicycle shelter, where lab wardens take a roll call.",
+      "tags": [
+        "single-source",
+        "safety"
+      ]
+    },
+    {
+      "id": "business-q2-revenue-and-growth",
+      "question": "How much revenue did Orbitwell make in Q2 2026, and how does that compare with a year earlier?",
+      "answerable": true,
+      "expectedSources": [
+        "quarterly-report-q2-2026.md"
+      ],
+      "expectedFacts": [
+        "€48.6 million",
+        "21%"
+      ],
+      "referenceAnswer": "Q2 2026 revenue was €48.6 million, up 21% year over year from €40.2 million in Q2 2025.",
+      "tags": [
+        "single-source",
+        "business"
+      ]
+    },
+    {
+      "id": "multi-e-214-meaning-and-firmware-fix",
+      "question": "Our OW-X7 keeps raising E-214 on Monday mornings in an unheated hall. What does the error mean, and which firmware version stops these false alarms?",
+      "answerable": true,
+      "expectedSources": [
+        "ow-x7-arm-manual.md",
+        "ow-x7-release-notes.md"
+      ],
+      "expectedFacts": [
+        "encoder mismatch",
+        "3.3.1"
+      ],
+      "referenceAnswer": "E-214 means an encoder mismatch on joint 2 (motor-side and output-side readings differ by more than 0.5°). Spurious E-214 errors after cold starts below 8 °C were fixed in firmware 3.3.1 (7 April 2026); on 3.3.0 the workaround is to leave the robot idle for 10 minutes before production.",
+      "tags": [
+        "multi-source",
+        "product"
+      ]
+    },
+    {
+      "id": "multi-new-hire-lab-access-and-ppe",
+      "question": "I'm a new hire who will work in the robot cells. What training must I complete before I'm allowed into the lab, and what protective gear do I need in the robot cell zone?",
+      "answerable": true,
+      "expectedSources": [
+        "onboarding-guide.md",
+        "lab-safety-procedures.txt"
+      ],
+      "expectedFacts": [
+        "LS-101",
+        "S3 safety shoes"
+      ],
+      "referenceAnswer": "You must pass the Lab Safety Induction LS-101 (a four-hour session every Thursday 08:30–12:30 in Safety Training Room C1.05) before lab access is granted. In Zone R, the robot cells, you must wear S3 safety shoes and safety glasses at all times.",
+      "tags": [
+        "multi-source",
+        "safety"
+      ]
+    },
+    {
+      "id": "multi-premier-security-incident-handling",
+      "question": "A Premier customer phones support saying their Fleet API credentials have leaked. How quickly must we respond, and how fast and where does the support engineer have to report it internally?",
+      "answerable": true,
+      "expectedSources": [
+        "support-sla.md",
+        "information-security-policy.md"
+      ],
+      "expectedFacts": [
+        "15 minutes",
+        "60 minutes",
+        "security@orbitwell.example"
+      ],
+      "referenceAnswer": "Suspected security incidents are always P1, so the Premier response target is 15 minutes. The engineer must also report it internally within 60 minutes of discovery to security@orbitwell.example or the 24/7 Security hotline on extension 7110.",
+      "tags": [
+        "multi-source",
+        "security"
+      ]
+    },
+    {
+      "id": "multi-corporate-card-eligibility",
+      "question": "I joined Orbitwell recently. When will I be eligible for a corporate card, and what monthly spending limit will it have?",
+      "answerable": true,
+      "expectedSources": [
+        "travel-and-expense-policy.md",
+        "employee-handbook.md"
+      ],
+      "expectedFacts": [
+        "4 months",
+        "€3,500"
+      ],
+      "referenceAnswer": "The corporate card is issued to employees who travel regularly once they have successfully completed probation, which lasts 4 months (8 months for managerial positions); the standard monthly limit is €3,500.",
+      "tags": [
+        "multi-source",
+        "travel"
+      ]
+    },
+    {
+      "id": "multi-fleet-uptime-q2-vs-commitment",
+      "question": "Did the Orbitwell Fleet platform meet its uptime commitment in Q2 2026?",
+      "answerable": true,
+      "expectedSources": [
+        "support-sla.md",
+        "quarterly-report-q2-2026.md"
+      ],
+      "expectedFacts": [
+        "99.9%",
+        "99.98%"
+      ],
+      "referenceAnswer": "Yes. Fleet availability in Q2 2026 was 99.98%, above the 99.9% monthly uptime commitment in the support SLA.",
+      "tags": [
+        "multi-source",
+        "business"
+      ]
+    },
+    {
+      "id": "paraphrase-time-off-for-new-baby",
+      "question": "I'm pregnant. How long can I stay home with my newborn without losing any income?",
+      "answerable": true,
+      "expectedSources": [
+        "employee-handbook.md"
+      ],
+      "expectedFacts": [
+        "20 weeks"
+      ],
+      "referenceAnswer": "As the birth parent you get 20 weeks of leave at 100% of salary (Orbitwell tops up the statutory maternity benefit), and you can work 80% of your hours on full pay during your first month back.",
+      "tags": [
+        "paraphrase",
+        "hr"
+      ]
+    },
+    {
+      "id": "paraphrase-people-in-cage-while-programming",
+      "question": "How many people can stand inside the robot enclosure while a colleague is moving the arm step by step to record positions?",
+      "answerable": true,
+      "expectedSources": [
+        "lab-safety-procedures.txt"
+      ],
+      "expectedFacts": [
+        "two people|2 people"
+      ],
+      "referenceAnswer": "In teach mode at most two people may be inside the robot cell: the operator holding the enabling device and one observer who stays outside the arm's reach. Robot speed is limited to 250 mm/s.",
+      "tags": [
+        "paraphrase",
+        "safety"
+      ]
+    },
+    {
+      "id": "paraphrase-daily-food-allowance-zurich",
+      "question": "When I'm working in Zurich for a few days, how much can I claim each day for food?",
+      "answerable": true,
+      "expectedSources": [
+        "travel-and-expense-policy.md"
+      ],
+      "expectedFacts": [
+        "€76"
+      ],
+      "referenceAnswer": "Zurich is a Tier 1 city, so the per diem is €76 per day; it covers meals, local public transport and tips, and is reduced when meals are provided.",
+      "tags": [
+        "paraphrase",
+        "travel"
+      ]
+    },
+    {
+      "id": "paraphrase-integration-login-validity",
+      "question": "Our backend signs in to the robot cloud with a machine login. How long does each login stay good before we have to sign in again?",
+      "answerable": true,
+      "expectedSources": [
+        "fleet-api-reference.md"
+      ],
+      "expectedFacts": [
+        "45 minutes"
+      ],
+      "referenceAnswer": "Access tokens issued by the Fleet token endpoint (OAuth 2.0 client credentials) are valid for 45 minutes (expires_in 2700). There are no refresh tokens, so request a new token shortly before the current one expires.",
+      "tags": [
+        "paraphrase",
+        "api"
+      ]
+    },
+    {
+      "id": "unanswerable-ceo-name",
+      "question": "Who is the CEO of Orbitwell Robotics?",
+      "answerable": false,
+      "expectedSources": [],
+      "expectedFacts": [],
+      "referenceAnswer": "The knowledge base does not contain this information. No document names a CEO or any other executive; the Q2 2026 update is signed only by the leadership team.",
+      "tags": [
+        "unanswerable",
+        "business"
+      ]
+    },
+    {
+      "id": "unanswerable-stock-ticker",
+      "question": "What is Orbitwell's stock ticker symbol?",
+      "answerable": false,
+      "expectedSources": [],
+      "expectedFacts": [],
+      "referenceAnswer": "The knowledge base does not contain this information. No document mentions a stock exchange listing or a ticker symbol.",
+      "tags": [
+        "unanswerable",
+        "business"
+      ]
+    },
+    {
+      "id": "unanswerable-salary-bands",
+      "question": "What is the salary band for a senior robotics engineer at Orbitwell?",
+      "answerable": false,
+      "expectedSources": [],
+      "expectedFacts": [],
+      "referenceAnswer": "The knowledge base does not contain this information. The Employee Handbook covers working hours, leave and remote work, but no document lists salary bands.",
+      "tags": [
+        "unanswerable",
+        "hr"
+      ]
+    },
+    {
+      "id": "unanswerable-ow-x9-payload",
+      "question": "What is the maximum payload of the OW-X9 robot arm?",
+      "answerable": false,
+      "expectedSources": [],
+      "expectedFacts": [],
+      "referenceAnswer": "The knowledge base does not contain this information. No OW-X9 model is documented; the corpus only describes the OW-X7.",
+      "tags": [
+        "unanswerable",
+        "product"
+      ]
+    }
+  ],
+  "gate": {
+    "minimums": {
+      "citation_validity": 0.99
+    },
+    "maxRegression": 0.05
+  }
+}

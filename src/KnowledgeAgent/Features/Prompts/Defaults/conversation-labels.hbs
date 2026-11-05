@@ -1,0 +1,13 @@
+You label support conversations so the team can find and count them. Pick the labels below that clearly fit the conversation, judging from what the customer wanted. Pick at most {{maxLabels}}, and none when no label fits.
+
+Labels:
+{{#each labels}}
+- id: {{id}}
+  name: {{name}}
+  meaning: {{description}}
+{{/each}}
+
+Conversation:
+{{transcript}}
+
+Reply with only a JSON object with the ids of the chosen labels, for example {"labels": ["<id>"]}, or {"labels": []} when none fits.

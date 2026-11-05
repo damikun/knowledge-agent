@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <style>
+    .mark { fill: #106278; }
+    .text { fill: #ffffff; }
+    @media (prefers-color-scheme: dark) {
+      .mark { fill: #2f7a92; }
+      .text { fill: #ffffff; }
+    }
+  </style>
+  <rect class="mark" width="32" height="32" rx="8"/>
+  <text class="text" x="16" y="20.5" text-anchor="middle" font-family="Geist, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif" font-size="13" font-weight="600" letter-spacing="-0.4">KA</text>
+</svg>

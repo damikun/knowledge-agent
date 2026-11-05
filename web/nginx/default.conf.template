@@ -1,0 +1,108 @@
+# Rendered at container start by the nginx image's envsubst entrypoint, which fills in API_UPSTREAM and
+# NGINX_LOCAL_RESOLVERS (see the Dockerfile). The API host is resolved per request, so the portal starts even before
+# the API is reachable.
+
+server {
+    listen 80;
+    server_name _;
+    server_tokens off;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+    set $api_upstream "${API_UPSTREAM}";
+
+    # Uploads are limited to 25 MB by the API; leave room for multipart overhead.
+    client_max_body_size 30m;
+
+    gzip on;
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 5;
+    gzip_min_length 1024;
+    # text/event-stream is deliberately absent: compressing SSE would buffer the stream.
+    gzip_types text/plain text/css application/javascript application/json application/problem+json application/xml image/svg+xml;
+
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header X-Frame-Options "DENY" always;
+
+    # Liveness of this container (the API's own health is proxied at /health).
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # /mcp/agents/{key} is the MCP server of an agent, streamed like the chat.
+    location ~ ^/(api|health|alive|openapi|scalar|mcp)(/|$) {
+        proxy_pass $api_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_ssl_server_name on;
+
+        # Stream server-sent events (POST /api/chat) as they arrive.
+        proxy_buffering off;
+        proxy_cache off;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+
+        # Applies only to errors nginx generates itself (API down or timed out, body too large); API responses pass through.
+        error_page 502 503 504 = @api_unavailable;
+        error_page 413 = @too_large;
+    }
+
+    location @api_unavailable {
+        default_type application/problem+json;
+        add_header Cache-Control "no-store" always;
+        return 502 '{"type":"about:blank","title":"Bad Gateway","status":502,"detail":"The API is not reachable. Check that the backend is running."}';
+    }
+
+    location @too_large {
+        default_type application/problem+json;
+        return 413 '{"type":"about:blank","title":"Payload Too Large","status":413,"detail":"The request is larger than the 30 MB limit of the portal."}';
+    }
+
+    # The embeddable widget is served by the API, which sends the frame's own Content-Security-Policy (frame-ancestors
+    # lists the sites allowed to embed it). This location sets its own headers, so the portal's X-Frame-Options: DENY
+    # does not reach the frame.
+    location /widget/ {
+        proxy_pass $api_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_ssl_server_name on;
+        add_header X-Content-Type-Options "nosniff" always;
+        error_page 502 503 504 = @api_unavailable;
+    }
+
+    # A location with its own add_header loses the server-level ones, so the relevant headers are repeated below.
+
+    # Content-hashed build output can be cached forever.
+    location /assets/ {
+        try_files $uri =404;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        add_header X-Content-Type-Options "nosniff" always;
+    }
+
+    # The SPA shell must always be revalidated so new deployments are picked up.
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header X-Frame-Options "DENY" always;
+    }
+
+    # Client-side routes fall back to the SPA shell.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

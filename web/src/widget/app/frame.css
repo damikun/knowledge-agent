@@ -1,0 +1,287 @@
+/* The frame's own styles, separate from src/index.css. Only this folder is scanned for classes. */
+@import 'tailwindcss' source('.');
+
+/* theme.ts sets data-theme, data-glow and the --ka-* colors on <html>. The frame is transparent over the loader's panel. */
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+@theme inline {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, Inter, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --color-accent: var(--ka-accent);
+  --color-on-accent: var(--ka-on-accent);
+  --color-accent-text: var(--ka-accent-text);
+  --color-accent-hover: var(--ka-accent-hover);
+  --color-accent-soft: var(--ka-accent-soft);
+  --color-panel: var(--ka-panel);
+  --color-ink: var(--ka-text);
+  --color-muted: var(--ka-muted);
+  --color-line: var(--ka-border);
+  --color-raised: var(--ka-raised);
+  --color-control: var(--ka-control);
+  --color-danger: var(--ka-danger);
+  --color-header: var(--ka-header);
+  --color-header-ink: var(--ka-header-text);
+  --color-user: var(--ka-user-bubble);
+  --color-user-end: var(--ka-user-bubble-end);
+  --color-user-ink: var(--ka-user-bubble-text);
+  --color-bot: var(--ka-assistant-bubble);
+  --color-bot-ink: var(--ka-assistant-bubble-text);
+  /* A soft spring: a little overshoot, then settled. */
+  --ease-spring: linear(0, 0.18 4.6%, 0.58 11%, 0.96 19.6%, 1.06 25%, 1.08 29%, 1.05 36%, 1.01 46%, 0.995 58%, 1);
+  --animate-rise: ka-rise 0.42s var(--ease-spring) both;
+}
+
+@keyframes ka-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+}
+
+@keyframes ka-flow {
+  to {
+    background-position: 300% 0;
+  }
+}
+
+@layer base {
+  /* What shows before theme.ts runs: the default preset in light mode. */
+  :root {
+    --ka-accent: #0f766e;
+    --ka-on-accent: #ffffff;
+    --ka-accent-text: #0f766e;
+    --ka-accent-hover: #0d6861;
+    --ka-accent-soft: rgb(15 118 110 / 0.1);
+    --ka-panel: #ffffff;
+    --ka-text: #1d1d1f;
+    --ka-muted: #57575c;
+    --ka-border: #e2e2e2;
+    --ka-raised: rgb(29 29 31 / 0.05);
+    --ka-control: #8c8c8e;
+    --ka-danger: #b91c1c;
+    --ka-header: transparent;
+    --ka-header-text: #1d1d1f;
+    --ka-user-bubble: #0f766e;
+    --ka-user-bubble-end: #0f766e;
+    --ka-user-bubble-text: #ffffff;
+    --ka-assistant-bubble: rgb(241 241 241 / 0.86);
+    --ka-assistant-bubble-text: #1d1d1f;
+    --ka-glow-1: #2ad1c2;
+    --ka-glow-2: #2a8bd1;
+    --ka-glow-3: #c22ad1;
+    --ka-glow-4: #d1772a;
+    --ka-radius: 28px;
+    color-scheme: light;
+  }
+
+  :root[data-theme='dark'] {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root,
+  [data-ka-chat] {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+  }
+
+  /* [data-ka-chat]: in the editor preview the chat sits in a shadow root and doesn't inherit from <body>. */
+  body,
+  [data-ka-chat] {
+    background: transparent;
+    color: var(--ka-text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.45;
+    letter-spacing: -0.003em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ka-accent-text);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Bubbles on the glass are a little translucent; here they are solid. */
+  @media (prefers-reduced-transparency: reduce) {
+    :root {
+      --ka-assistant-bubble: var(--ka-panel);
+    }
+  }
+}
+
+@layer components {
+  /* Answers in Markdown: compact, inside a chat bubble. */
+  .ka-md {
+    line-height: 1.55;
+    overflow-wrap: anywhere;
+  }
+
+  .ka-md > :first-child {
+    margin-top: 0;
+  }
+
+  .ka-md > :last-child {
+    margin-bottom: 0;
+  }
+
+  .ka-md :where(p, ul, ol, pre, blockquote, .ka-table) {
+    margin: 0.5em 0;
+  }
+
+  .ka-md :where(ul) {
+    list-style: disc;
+    padding-left: 1.25em;
+  }
+
+  .ka-md :where(ol) {
+    list-style: decimal;
+    padding-left: 1.25em;
+  }
+
+  .ka-md :where(li) {
+    margin: 0.15em 0;
+  }
+
+  .ka-md :where(li > p) {
+    margin: 0;
+  }
+
+  .ka-md :where(h1, h2, h3, h4, h5, h6) {
+    margin: 0.75em 0 0.25em;
+    font-size: 1em;
+    font-weight: 600;
+  }
+
+  .ka-md :where(strong) {
+    font-weight: 600;
+  }
+
+  .ka-md :where(a) {
+    color: var(--ka-accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .ka-md :where(code) {
+    border-radius: 4px;
+    background: color-mix(in oklab, var(--ka-text) 8%, transparent);
+    padding: 0.1em 0.3em;
+    font-family: var(--font-mono);
+    font-size: 0.875em;
+  }
+
+  .ka-md :where(pre) {
+    overflow-x: auto;
+    border-radius: 8px;
+    background: color-mix(in oklab, var(--ka-text) 8%, transparent);
+    padding: 0.6em 0.75em;
+  }
+
+  .ka-md :where(pre code) {
+    background: none;
+    padding: 0;
+  }
+
+  .ka-md :where(blockquote) {
+    border-left: 3px solid var(--ka-border);
+    padding-left: 0.75em;
+    color: var(--ka-muted);
+  }
+
+  .ka-md :where(hr) {
+    margin: 0.75em 0;
+    border: 0;
+    border-top: 1px solid var(--ka-border);
+  }
+
+  .ka-md .ka-table {
+    overflow-x: auto;
+  }
+
+  .ka-md :where(table) {
+    border-collapse: collapse;
+    font-size: 0.875em;
+  }
+
+  .ka-md :where(th, td) {
+    border: 1px solid var(--ka-border);
+    padding: 0.25em 0.5em;
+    text-align: left;
+  }
+
+  /* A numbered source marker in place of an [S1] tag. */
+  .ka-marker {
+    margin-left: 0.2em;
+    border-radius: 999px;
+    background: var(--ka-accent-soft);
+    padding: 0.05em 0.45em;
+    color: var(--ka-accent-text);
+    font-size: 0.68em;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* A padded box masked to its border, with a blurred copy behind it for the glow. */
+  .ka-glow-ring {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .ka-glow-ring::before,
+  .ka-glow-ring::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--ka-glow-1), var(--ka-glow-2), var(--ka-glow-3), var(--ka-glow-4), var(--ka-glow-1));
+    background-size: 300% 100%;
+    animation: ka-flow 3.2s linear infinite;
+    pointer-events: none;
+  }
+
+  .ka-glow-ring::before {
+    padding: 2px;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+
+  .ka-glow-ring::after {
+    inset: 2px;
+    filter: blur(14px);
+    opacity: 0.55;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ka-glow-ring::before,
+    .ka-glow-ring::after {
+      animation: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .ka-glow-ring::before,
+    .ka-glow-ring::after {
+      display: none;
+    }
+  }
+}

@@ -1,0 +1,188 @@
+@import 'tailwindcss';
+@import './styles/tokens.css';
+@plugin '@tailwindcss/typography';
+
+/* lib/theme.ts toggles .dark on <html>; the tokens switch with it, so components need no dark: variants. */
+
+@layer base {
+  html {
+    color-scheme: light;
+    accent-color: var(--ka-control);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-sm text-fg antialiased;
+    font-optical-sizing: auto;
+  }
+
+  :where(h1, h2, h3) {
+    text-wrap: balance;
+  }
+
+  :where(p, li, dd) {
+    text-wrap: pretty;
+  }
+
+  /* Keyboard-only rings. The focus color has at least 3:1 against every surface in both themes. */
+  :where(
+    a,
+    button,
+    summary,
+    select,
+    input[type='checkbox'],
+    input[type='radio'],
+    [role='tab'],
+    [role='button'],
+    [role='switch'],
+    [role='option'],
+    [tabindex]:not([tabindex='-1'])
+  ):focus-visible {
+    outline: 2px solid var(--ka-focus);
+    outline-offset: 2px;
+  }
+
+  /* Programmatic focus targets (main landmark, dialog panels) need no ring. */
+  :where([tabindex='-1']):focus {
+    outline: none;
+  }
+
+  ::selection {
+    background-color: var(--ka-selection);
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ka-border-hover) transparent;
+  }
+
+  /* Set by lib/theme.ts for one frame, so a theme switch is never animated. */
+  :root[data-switching-theme] *,
+  :root[data-switching-theme] *::before,
+  :root[data-switching-theme] *::after {
+    transition: none !important;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* Forced-color modes drop backgrounds and shadows: keep controls outlined and the focus ring in the highlight color. */
+  @media (forced-colors: active) {
+    :where(button, [role='tab'], [role='switch'], [role='option']) {
+      border: 1px solid ButtonText;
+    }
+
+    :where(a, button, summary, select, input, textarea, [role='tab'], [role='button'], [role='switch'], [tabindex]):focus-visible {
+      outline: 2px solid Highlight;
+      outline-offset: 2px;
+    }
+  }
+}
+
+/* 32px single-line fields. Text fields always show the focus edge; a select trigger only when tabbed to. */
+@utility field {
+  display: block;
+  width: 100%;
+  border-radius: --theme(--radius-md);
+  border: 1px solid var(--ka-border-strong);
+  background-color: var(--ka-surface);
+  box-shadow: var(--ka-shadow-control);
+  padding: 0.3125rem 0.625rem;
+  font-size: --theme(--text-sm);
+  line-height: 1.25rem;
+  color: var(--ka-fg);
+  transition:
+    border-color 100ms ease-out,
+    box-shadow 100ms ease-out;
+
+  &::placeholder {
+    color: var(--ka-fg-muted);
+  }
+
+  &:hover:not(:focus-visible, :disabled, [aria-invalid='true']) {
+    border-color: var(--ka-fg-muted);
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  &:focus-visible {
+    border-color: var(--ka-focus);
+    box-shadow: 0 0 0 1px var(--ka-focus);
+  }
+
+  &[aria-invalid='true'] {
+    border-color: var(--ka-danger);
+  }
+
+  &[aria-invalid='true']:focus-visible {
+    box-shadow: 0 0 0 1px var(--ka-danger);
+  }
+
+  &:disabled {
+    background-color: var(--ka-fill-muted);
+    color: var(--ka-fg-disabled);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  @media (forced-colors: active) {
+    &:focus-visible {
+      outline: 2px solid Highlight;
+    }
+  }
+}
+
+@utility dot-grid {
+  background-image: radial-gradient(var(--ka-border) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Markdown answers. The tokens follow the theme, so one block serves both. */
+.prose-zinc {
+  --tw-prose-body: var(--ka-fg);
+  --tw-prose-headings: var(--ka-fg);
+  --tw-prose-lead: var(--ka-fg-secondary);
+  --tw-prose-links: var(--ka-accent-text);
+  --tw-prose-bold: var(--ka-fg);
+  --tw-prose-counters: var(--ka-fg-muted);
+  --tw-prose-bullets: var(--ka-fg-muted);
+  --tw-prose-hr: var(--ka-border);
+  --tw-prose-quotes: var(--ka-fg-secondary);
+  --tw-prose-quote-borders: var(--ka-border);
+  --tw-prose-captions: var(--ka-fg-muted);
+  --tw-prose-kbd: var(--ka-fg);
+  --tw-prose-code: var(--ka-fg);
+  --tw-prose-pre-code: var(--ka-fg);
+  --tw-prose-pre-bg: var(--ka-surface-subtle);
+  --tw-prose-th-borders: var(--ka-border);
+  --tw-prose-td-borders: var(--ka-border-subtle);
+}
+
+@keyframes ka-blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+@utility typing-dot {
+  animation: ka-blink 1.2s infinite ease-in-out both;
+}

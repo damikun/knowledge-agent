@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>knowledge-agent-eval</AssemblyName>
+    <RootNamespace>KnowledgeAgent.Eval</RootNamespace>
+    <UserSecretsId>knowledge-agent-api-5f1c2a</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\KnowledgeAgent\KnowledgeAgent.csproj" />
+    <ProjectReference Include="..\KnowledgeAgent.ServiceDefaults\KnowledgeAgent.ServiceDefaults.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\KnowledgeAgent.Api\appsettings.json" Link="appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

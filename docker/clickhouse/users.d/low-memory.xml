@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+  Per-query limits for the default settings profile (used by the Knowledge Agent and Langfuse users).
+  Mounted next to config.d/low-memory.xml; optional, remove on a machine with plenty of RAM.
+-->
+<clickhouse>
+    <profiles>
+        <default>
+            <max_threads>4</max_threads>
+            <!-- Spill large GROUP BY / ORDER BY to disk instead of failing on a small VM. -->
+            <max_bytes_before_external_group_by>536870912</max_bytes_before_external_group_by>
+            <max_bytes_before_external_sort>536870912</max_bytes_before_external_sort>
+        </default>
+    </profiles>
+</clickhouse>

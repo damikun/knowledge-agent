@@ -1,0 +1,260 @@
+{
+  "realm": "knowledge-agent",
+  "displayName": "Knowledge Agent",
+  "enabled": true,
+  "sslRequired": "${KA_KEYCLOAK_SSL_REQUIRED:none}",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "bruteForceProtected": true,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 28800,
+  "ssoSessionMaxLifespan": 86400,
+  "accessCodeLifespanLogin": 28800,
+  "roles": {
+    "realm": [
+      { "name": "admin", "description": "Configures models, sources, prompts, agents, widgets and integrations" },
+      { "name": "support", "description": "Chats with the agent and answers visitors handed over by widgets" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "knowledge-agent-portal",
+      "name": "Knowledge Agent portal",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KA_PORTAL_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "${KA_PORTAL_URL:http://localhost:5173}/api/auth/callback",
+        "http://localhost:5173/api/auth/callback",
+        "http://localhost:8080/api/auth/callback"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "${KA_PORTAL_URL:http://localhost:5173}/*##http://localhost:5173/*##http://localhost:8080/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "realm roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "claim.name": "roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        },
+        {
+          "name": "user admin roles",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-client-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "usermodel.clientRoleMapping.clientId": "realm-management",
+            "claim.name": "realm_management_roles",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "false"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "langfuse",
+      "name": "Langfuse",
+      "description": "Signs portal admins in to Langfuse. Its browser flow, langfuse browser, denies every user without the realm role admin.",
+      "protocol": "openid-connect",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${KA_LANGFUSE_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "${KA_LANGFUSE_URL:http://localhost:3000}/api/auth/callback/custom",
+        "http://localhost:3000/api/auth/callback/custom"
+      ],
+      "webOrigins": ["+"],
+      "attributes": {
+        "post.logout.redirect.uris": "${KA_LANGFUSE_URL:http://localhost:3000}/*##http://localhost:3000/*"
+      },
+      "authenticationFlowBindingOverrides": {
+        "browser": "langfuse-browser"
+      }
+    }
+  ],
+  "authenticationFlows": [
+    {
+      "id": "langfuse-browser",
+      "alias": "langfuse browser",
+      "description": "Browser flow of the langfuse client: sign in as in the portal (the Keycloak session or the login form), then deny every user without the realm role admin.",
+      "providerId": "basic-flow",
+      "topLevel": true,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticatorFlow": true,
+          "flowAlias": "langfuse sign-in",
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "flowAlias": "langfuse admins only",
+          "requirement": "CONDITIONAL",
+          "priority": 20,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "langfuse sign-in",
+      "description": "The Keycloak session from the portal, or the login form.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-cookie",
+          "authenticatorFlow": false,
+          "requirement": "ALTERNATIVE",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "flowAlias": "langfuse sign-in form",
+          "requirement": "ALTERNATIVE",
+          "priority": 20,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "langfuse sign-in form",
+      "description": "Username or email and password, then a one-time code for users who set one up.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "auth-username-password-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticatorFlow": true,
+          "flowAlias": "langfuse one-time code",
+          "requirement": "CONDITIONAL",
+          "priority": 20,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "langfuse one-time code",
+      "description": "Asks for a one-time code when the user has set one up, as the realm's browser flow does.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-configured",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "auth-otp-form",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        }
+      ]
+    },
+    {
+      "alias": "langfuse admins only",
+      "description": "Runs for users without the realm role admin and denies them.",
+      "providerId": "basic-flow",
+      "topLevel": false,
+      "builtIn": false,
+      "authenticationExecutions": [
+        {
+          "authenticator": "conditional-user-role",
+          "authenticatorConfig": "langfuse not an admin",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 10,
+          "userSetupAllowed": false
+        },
+        {
+          "authenticator": "deny-access-authenticator",
+          "authenticatorConfig": "langfuse admins only",
+          "authenticatorFlow": false,
+          "requirement": "REQUIRED",
+          "priority": 20,
+          "userSetupAllowed": false
+        }
+      ]
+    }
+  ],
+  "authenticatorConfig": [
+    {
+      "alias": "langfuse not an admin",
+      "config": {
+        "condUserRole": "admin",
+        "negate": "true"
+      }
+    },
+    {
+      "alias": "langfuse admins only",
+      "config": {
+        "denyErrorMessage": "Langfuse is for admins. Ask an admin for the admin role, or go back to the portal."
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "admin",
+      "email": "admin@knowledge-agent.local",
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "Local",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "${KA_ADMIN_PASSWORD}", "temporary": false }],
+      "realmRoles": ["admin", "support"]
+    },
+    {
+      "username": "user",
+      "email": "user@knowledge-agent.local",
+      "emailVerified": true,
+      "firstName": "User",
+      "lastName": "Local",
+      "enabled": true,
+      "credentials": [{ "type": "password", "value": "${KA_USER_PASSWORD}", "temporary": false }],
+      "realmRoles": ["support"]
+    }
+  ]
+}

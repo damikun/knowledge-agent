@@ -1,0 +1,345 @@
+/* The only file with color values: --ka-* tokens, light in :root and dark in .dark, mapped by @theme inline. */
+
+@theme {
+  /* No Tailwind palette: raw colors such as bg-zinc-100 or text-white produce no CSS, so colors come only from here. */
+  --color-*: initial;
+
+  --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  /* Caption and body are Tailwind's text-xs (12/16) and text-sm (14/20); these are the other roles. */
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.125rem;
+  --text-section: 1rem;
+  --text-section--line-height: 1.5rem;
+  --text-section--letter-spacing: -0.02em;
+  --text-section--font-weight: 600;
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.75rem;
+  --text-title--letter-spacing: -0.02em;
+  --text-title--font-weight: 600;
+  --text-kpi: 1.5rem;
+  --text-kpi--line-height: 2rem;
+  --text-kpi--letter-spacing: -0.02em;
+  --text-kpi--font-weight: 600;
+
+  /* sm: checkboxes, kbd, inline code. md: controls, nav and menu items. lg: alerts, tracks. xl: menus, popovers.
+     2xl: cards, dialogs, the panel. xl and 2xl are smaller than Tailwind's defaults. */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.625rem;
+  --radius-2xl: 0.75rem;
+
+  --ease-enter: cubic-bezier(0.23, 1, 0.32, 1);
+  /* The widget editor's bottom sheet. */
+  --ease-hero: cubic-bezier(0.2, 0.75, 0.15, 1);
+
+  /* Menus and popovers grow from 97%, never from zero; dialogs take a little longer. */
+  --animate-fade-in: ka-fade-in 200ms ease-out;
+  --animate-pop-in: ka-pop-in 150ms var(--ease-enter);
+  --animate-dialog-in: ka-pop-in 200ms var(--ease-enter);
+  --animate-drawer-in: ka-drawer-in 200ms var(--ease-enter);
+  --animate-sheet-in: ka-sheet-in 200ms var(--ease-enter);
+
+  /* Individual scale and translate properties add to any transform the element already has. */
+  @keyframes ka-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes ka-pop-in {
+    from {
+      opacity: 0;
+      scale: 0.97;
+    }
+  }
+
+  @keyframes ka-drawer-in {
+    from {
+      translate: -100% 0;
+    }
+  }
+
+  @keyframes ka-sheet-in {
+    from {
+      translate: 100% 0;
+    }
+  }
+}
+
+@theme inline {
+  --color-canvas: var(--ka-canvas);
+  --color-sidebar: var(--ka-sidebar);
+  --color-surface: var(--ka-surface);
+  --color-surface-subtle: var(--ka-surface-subtle);
+  --color-raised: var(--ka-raised);
+  --color-overlay: var(--ka-overlay);
+
+  --color-fill-hover: var(--ka-fill-hover);
+  --color-fill-active: var(--ka-fill-active);
+  --color-fill-muted: var(--ka-fill-muted);
+  --color-segment-active: var(--ka-segment-active);
+
+  --color-border-subtle: var(--ka-border-subtle);
+  --color-border: var(--ka-border);
+  --color-border-hover: var(--ka-border-hover);
+  --color-border-strong: var(--ka-border-strong);
+
+  --color-fg: var(--ka-fg);
+  --color-fg-secondary: var(--ka-fg-secondary);
+  --color-fg-muted: var(--ka-fg-muted);
+  --color-fg-disabled: var(--ka-fg-disabled);
+  --color-fg-on-accent: var(--ka-fg-on-accent);
+  --color-fg-on-solid: var(--ka-fg-on-solid);
+
+  /* Petrol, the brand: the primary action, progress, selection and the active nav item. */
+  --color-accent: var(--ka-accent);
+  --color-accent-hover: var(--ka-accent-hover);
+  --color-accent-active: var(--ka-accent-active);
+  --color-accent-subtle: var(--ka-accent-subtle);
+  --color-accent-text: var(--ka-accent-text);
+  --color-accent-icon: var(--ka-accent-icon);
+  --color-accent-edge: var(--ka-accent-edge);
+  --color-selection: var(--ka-selection);
+  /* Checked checkboxes, radios and switches. */
+  --color-control: var(--ka-control);
+  --color-fg-on-control: var(--ka-fg-on-control);
+  --color-focus: var(--ka-focus);
+
+  /* Status hues sit far from the petrol: green, amber and red. */
+  --color-info: var(--ka-info);
+  --color-info-subtle: var(--ka-info-subtle);
+  --color-info-text: var(--ka-info-text);
+  --color-success: var(--ka-success);
+  --color-success-subtle: var(--ka-success-subtle);
+  --color-success-text: var(--ka-success-text);
+  --color-warning: var(--ka-warning);
+  --color-warning-subtle: var(--ka-warning-subtle);
+  --color-warning-text: var(--ka-warning-text);
+  --color-danger: var(--ka-danger);
+  --color-danger-hover: var(--ka-danger-hover);
+  --color-danger-subtle: var(--ka-danger-subtle);
+  --color-danger-text: var(--ka-danger-text);
+
+  /* Category colors for labels: muted, one lightness band, so none shouts or passes for a status. */
+  --color-tag-gray: var(--ka-tag-gray);
+  --color-tag-gray-subtle: var(--ka-tag-gray-subtle);
+  --color-tag-gray-text: var(--ka-tag-gray-text);
+  --color-tag-blue: var(--ka-tag-blue);
+  --color-tag-blue-subtle: var(--ka-tag-blue-subtle);
+  --color-tag-blue-text: var(--ka-tag-blue-text);
+  --color-tag-green: var(--ka-tag-green);
+  --color-tag-green-subtle: var(--ka-tag-green-subtle);
+  --color-tag-green-text: var(--ka-tag-green-text);
+  --color-tag-amber: var(--ka-tag-amber);
+  --color-tag-amber-subtle: var(--ka-tag-amber-subtle);
+  --color-tag-amber-text: var(--ka-tag-amber-text);
+  --color-tag-red: var(--ka-tag-red);
+  --color-tag-red-subtle: var(--ka-tag-red-subtle);
+  --color-tag-red-text: var(--ka-tag-red-text);
+  --color-tag-purple: var(--ka-tag-purple);
+  --color-tag-purple-subtle: var(--ka-tag-purple-subtle);
+  --color-tag-purple-text: var(--ka-tag-purple-text);
+  --color-tag-teal: var(--ka-tag-teal);
+  --color-tag-teal-subtle: var(--ka-tag-teal-subtle);
+  --color-tag-teal-text: var(--ka-tag-teal-text);
+  --color-tag-pink: var(--ka-tag-pink);
+  --color-tag-pink-subtle: var(--ka-tag-pink-subtle);
+  --color-tag-pink-text: var(--ka-tag-pink-text);
+
+  --color-swatch-edge: var(--ka-swatch-edge);
+
+  --shadow-control: var(--ka-shadow-control);
+  --shadow-panel: var(--ka-shadow-panel);
+  --shadow-card: var(--ka-shadow-card);
+  --shadow-menu: var(--ka-shadow-menu);
+  --shadow-dialog: var(--ka-shadow-dialog);
+}
+
+@layer base {
+  :root {
+    --ka-canvas: #FAFAFB;
+    --ka-sidebar: #F1F1F3;
+    --ka-surface: #FFFFFF;
+    --ka-surface-subtle: #F6F6F7;
+    --ka-raised: #FFFFFF;
+    --ka-overlay: #09090B66;
+
+    --ka-fill-hover: #09090B0D;
+    --ka-fill-active: #09090B14;
+    --ka-fill-muted: #EFEFF1;
+    --ka-segment-active: #FFFFFF;
+
+    --ka-border-subtle: #EBEBEE;
+    --ka-border: #E0E0E5;
+    /* Clickable cards on hover. */
+    --ka-border-hover: #CBCBD2;
+    /* Input, select, checkbox and switch edges: at least 3:1 (WCAG 1.4.11). */
+    --ka-border-strong: #8A8A94;
+
+    --ka-fg: #18181B;
+    --ka-fg-secondary: #46464F;
+    --ka-fg-muted: #5D5D67;
+    --ka-fg-disabled: #A1A1AA;
+    /* White on the petrol and on status solids. */
+    --ka-fg-on-accent: #FFFFFF;
+    --ka-fg-on-solid: #FFFFFF;
+
+    --ka-accent: #106278;
+    --ka-accent-hover: #005369;
+    --ka-accent-active: #00485E;
+    --ka-accent-subtle: #E9F6FB;
+    --ka-accent-text: #045C72;
+    /* The active nav icon, 3:1 on the active fill. */
+    --ka-accent-icon: #216D84;
+    --ka-accent-edge: var(--ka-accent);
+    --ka-selection: #10627833;
+    --ka-control: var(--ka-accent);
+    --ka-fg-on-control: #FFFFFF;
+    /* Neutral, so the petrol is left for the one primary action per page and small indicators. */
+    --ka-focus: #52525B;
+
+    /* Info is the brand at low emphasis; the three alarms (success, warning, danger) never are. */
+    --ka-info: var(--ka-accent);
+    --ka-info-subtle: var(--ka-accent-subtle);
+    --ka-info-text: var(--ka-accent-text);
+    --ka-success: #149A45;
+    --ka-success-subtle: #F0FDF4;
+    --ka-success-text: #137535;
+    --ka-warning: #D07005;
+    --ka-warning-subtle: #FFFBEB;
+    --ka-warning-text: #A1490A;
+    --ka-danger: #DC2626;
+    --ka-danger-hover: #B91C1C;
+    --ka-danger-subtle: #FEF2F2;
+    --ka-danger-text: #B91C1C;
+
+    --ka-tag-gray: #7F7F87;
+    --ka-tag-gray-subtle: #F0F0F3;
+    --ka-tag-gray-text: #55555B;
+    --ka-tag-blue: #4C84BC;
+    --ka-tag-blue-subtle: #E4F2FF;
+    --ka-tag-blue-text: #2E5882;
+    --ka-tag-green: #4E925E;
+    --ka-tag-green-subtle: #E3F6E6;
+    --ka-tag-green-text: #2F623C;
+    --ka-tag-amber: #AA7500;
+    --ka-tag-amber-subtle: #FFEED3;
+    --ka-tag-amber-text: #744D00;
+    --ka-tag-red: #C45D4E;
+    --ka-tag-red-subtle: #FFE9E4;
+    --ka-tag-red-text: #873A2F;
+    --ka-tag-purple: #9563AB;
+    --ka-tag-purple-subtle: #F6ECFB;
+    --ka-tag-purple-text: #644971;
+    --ka-tag-teal: #009394;
+    --ka-tag-teal-subtle: #DEF6F5;
+    --ka-tag-teal-text: #106262;
+    --ka-tag-pink: #B06E3E;
+    --ka-tag-pink-subtle: #FEECE1;
+    --ka-tag-pink-text: #744A2C;
+
+    /* The edge of a swatch of a customer color, which must show on any color and on the surface around it. */
+    --ka-swatch-edge: #0000001A;
+
+    --ka-shadow-control: 0 1px 2px #0000000D;
+    --ka-shadow-panel: 0 1px 2px #0000000A;
+    /* Cards lift a hair off the tinted canvas, so regions separate without heavier borders. */
+    --ka-shadow-card: 0 1px 2px #18181B0D, 0 1px 1px #18181B05;
+    --ka-shadow-menu: 0 1px 1px #00000005, 0 4px 8px -4px #0000000A, 0 16px 24px -8px #0000000F;
+    --ka-shadow-dialog: 0 1px 1px #00000005, 0 8px 16px -4px #0000000A, 0 24px 32px -8px #0000000F;
+  }
+
+  .dark {
+    --ka-canvas: #131315;
+    --ka-sidebar: #0D0D0F;
+    --ka-surface: #19191C;
+    --ka-surface-subtle: #161619;
+    --ka-raised: #1E1E22;
+    --ka-overlay: #00000099;
+
+    --ka-fill-hover: #FFFFFF0A;
+    --ka-fill-active: #FFFFFF12;
+    --ka-fill-muted: #222226;
+    --ka-segment-active: #303036;
+
+    --ka-border-subtle: #FFFFFF0F;
+    --ka-border: #FFFFFF17;
+    --ka-border-hover: #FFFFFF24;
+    --ka-border-strong: #6E6E78;
+
+    --ka-fg: #EDEDEF;
+    --ka-fg-secondary: #B5B5BD;
+    --ka-fg-muted: #A0A0AA;
+    --ka-fg-disabled: #52525B;
+    --ka-fg-on-accent: #FFFFFF;
+    --ka-fg-on-solid: #FFFFFF;
+
+    --ka-accent: #2F7A92;
+    --ka-accent-hover: #286F86;
+    --ka-accent-active: #22647A;
+    --ka-accent-subtle: #102A33;
+    --ka-accent-text: #90C8DB;
+    --ka-accent-icon: var(--ka-accent-text);
+    --ka-accent-edge: var(--ka-accent-text);
+    --ka-selection: #2F7A9266;
+    --ka-control: var(--ka-accent);
+    --ka-fg-on-control: #FFFFFF;
+    --ka-focus: #A1A1AA;
+
+    --ka-info: var(--ka-accent);
+    --ka-info-subtle: var(--ka-accent-subtle);
+    --ka-info-text: var(--ka-accent-text);
+    --ka-success: #22C55E;
+    --ka-success-subtle: #0F2619;
+    --ka-success-text: #4ADE80;
+    --ka-warning: #F59E0B;
+    --ka-warning-subtle: #2A1E0B;
+    --ka-warning-text: #FBBF24;
+    --ka-danger: #DC2626;
+    --ka-danger-hover: #C11F1F;
+    --ka-danger-subtle: #2C1415;
+    --ka-danger-text: #FF8A8A;
+
+    --ka-tag-gray: #A4A4AB;
+    --ka-tag-gray-subtle: #28282E;
+    --ka-tag-gray-text: #CACACF;
+    --ka-tag-blue: #78A9DC;
+    --ka-tag-blue-subtle: #1B2A3A;
+    --ka-tag-blue-text: #ACCEF3;
+    --ka-tag-green: #7AB586;
+    --ka-tag-green-subtle: #192F1E;
+    --ka-tag-green-text: #AED7B5;
+    --ka-tag-amber: #CB9C46;
+    --ka-tag-amber-subtle: #372502;
+    --ka-tag-amber-text: #E7C58E;
+    --ka-tag-red: #E48778;
+    --ka-tag-red-subtle: #3B211C;
+    --ka-tag-red-text: #FBB7AB;
+    --ka-tag-purple: #C18DD8;
+    --ka-tag-purple-subtle: #2F2433;
+    --ka-tag-purple-text: #D8C1E3;
+    --ka-tag-teal: #49B8B8;
+    --ka-tag-teal-subtle: #112E2E;
+    --ka-tag-teal-text: #A2D6D5;
+    --ka-tag-pink: #D59466;
+    --ka-tag-pink-subtle: #362418;
+    --ka-tag-pink-text: #E7C2AA;
+
+    --ka-swatch-edge: #FFFFFF26;
+
+    /* Dark surfaces separate by border and lightness; a transparent shadow keeps the shadow utilities valid. */
+    --ka-shadow-control: 0 0 #0000;
+    --ka-shadow-panel: 0 0 #0000;
+    --ka-shadow-card: 0 0 #0000;
+    --ka-shadow-menu: 0 8px 24px -6px #00000099;
+    --ka-shadow-dialog: 0 24px 48px -12px #000000B3;
+  }
+}
+
+
+
+
+

@@ -1,0 +1,355 @@
+# Knowledge Agent: the whole stack without Aspire.
+#
+#   docker compose up --build -d        portal  http://localhost:8080
+#                                       API     http://localhost:5080  (/scalar, /health)
+#                                       Langfuse http://localhost:3000 (signs portal admins in through Keycloak)
+#   docker compose up -d langfuse-web langfuse-worker
+#                                       infrastructure + Langfuse only (run the API from your IDE against it)
+#   docker compose down                 stop (add -v to delete all data volumes)
+#
+# Every variable is optional: copy .env.example to .env to override the local-development defaults
+# (LLM keys, passwords, ports). The defaults are for local development only, never for a shared host.
+#
+# Postgres and ClickHouse are shared between the Knowledge Agent and Langfuse to save memory:
+#   Postgres   databases "knowledge" (API) and "langfuse"      - created by docker/postgres/init
+#   ClickHouse databases "knowledge" (vectors) and "default" (Langfuse) - see docker/clickhouse
+# Infrastructure ports are published on 127.0.0.1 only.
+
+name: knowledge-agent
+
+x-langfuse-env: &langfuse-env
+  NEXTAUTH_URL: ${LANGFUSE_PUBLIC_URL:-http://localhost:${LANGFUSE_PORT:-3000}}
+  DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/langfuse
+  SALT: ${LANGFUSE_SALT:-knowledge-agent-local-salt}
+  ENCRYPTION_KEY: ${LANGFUSE_ENCRYPTION_KEY:-0000000000000000000000000000000000000000000000000000000000000000}
+  TELEMETRY_ENABLED: "false"
+  LANGFUSE_ENABLE_EXPERIMENTAL_FEATURES: "false"
+  # Next.js / express bind to $HOSTNAME, which Docker sets to the container id.
+  HOSTNAME: 0.0.0.0
+  CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+  CLICKHOUSE_URL: http://clickhouse:8123
+  CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+  CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+  CLICKHOUSE_DB: default
+  CLICKHOUSE_CLUSTER_ENABLED: "false"
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_AUTH: ${REDIS_PASSWORD:-myredissecret}
+  LANGFUSE_S3_EVENT_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_EVENT_UPLOAD_REGION: auto
+  LANGFUSE_S3_EVENT_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minio}
+  LANGFUSE_S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-miniosecret}
+  LANGFUSE_S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_EVENT_UPLOAD_PREFIX: events/
+  LANGFUSE_S3_MEDIA_UPLOAD_BUCKET: langfuse
+  LANGFUSE_S3_MEDIA_UPLOAD_REGION: auto
+  LANGFUSE_S3_MEDIA_UPLOAD_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-minio}
+  LANGFUSE_S3_MEDIA_UPLOAD_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-miniosecret}
+  LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://minio:9000
+  LANGFUSE_S3_MEDIA_UPLOAD_FORCE_PATH_STYLE: "true"
+  LANGFUSE_S3_MEDIA_UPLOAD_PREFIX: media/
+
+x-langfuse-depends-on: &langfuse-depends-on
+  postgres:
+    condition: service_healthy
+  clickhouse:
+    condition: service_healthy
+  redis:
+    condition: service_healthy
+  minio:
+    condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+      TZ: UTC
+      PGTZ: UTC
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - 127.0.0.1:${POSTGRES_PORT:-5432}:5432
+    healthcheck:
+      # Probe over TCP: during first-start initialisation the temporary server only listens on the Unix
+      # socket, so this only succeeds once the init scripts (database creation) have completed.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U postgres -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:25.12
+    restart: unless-stopped
+    user: "101:101"
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: ${CLICKHOUSE_USER:-clickhouse}
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-clickhouse}
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - clickhouse_logs:/var/log/clickhouse-server
+      - ./docker/clickhouse/initdb:/docker-entrypoint-initdb.d:ro
+      # Optional low-memory tuning; mounted as single files so the image's own config.d/users.d stay intact.
+      - ./docker/clickhouse/config.d/low-memory.xml:/etc/clickhouse-server/config.d/low-memory.xml:ro
+      - ./docker/clickhouse/users.d/low-memory.xml:/etc/clickhouse-server/users.d/low-memory.xml:ro
+    ports:
+      - 127.0.0.1:${CLICKHOUSE_HTTP_PORT:-8123}:8123
+      - 127.0.0.1:${CLICKHOUSE_NATIVE_PORT:-9000}:9000
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8123/ping || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: >
+      --requirepass ${REDIS_PASSWORD:-myredissecret}
+      --maxmemory-policy noeviction
+    volumes:
+      - redis_data:/data
+    ports:
+      - 127.0.0.1:${REDIS_PORT:-6379}:6379
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" --no-auth-warning ping | grep -q PONG"]
+      interval: 3s
+      timeout: 10s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-myredissecret}
+
+  minio:
+    image: cgr.dev/chainguard/minio
+    restart: unless-stopped
+    entrypoint: sh
+    # Creates the "langfuse" bucket (a directory) before starting the server.
+    command: -c 'mkdir -p /data/langfuse && minio server --address ":9000" --console-address ":9001" /data'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-miniosecret}
+    volumes:
+      - minio_data:/data
+    ports:
+      # S3 API: Langfuse hands out presigned media URLs on this port to the browser.
+      - ${MINIO_API_PORT:-9090}:9000
+      - 127.0.0.1:${MINIO_CONSOLE_PORT:-9091}:9001
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+      start_period: 2s
+
+  langfuse-worker:
+    image: docker.langfuse.com/langfuse/langfuse-worker:4
+    restart: unless-stopped
+    depends_on: *langfuse-depends-on
+    environment:
+      <<: *langfuse-env
+    ports:
+      - 127.0.0.1:${LANGFUSE_WORKER_PORT:-3030}:3030
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3030/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  langfuse-web:
+    image: docker.langfuse.com/langfuse/langfuse:4
+    restart: unless-stopped
+    depends_on: *langfuse-depends-on
+    environment:
+      <<: *langfuse-env
+      NEXTAUTH_SECRET: ${LANGFUSE_NEXTAUTH_SECRET:-knowledge-agent-local-nextauth-secret}
+      # Browser-facing media endpoint (presigned URLs) vs. the endpoint used inside the network.
+      LANGFUSE_S3_MEDIA_UPLOAD_ENDPOINT: http://localhost:${MINIO_API_PORT:-9090}
+      LANGFUSE_S3_MEDIA_UPLOAD_INTERNAL_ENDPOINT: http://minio:9000
+      # Headless initialisation: organisation, project, API keys and an admin user on first start.
+      LANGFUSE_INIT_ORG_ID: knowledge-agent
+      LANGFUSE_INIT_ORG_NAME: Knowledge Agent
+      LANGFUSE_INIT_PROJECT_ID: ${LANGFUSE_PROJECT_ID:-knowledge-agent}
+      LANGFUSE_INIT_PROJECT_NAME: Knowledge Agent
+      LANGFUSE_INIT_PROJECT_PUBLIC_KEY: ${LANGFUSE_PUBLIC_KEY:-pk-lf-local-dev}
+      LANGFUSE_INIT_PROJECT_SECRET_KEY: ${LANGFUSE_SECRET_KEY:-sk-lf-local-dev}
+      LANGFUSE_INIT_USER_EMAIL: ${LANGFUSE_ADMIN_EMAIL:-admin@knowledge-agent.local}
+      LANGFUSE_INIT_USER_NAME: Admin
+      LANGFUSE_INIT_USER_PASSWORD: ${LANGFUSE_ADMIN_PASSWORD:-knowledge-agent}
+      # One sign-in through Keycloak's langfuse client, which lets only admins in. The issuer is Keycloak inside the
+      # network; its metadata names the public URL as the issuer, and the browser goes there to sign in.
+      AUTH_CUSTOM_CLIENT_ID: langfuse
+      AUTH_CUSTOM_CLIENT_SECRET: ${LANGFUSE_CLIENT_SECRET:-knowledge-agent-dev-langfuse-secret}
+      AUTH_CUSTOM_ISSUER: http://keycloak:8080/realms/knowledge-agent
+      AUTH_CUSTOM_NAME: Knowledge Agent
+      # The seeded admin links to the Keycloak user with the same email.
+      AUTH_CUSTOM_ALLOW_ACCOUNT_LINKING: "true"
+      # Keycloak's token response has fields Langfuse's account table lacks.
+      AUTH_IGNORE_ACCOUNT_FIELDS: refresh_expires_in,not-before-policy
+      # Break-glass: false brings back the password form for the admin above.
+      AUTH_DISABLE_USERNAME_PASSWORD: ${LANGFUSE_DISABLE_PASSWORD_SIGN_IN:-true}
+      # Admins new to Langfuse administer the organisation and the project; the seeded admin stays its owner.
+      # Without Langfuse's project roles (an enterprise feature) the organisation role is the one that counts.
+      LANGFUSE_DEFAULT_ORG_ID: knowledge-agent
+      LANGFUSE_DEFAULT_ORG_ROLE: ADMIN
+      LANGFUSE_DEFAULT_PROJECT_ID: ${LANGFUSE_PROJECT_ID:-knowledge-agent}
+      LANGFUSE_DEFAULT_PROJECT_ROLE: ADMIN
+    ports:
+      - ${LANGFUSE_PORT:-3000}:3000
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1:3000/api/public/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      # First start runs the Postgres + ClickHouse migrations.
+      start_period: 60s
+
+  # Inngest dev server: keeps the job runs and its dashboard. For production, run `inngest start` with signing and
+  # event keys instead and set INNGEST_SIGNING_KEY, INNGEST_EVENT_KEY and INNGEST_BASE_URL on the API.
+  inngest:
+    image: inngest/inngest:v1.49.0
+    restart: unless-stopped
+    command: [inngest, dev, --no-discovery, -u, "http://api:8080/api/inngest"]
+    environment:
+      DO_NOT_TRACK: "1"
+    ports:
+      - 127.0.0.1:${INNGEST_PORT:-8288}:8288
+
+  # Local open models with no key: `docker compose --profile ollama up`, then pull the models (see README) and set
+  # OLLAMA_ENDPOINT=http://ollama:11434. Off by default because the models take several GB.
+  ollama:
+    image: ollama/ollama:0.40.13
+    profiles: [ollama]
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - 127.0.0.1:${OLLAMA_PORT:-11434}:11434
+
+  # Sign-in for admins and support staff. The realm, its clients and two users come from docker/keycloak on the first
+  # start; the volume keeps them, so later edits of that file need `docker compose down -v keycloak` or the admin UI.
+  # The API and Langfuse reach Keycloak inside the network, while tokens carry the public URL as their issuer.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    restart: unless-stopped
+    command:
+      - start-dev
+      - --import-realm
+      - --hostname=${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}
+      - --hostname-backchannel-dynamic=true
+      - --health-enabled=true
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin}
+      KA_PORTAL_CLIENT_SECRET: ${PORTAL_CLIENT_SECRET:-knowledge-agent-dev-client-secret}
+      KA_PORTAL_URL: http://localhost:${WEB_PORT:-8080}
+      KA_LANGFUSE_CLIENT_SECRET: ${LANGFUSE_CLIENT_SECRET:-knowledge-agent-dev-langfuse-secret}
+      KA_LANGFUSE_URL: ${LANGFUSE_PUBLIC_URL:-http://localhost:${LANGFUSE_PORT:-3000}}
+      KA_ADMIN_PASSWORD: ${PORTAL_ADMIN_PASSWORD:-admin}
+      KA_USER_PASSWORD: ${PORTAL_USER_PASSWORD:-user}
+    volumes:
+      - keycloak_data:/opt/keycloak/data
+      - ./docker/keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - 127.0.0.1:${KEYCLOAK_PORT:-8180}:8080
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - "exec 3<>/dev/tcp/127.0.0.1/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200 '"
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+
+  api:
+    build:
+      context: .
+      dockerfile: src/KnowledgeAgent.Api/Dockerfile
+    image: knowledge-agent-api:local
+    restart: unless-stopped
+    # Not waiting for Langfuse on purpose: the API serves its embedded prompts until Langfuse is up and
+    # seeds the prompts into Langfuse in the background.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      inngest:
+        condition: service_started
+      keycloak:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${API_ENVIRONMENT:-Production}
+      # nginx in the web service forwards the scheme and host of the portal.
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+      OTEL_SERVICE_NAME: api
+      ConnectionStrings__knowledgedb: Host=postgres;Port=5432;Database=knowledge;Username=postgres;Password=${POSTGRES_PASSWORD:-postgres}
+      ConnectionStrings__clickhouse: Host=clickhouse;Port=8123;Username=${CLICKHOUSE_USER:-clickhouse};Password=${CLICKHOUSE_PASSWORD:-clickhouse}
+      Langfuse__BaseUrl: http://langfuse-web:3000
+      Langfuse__PublicUrl: ${LANGFUSE_PUBLIC_URL:-http://localhost:${LANGFUSE_PORT:-3000}}
+      Langfuse__PublicKey: ${LANGFUSE_PUBLIC_KEY:-pk-lf-local-dev}
+      Langfuse__SecretKey: ${LANGFUSE_SECRET_KEY:-sk-lf-local-dev}
+      Langfuse__ProjectId: ${LANGFUSE_PROJECT_ID:-knowledge-agent}
+      # Empty = provider not configured; keys can also be saved on the portal's Models page.
+      AI__Providers__anthropic__ApiKey: ${ANTHROPIC_API_KEY:-}
+      AI__Providers__openai__ApiKey: ${OPENAI_API_KEY:-}
+      AI__Providers__ollama__Endpoint: ${OLLAMA_ENDPOINT:-}
+      AI__Providers__voyage__ApiKey: ${VOYAGE_API_KEY:-}
+      Cors__AllowedOrigins__0: http://localhost:${WEB_PORT:-8080}
+      Cors__AllowedOrigins__1: http://localhost:5173
+      Auth__Authority: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8180}/realms/knowledge-agent
+      Auth__MetadataAddress: http://keycloak:8080/realms/knowledge-agent/.well-known/openid-configuration
+      Auth__ClientSecret: ${PORTAL_CLIENT_SECRET:-knowledge-agent-dev-client-secret}
+      Auth__PublicOrigin: http://localhost:${WEB_PORT:-8080}
+      # Background jobs run as Inngest functions; the dev server below calls the API back at /api/inngest.
+      Jobs__Provider: Inngest
+      Jobs__Inngest__DashboardUrl: http://localhost:${INNGEST_PORT:-8288}
+      INNGEST_DEV: http://inngest:8288
+    ports:
+      - ${API_PORT:-5080}:8080
+    healthcheck:
+      # The aspnet base image has no curl/wget; bash's /dev/tcp is enough for an HTTP probe.
+      test:
+        - CMD
+        - bash
+        - -c
+        - "exec 3<>/dev/tcp/127.0.0.1/8080 && printf 'GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -n 1 <&3 | grep -q ' 200 '"
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  web:
+    build:
+      context: ./web
+    image: knowledge-agent-web:local
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      API_UPSTREAM: http://api:8080
+    ports:
+      - ${WEB_PORT:-8080}:80
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  clickhouse_logs:
+  redis_data:
+  minio_data:
+  ollama_data:
+  keycloak_data:

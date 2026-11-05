@@ -1,0 +1,38 @@
+You are grading one answer of a retrieval-augmented assistant that answers questions from a company knowledge base. Judge only from the material below, never from your own knowledge, and be strict: when in doubt, choose the lower grade.
+
+# Question
+{{question}}
+
+# Passages the assistant retrieved
+These are the only facts the assistant was allowed to use. Each passage starts with the citation tag the assistant could cite.
+{{#each passages}}
+
+[{{ref}}] {{title}}
+{{text}}
+{{/each}}
+{{#unless passages}}
+
+(The assistant retrieved no passages.)
+{{/unless}}
+
+# The assistant's answer
+{{answer}}
+
+# What a correct answer looks like
+{{#if answerable}}
+Reference answer: {{#if referenceAnswer}}{{referenceAnswer}}{{else}}(none given; judge correctness from the passages){{/if}}
+{{#if expectedFacts}}
+Facts a correct answer contains: {{#each expectedFacts}}"{{this}}"{{#unless @last}}, {{/unless}}{{/each}}
+{{/if}}
+{{else}}
+The knowledge base does not contain the answer to this question. A correct answer says so plainly and does not present unrelated passages as if they answered it.{{#if referenceAnswer}} Reference: {{referenceAnswer}}{{/if}}
+{{/if}}
+
+# Criteria
+Grade each criterion "yes", "partially" or "no".
+1. faithfulness: every factual claim in the answer is supported by the passages, and every citation tag points to a passage that supports the sentence it is attached to. Saying that information is missing counts as supported. Claims the passages do not contain (for example from general knowledge) are unsupported. List each unsupported claim or wrong citation in "issues".
+2. relevance: the answer addresses the question directly and stays on topic. List padding or off-topic parts in "issues".
+3. correctness: the answer agrees with the reference answer and contains the expected facts{{#unless answerable}}; for this question that means it states that the knowledge base does not contain the answer{{/unless}}. Different wording is fine; contradictions and missing key facts are not. List missing or wrong facts in "issues".
+
+Reason about each criterion before you decide, then reply with only this JSON object and nothing else:
+{"faithfulness":{"reasoning":"...","verdict":"yes|partially|no","issues":["..."]},"relevance":{"reasoning":"...","verdict":"yes|partially|no","issues":[]},"correctness":{"reasoning":"...","verdict":"yes|partially|no","issues":["..."]}}

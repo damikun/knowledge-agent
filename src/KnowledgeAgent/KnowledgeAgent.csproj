@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="AngleSharp" />
+    <PackageReference Include="Anthropic" />
+    <PackageReference Include="Aspire.Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="ClickHouse.Driver" />
+    <PackageReference Include="Cronos" />
+    <PackageReference Include="Handlebars.Net" />
+    <PackageReference Include="Inngest.AspNetCore" />
+    <PackageReference Include="Inngest.OpenTelemetry" />
+    <PackageReference Include="MailKit" />
+    <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+    <PackageReference Include="Microsoft.AspNetCore.DataProtection.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <PackageReference Include="Microsoft.Extensions.AI" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
+    <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="OllamaSharp" />
+    <PackageReference Include="OpenTelemetry" />
+    <PackageReference Include="PdfPig" />
+    <PackageReference Include="SmartReader" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Remove="Features\Prompts\Defaults\**" />
+    <EmbeddedResource Include="Features\Prompts\Defaults\*.hbs;Features\Prompts\Defaults\*.json" LogicalName="Prompts/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\evals\datasets\**\*" LogicalName="Datasets/%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- The in-app help reads the guide and the README from memory. -->
+    <EmbeddedResource Include="..\..\docs\help\*.md" LogicalName="Help/guide/%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\README.md" LogicalName="Help/docs/%(Filename)%(Extension)" />
+    <!-- Built in: not seeded to Langfuse and not editable in the portal. -->
+    <None Remove="Features\Help\*.hbs" />
+    <EmbeddedResource Include="Features\Help\*.hbs" LogicalName="Help/prompt/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="KnowledgeAgent.Tests" />
+    <InternalsVisibleTo Include="KnowledgeAgent.Api.Tests" />
+  </ItemGroup>
+</Project>
