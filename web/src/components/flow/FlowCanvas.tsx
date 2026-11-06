@@ -20,6 +20,8 @@ import type { GraphEdge, GraphNode, GraphTone } from './graph';
 import type { PositionedNode } from './graph';
 import type { LayoutDirection } from './layout';
 import './flow.css';
+import { ConnectionList } from './ConnectionList';
+import { prefersReducedMotion } from '../../lib/motion';
 
 interface CardData extends Record<string, unknown> {
   node: GraphNode;
@@ -95,14 +97,16 @@ function ZoomButton({ label, icon: Icon, onClick }: { label: string; icon: Lucid
 }
 
 // Our own buttons instead of React Flow's Controls, so they look like every other control in the portal.
+const zoomDuration = () => (prefersReducedMotion() ? 0 : 150);
+
 function ZoomControls() {
   const flow = useReactFlow();
   return (
     <Panel position="bottom-right">
       <div className="flex flex-col overflow-hidden rounded-lg border border-border bg-raised shadow-control" role="group" aria-label="Zoom">
-        <ZoomButton label="Zoom in" icon={Plus} onClick={() => void flow.zoomIn({ duration: 150 })} />
-        <ZoomButton label="Zoom out" icon={Minus} onClick={() => void flow.zoomOut({ duration: 150 })} />
-        <ZoomButton label="Fit to screen" icon={Maximize} onClick={() => void flow.fitView({ duration: 150, padding: 0.1 })} />
+        <ZoomButton label="Zoom in" icon={Plus} onClick={() => void flow.zoomIn({ duration: zoomDuration() })} />
+        <ZoomButton label="Zoom out" icon={Minus} onClick={() => void flow.zoomOut({ duration: zoomDuration() })} />
+        <ZoomButton label="Fit to screen" icon={Maximize} onClick={() => void flow.fitView({ duration: zoomDuration(), padding: 0.1 })} />
       </div>
     </Panel>
   );
@@ -248,6 +252,15 @@ function Canvas<N extends GraphNode>({
         {interactive ? <ZoomControls /> : null}
         <RefitOnChange signature={signature} />
       </ReactFlow>
+      <ConnectionList
+        label="Connections"
+        connections={flowEdges.map((edge) => ({
+          id: edge.id,
+          from: byId.get(edge.source)?.title ?? edge.source,
+          to: byId.get(edge.target)?.title ?? edge.target,
+          label: typeof edge.label === 'string' ? edge.label : undefined,
+        }))}
+      />
     </div>
   );
 }

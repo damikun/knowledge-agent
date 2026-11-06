@@ -10,6 +10,7 @@ import type { SelectMode } from './selection';
 import { SourceStatusBadge } from './SourceStatusBadge';
 import { SOURCE_TYPES } from './sourceTypes';
 import type { SourceDto } from './types';
+import { scrollBehavior } from '../../lib/motion';
 
 // The chunk count gives way first when the list is narrow; size, pages, tokens and the model are in the details.
 const CHUNKS_COLUMN = 'hidden @min-[36rem]:table-cell';
@@ -125,7 +126,7 @@ export function SourcesTable({
 
   useEffect(() => {
     if (highlightId) {
-      highlightRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      highlightRef.current?.scrollIntoView({ block: 'center', behavior: scrollBehavior() });
     }
   }, [highlightId, sources.length]);
 

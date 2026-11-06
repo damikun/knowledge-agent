@@ -59,13 +59,20 @@ export function ContactForm({ initialName, initialEmail, initialErrors, onSubmit
   const [busy, setBusy] = useState(false);
   const titleId = useId();
 
-  const submit = async (event: FormEvent) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const form = event.currentTarget;
     setBusy(true);
     const result = await onSubmit({ name, email });
     setBusy(false);
     if (!result.ok) {
       setErrors(result.errors);
+      // Focus the first field to fix, which reads its error with it (WCAG 3.3.1).
+      const invalid = result.errors.name ? 'name' : result.errors.email ? 'email' : null;
+      const field = invalid ? form.elements.namedItem(invalid) : null;
+      if (field instanceof HTMLInputElement) {
+        field.focus();
+      }
     }
   };
 
@@ -77,6 +84,7 @@ export function ContactForm({ initialName, initialEmail, initialErrors, onSubmit
       <ContactField
         ref={autoFocus ? focusField : undefined}
         label={t('contactName')}
+        name="name"
         autoComplete="name"
         maxLength={200}
         value={name}
@@ -85,6 +93,7 @@ export function ContactForm({ initialName, initialEmail, initialErrors, onSubmit
       />
       <ContactField
         label={t('contactEmail')}
+        name="email"
         type="email"
         required
         autoComplete="email"

@@ -51,6 +51,16 @@ describe('FilterChips', () => {
     expect(onChange.mock.calls).toEqual([['attention'], ['indexing']]);
   });
 
+  it('marks the chosen chip with a check as well as its fill', async () => {
+    const user = userEvent.setup();
+    render(<StatusFilter />);
+    const checked = () => screen.getAllByRole('radio').map((radio) => radio.closest('label')!.querySelector('.lucide-check') !== null);
+
+    expect(checked()).toEqual([true, false, false]);
+    await user.click(screen.getByText('Indexing'));
+    expect(checked()).toEqual([false, false, true]);
+  });
+
   it('shows counts after the labels and reads them with the name', () => {
     render(
       <FilterChips

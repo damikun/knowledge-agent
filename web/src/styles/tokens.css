@@ -177,7 +177,7 @@
     /* Clickable cards on hover. */
     --ka-border-hover: #CBCBD2;
     /* Input, select, checkbox and switch edges: at least 3:1 (WCAG 1.4.11). */
-    --ka-border-strong: #8A8A94;
+    --ka-border-strong: #898993;
 
     --ka-fg: #18181B;
     --ka-fg-secondary: #46464F;
@@ -207,7 +207,7 @@
     --ka-info-text: var(--ka-accent-text);
     --ka-success: #149A45;
     --ka-success-subtle: #F0FDF4;
-    --ka-success-text: #137535;
+    --ka-success-text: #137234;
     --ka-warning: #D07005;
     --ka-warning-subtle: #FFFBEB;
     --ka-warning-text: #A1490A;

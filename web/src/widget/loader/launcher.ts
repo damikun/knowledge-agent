@@ -124,6 +124,14 @@ function readAttributes(value: unknown): Record<string, AttributeValue> {
   return attributes;
 }
 
+const LANGUAGE_TAG = /^[a-z]{2,3}(-[a-z0-9]{1,8})*$/i;
+
+// The frame takes the host page's language, which the widget's title, greeting and answers usually share (WCAG 3.1.1).
+function frameQuery(): string {
+  const language = document.documentElement.lang.trim();
+  return LANGUAGE_TAG.test(language) ? `?lang=${encodeURIComponent(language)}` : '';
+}
+
 function currentPage(): KnowledgeAgentPage {
   return {
     url: window.location.href,
@@ -174,7 +182,11 @@ export function findLoaderScript(): HTMLScriptElement | null {
   return document.querySelector<HTMLScriptElement>(SCRIPT_SELECTOR);
 }
 
-function element<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, attributes: Record<string, string> = {}): HTMLElementTagNameMap[K] {
+function element<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  className: string,
+  attributes: Record<string, string> = {},
+): HTMLElementTagNameMap[K] {
   const created = document.createElement(tag);
   created.className = className;
   for (const [name, value] of Object.entries(attributes)) {
@@ -375,7 +387,7 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
       return;
     }
     iframe = document.createElement('iframe');
-    iframe.src = `${origin}/widget/v1/frame/${encodeURIComponent(key)}`;
+    iframe.src = `${origin}/widget/v1/frame/${encodeURIComponent(key)}${frameQuery()}`;
     iframe.title = config.title;
     // Browsers paint a frame opaque when its color scheme differs from the iframe element's, which would hide the glass.
     iframe.style.colorScheme = config.theme === 'light' || config.theme === 'dark' ? config.theme : 'light dark';

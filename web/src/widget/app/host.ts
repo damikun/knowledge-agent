@@ -169,6 +169,12 @@ export function postToEditor(message: PreviewMessage): void {
   window.parent.postMessage(envelope(message), window.location.origin);
 }
 
+/** The language the loader passes from the host page, or English, the language of the frame's default texts. */
+export function readFrameLanguage(location: Pick<Location, 'search'>): string {
+  const language = new URLSearchParams(location.search).get('lang')?.trim() ?? '';
+  return /^[a-z]{2,3}(-[a-z0-9]{1,8})*$/i.test(language) ? language : 'en';
+}
+
 // /widget/v1/frame/{key} is the chat of one widget; /widget/v1/preview is the editor's preview, which needs no key.
 export function readFrameLocation(location: Pick<Location, 'pathname'>): { widgetKey: string; preview: boolean } {
   if (/\/preview\/?$/.test(location.pathname)) {

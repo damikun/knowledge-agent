@@ -10,6 +10,7 @@ import { Markdown } from './Markdown';
 import { ThinkingBlock } from './ThinkingBlock';
 import { isDelegateTool, summarizeToolArguments, toolMeta, toolSourceIds } from './tools';
 import { ToolNames, type CitationDto } from './types';
+import { ScrollBox } from '../../components/ui/ScrollBox';
 
 function flatten(tools: readonly ToolCallView[]): ToolCallView[] {
   return tools.flatMap((tool) => [tool, ...flatten(tool.children)]);
@@ -162,8 +163,16 @@ export function ToolStep({ tool }: { tool: ToolCallView }) {
   const delegate = isDelegate(tool);
   const running = tool.status === 'running';
   const failed = tool.status === 'error';
-  const label = delegate && tool.subAgent ? (running ? `${capitalize(tool.subAgent.agent)} working` : capitalize(tool.subAgent.agent)) : running ? meta.activeLabel : meta.label;
-  const hasArguments = tool.arguments !== null && !(typeof tool.arguments === 'object' && !Array.isArray(tool.arguments) && Object.keys(tool.arguments).length === 0);
+  const label =
+    delegate && tool.subAgent
+      ? running
+        ? `${capitalize(tool.subAgent.agent)} working`
+        : capitalize(tool.subAgent.agent)
+      : running
+        ? meta.activeLabel
+        : meta.label;
+  const hasArguments =
+    tool.arguments !== null && !(typeof tool.arguments === 'object' && !Array.isArray(tool.arguments) && Object.keys(tool.arguments).length === 0);
   const quoted = delegate || tool.toolName === ToolNames.SearchKnowledgeBase;
 
   return (
@@ -201,9 +210,12 @@ export function ToolStep({ tool }: { tool: ToolCallView }) {
         {developer && hasArguments ? (
           <details>
             <summary className="w-fit cursor-pointer rounded-sm text-fg-muted select-none hover:text-fg">Arguments</summary>
-            <pre className="mt-1 overflow-x-auto rounded-md border border-border-subtle bg-surface p-2 font-mono text-xs leading-relaxed text-fg-secondary">
+            <ScrollBox
+              as="pre"
+              className="mt-1 overflow-x-auto rounded-md border border-border-subtle bg-surface p-2 font-mono text-xs leading-relaxed text-fg-secondary"
+            >
               {JSON.stringify(tool.arguments, null, 2)}
-            </pre>
+            </ScrollBox>
             <div className="mt-1 font-mono break-all text-fg-muted">
               {tool.toolName} · {tool.callId}
             </div>

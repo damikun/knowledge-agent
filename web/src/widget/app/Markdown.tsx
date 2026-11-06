@@ -1,6 +1,7 @@
 import { memo, useMemo } from 'react';
 import ReactMarkdown, { type Components, type Options } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ScrollBox } from '../../components/ui/ScrollBox';
 import { markerNumber, remarkCitations } from './citations';
 import { useWidget } from './context';
 import type { CitationMode } from './types';
@@ -60,10 +61,11 @@ export const Markdown = memo(function Markdown({ text, citationMode, markers = N
       },
       img: ({ alt }) => <span>{alt ? `[${alt}]` : null}</span>,
       table: ({ node: _node, ...props }) => (
-        <div className="ka-table">
+        <ScrollBox className="ka-table">
           <table {...props} />
-        </div>
+        </ScrollBox>
       ),
+      pre: ({ node: _node, ...props }) => <ScrollBox as="pre" {...props} />,
     }),
     [t],
   );

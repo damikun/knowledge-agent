@@ -66,6 +66,7 @@ export function AgentPage() {
           <EmptyState
             icon={Bot}
             title="This agent does not exist"
+            headingLevel={1}
             description="It may have been deleted."
             action={
               <Link to="/agents" className={buttonClass()}>
@@ -89,10 +90,7 @@ function AgentView({ agent, options }: { agent: AgentDto; options: AgentOptionsD
   const widgets = useWidgets();
   const folders = useSourceFolders();
   const tree = useMemo(() => (folders.data ? buildFolderTree(folders.data.folders) : undefined), [folders.data]);
-  const using = useMemo(
-    () => widgets.data?.filter((widget) => widget.agentId.toLowerCase() === agent.id.toLowerCase()),
-    [agent.id, widgets.data],
-  );
+  const using = useMemo(() => widgets.data?.filter((widget) => widget.agentId.toLowerCase() === agent.id.toLowerCase()), [agent.id, widgets.data]);
   const [deleting, setDeleting] = useState(false);
   const guard = useLeaveGuard();
   const justCreated = (location.state as { created?: boolean } | null)?.created === true;

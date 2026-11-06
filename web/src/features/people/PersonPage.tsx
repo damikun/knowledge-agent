@@ -39,7 +39,12 @@ export function PersonPage() {
     return (
       <div className="mx-auto max-w-6xl space-y-4 px-4 py-6 lg:px-6">
         {missing ? (
-          <EmptyState icon={UserRound} title="This person does not exist" description="They may have been erased, or retention removed them." />
+          <EmptyState
+            icon={UserRound}
+            title="This person does not exist"
+            headingLevel={1}
+            description="They may have been erased, or retention removed them."
+          />
         ) : (
           <ErrorMessage error={person.error} title="The person could not be loaded" />
         )}
@@ -76,7 +81,9 @@ export function PersonPage() {
                       icon={Download}
                       loading={exportPerson.isPending}
                       onClick={() =>
-                        exportPerson.mutate(undefined, { onError: (error) => toast({ title: 'The export failed', description: errorMessage(error), tone: 'danger' }) })
+                        exportPerson.mutate(undefined, {
+                          onError: (error) => toast({ title: 'The export failed', description: errorMessage(error), tone: 'danger' }),
+                        })
                       }
                     >
                       Export
@@ -97,7 +104,11 @@ export function PersonPage() {
           <StatCard
             label="Average rating"
             value={data.stats.averageRating === null ? '–' : `${data.stats.averageRating.toFixed(1)}/5`}
-            caption={data.stats.ratings === 0 ? 'No chat ratings' : `From ${formatNumber(data.stats.ratings)} ${data.stats.ratings === 1 ? 'rating' : 'ratings'}`}
+            caption={
+              data.stats.ratings === 0
+                ? 'No chat ratings'
+                : `From ${formatNumber(data.stats.ratings)} ${data.stats.ratings === 1 ? 'rating' : 'ratings'}`
+            }
           />
           <StatCard label="Last seen" value={formatRelativeTime(data.stats.lastSeenAt)} caption={formatDateTime(data.stats.lastSeenAt)} />
         </div>

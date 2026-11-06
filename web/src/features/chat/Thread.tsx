@@ -1,4 +1,5 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Announcer } from '../../components/ui/Announcer';
 import { AssistantMessage, SystemNotice, UserMessage } from './AssistantMessage';
 import { citationIndex, type TurnView } from './chatReducer';
 import { ChatColumn } from './ChatColumn';
@@ -16,6 +17,20 @@ export function Thread({ turns, messages = NO_MESSAGES }: { turns: TurnView[]; m
   const finishedKey = finished.map((turn) => `${turn.key}:${turn.id}:${turn.citations.length}`).join('|');
   const index = useMemo(() => citationIndex(finished), [finishedKey]);
   const items = useMemo(() => withSystemNotices(turns, messages), [turns, messages]);
+  // The thread remounts per conversation: answers finished when it opens are not news, one still being written is.
+  const [openedWith] = useState(() => {
+    const opening = turns.at(-1);
+    return opening && opening.status !== 'streaming' && opening.status !== 'pending' ? opening.key : undefined;
+  });
+  const last = turns.at(-1);
+  const announcement =
+    !last || last.key === openedWith
+      ? ''
+      : last.status === 'complete'
+        ? 'The answer is ready.'
+        : last.status === 'cancelled'
+          ? 'The answer was stopped.'
+          : '';
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -48,6 +63,7 @@ export function Thread({ turns, messages = NO_MESSAGES }: { turns: TurnView[]; m
             ),
           )}
         </ol>
+        <Announcer message={announcement} />
       </ChatColumn>
     </div>
   );

@@ -42,7 +42,10 @@ const ADD_CHOICES: ReadonlyArray<{ mode: AddMode; icon: typeof Plus; title: stri
 function addedToast(result: ImportEvalItemsResultDto) {
   toast({
     title: result.created === 0 ? 'No questions added' : `Added ${pluralize(result.created, 'question')}`,
-    description: result.skipped > 0 ? `${pluralize(result.skipped, 'question')} the dataset already had ${result.skipped === 1 ? 'was' : 'were'} left out.` : undefined,
+    description:
+      result.skipped > 0
+        ? `${pluralize(result.skipped, 'question')} the dataset already had ${result.skipped === 1 ? 'was' : 'were'} left out.`
+        : undefined,
     tone: result.created === 0 ? undefined : 'success',
   });
 }
@@ -52,7 +55,14 @@ function LastRunCard({ dataset }: { dataset: EvalDatasetDto }) {
   const last = latestCompletedRun(dataset, runs.data);
   const score = last ? headlineScore(last.metrics) : null;
   if (!last) {
-    return <StatCard label="Last run" value="Not run yet" caption={runs.isPending ? 'Loading runs' : 'Run it to see how the agent does.'} className="h-full" />;
+    return (
+      <StatCard
+        label="Last run"
+        value="Not run yet"
+        caption={runs.isPending ? 'Loading runs' : 'Run it to see how the agent does.'}
+        className="h-full"
+      />
+    );
   }
   const verdict = score ? VERDICTS[score.verdict] : null;
   return (
@@ -153,7 +163,9 @@ function CustomDataset({ dataset, list }: { dataset: EvalDatasetDto; list: EvalD
         <div className="mx-auto max-w-180 space-y-4">
           <div className="text-center">
             <h2 className="text-section text-fg">Add the first questions</h2>
-            <p className="mt-1 text-sm text-fg-secondary">Ten to fifty questions your visitors really ask make a good start. Choose how to add them.</p>
+            <p className="mt-1 text-sm text-fg-secondary">
+              Ten to fifty questions your visitors really ask make a good start. Choose how to add them.
+            </p>
           </div>
           <AddChooser onChoose={setAdding} />
         </div>
@@ -174,7 +186,8 @@ function CustomDataset({ dataset, list }: { dataset: EvalDatasetDto; list: EvalD
       <PageHeader
         title={dataset.name}
         description={
-          dataset.description ?? 'Questions with the answers you expect. A run asks the agent each one against your live sources and scores the answers.'
+          dataset.description ??
+          'Questions with the answers you expect. A run asks the agent each one against your live sources and scores the answers.'
         }
         actions={
           <>
@@ -216,7 +229,9 @@ function CustomDataset({ dataset, list }: { dataset: EvalDatasetDto; list: EvalD
           <StatCard
             label="Should say “I don’t know”"
             value={formatNumber(declines)}
-            caption={declines === 0 ? 'Add a few questions your sources do not cover, so runs check it does not guess.' : 'Questions it should decline'}
+            caption={
+              declines === 0 ? 'Add a few questions your sources do not cover, so runs check it does not guess.' : 'Questions it should decline'
+            }
             className="h-full"
           />
         </li>
@@ -234,7 +249,9 @@ function CustomDataset({ dataset, list }: { dataset: EvalDatasetDto; list: EvalD
           }}
         />
       ) : null}
-      {adding === 'conversations' ? <ConversationQuestionsSheet datasetId={id} existing={keys} onClose={() => setAdding(null)} onAdded={onAdded} /> : null}
+      {adding === 'conversations' ? (
+        <ConversationQuestionsSheet datasetId={id} existing={keys} onClose={() => setAdding(null)} onAdded={onAdded} />
+      ) : null}
       {adding === 'upload' ? <UploadQuestionsSheet datasetId={id} existing={keys} onClose={() => setAdding(null)} onAdded={onAdded} /> : null}
       {editing ? (
         <QuestionSheet
@@ -265,7 +282,11 @@ function CustomDataset({ dataset, list }: { dataset: EvalDatasetDto; list: EvalD
       <ConfirmDialog
         open={deletingDataset}
         title="Delete dataset?"
-        message={<>“{dataset.name}” and its {pluralize(all.length || dataset.itemCount, 'question')} will be deleted. Its past runs stay.</>}
+        message={
+          <>
+            “{dataset.name}” and its {pluralize(all.length || dataset.itemCount, 'question')} will be deleted. Its past runs stay.
+          </>
+        }
         confirmLabel="Delete dataset"
         busy={removeDataset.isPending}
         error={removeDataset.isError ? <ErrorMessage error={removeDataset.error} /> : null}
@@ -304,16 +325,27 @@ function ReadOnlyDataset({ dataset, list }: { dataset: EvalDatasetDto; list: Eva
       </Alert>
       <ul className="grid gap-3 sm:grid-cols-3" aria-label="Summary">
         <li>
-          <StatCard label="Questions" value={formatNumber(dataset.itemCount)} caption={<DatasetSourceBadge source={dataset.source} />} className="h-full" />
+          <StatCard
+            label="Questions"
+            value={formatNumber(dataset.itemCount)}
+            caption={<DatasetSourceBadge source={dataset.source} />}
+            className="h-full"
+          />
         </li>
         <li>
           <LastRunCard dataset={dataset} />
         </li>
       </ul>
       {copying ? (
-        <DatasetFormDialog mode={{ kind: 'copy', from: dataset }} onClose={() => setCopying(false)} onSaved={(saved) => saved.id && navigate(datasetPath(saved.id))} />
+        <DatasetFormDialog
+          mode={{ kind: 'copy', from: dataset }}
+          onClose={() => setCopying(false)}
+          onSaved={(saved) => saved.id && navigate(datasetPath(saved.id))}
+        />
       ) : null}
-      {running ? <StartRunModal dataset={dataset} judgeAvailable={list.judgeAvailable} judgeModel={list.judgeModel} onClose={() => setRunning(false)} /> : null}
+      {running ? (
+        <StartRunModal dataset={dataset} judgeAvailable={list.judgeAvailable} judgeModel={list.judgeModel} onClose={() => setRunning(false)} />
+      ) : null}
     </Page>
   );
 }
@@ -349,6 +381,7 @@ export function DatasetPage() {
           <EmptyState
             icon={ClipboardCheck}
             title="Dataset not found"
+            headingLevel={1}
             description="It may have been deleted."
             action={
               <Link to="/evals" className="text-sm font-medium text-accent-text hover:underline">
@@ -360,5 +393,9 @@ export function DatasetPage() {
       </Page>
     );
   }
-  return isCustomDataset(dataset.source) ? <CustomDataset key={dataset.id} dataset={dataset} list={datasets.data} /> : <ReadOnlyDataset dataset={dataset} list={datasets.data} />;
+  return isCustomDataset(dataset.source) ? (
+    <CustomDataset key={dataset.id} dataset={dataset} list={datasets.data} />
+  ) : (
+    <ReadOnlyDataset dataset={dataset} list={datasets.data} />
+  );
 }

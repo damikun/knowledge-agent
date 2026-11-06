@@ -32,10 +32,11 @@ export function UserMenu() {
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={`Account: ${user.name}`}
         className="group rounded-full"
       >
         <Avatar name={user.name} size="sm" className="group-hover:bg-fill-active group-hover:text-fg" />
+        {/* Text rather than aria-label: the initials are a picture of the person, not a label to match (2.5.3). */}
+        <span className="sr-only">Account: {user.name}</span>
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={buttonRef} label="Account" align="end" className="w-72 p-1">
         <div className="flex items-start gap-3 p-3">

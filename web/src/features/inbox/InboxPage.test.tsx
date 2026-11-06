@@ -40,7 +40,14 @@ const HISTORY = `${DETAIL}/history`;
 const POST = (action: string) => `POST /api/conversations/${WIDGET_CONVERSATION_ID}/${action}`;
 
 const waiting = searchItem();
-const withAssistant = searchItem({ id: '0199c1e2-0000-7000-8000-00000000d002', title: 'Opening hours', status: 'ai', preview: 'We open at nine.', widgetId: widgetGuid(2), handoverStatus: null });
+const withAssistant = searchItem({
+  id: '0199c1e2-0000-7000-8000-00000000d002',
+  title: 'Opening hours',
+  status: 'ai',
+  preview: 'We open at nine.',
+  widgetId: widgetGuid(2),
+  handoverStatus: null,
+});
 
 function Location() {
   const location = useLocation();
@@ -61,7 +68,9 @@ const address = () => new URL(screen.getByTestId('location').textContent ?? '', 
 
 function body(fetchMock: ReturnType<typeof mockFetch>, route: string): unknown {
   const [method, path] = route.split(' ');
-  const call = fetchMock.mock.calls.filter(([input, init]) => new URL(String(input), 'http://localhost').pathname === path && (init as RequestInit).method === method).at(-1);
+  const call = fetchMock.mock.calls
+    .filter(([input, init]) => new URL(String(input), 'http://localhost').pathname === path && (init as RequestInit).method === method)
+    .at(-1);
   return JSON.parse((call![1] as RequestInit).body as string);
 }
 
@@ -72,7 +81,11 @@ const baseRoutes = {
   ...agentsRoutes(() => [builtInAgent, agentDto()]),
 };
 
-function setup(getConversation: () => InboxConversationDetail, extra: Record<string, unknown> = {}, route = `/inbox?view=all&c=${WIDGET_CONVERSATION_ID}`) {
+function setup(
+  getConversation: () => InboxConversationDetail,
+  extra: Record<string, unknown> = {},
+  route = `/inbox?view=all&c=${WIDGET_CONVERSATION_ID}`,
+) {
   const events = controlledEventStream();
   const fetchMock = mockFetch({
     ...baseRoutes,
@@ -130,7 +143,11 @@ describe('InboxPage views and list', () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch({
       ...baseRoutes,
-      [SEARCH]: (url: URL) => jsonResponse({ items: [searchItem({ match: url.searchParams.get('q') ? 'Can I return shoes I wore once?' : null, rating: 2, thumbsDown: 1 })], nextCursor: null }),
+      [SEARCH]: (url: URL) =>
+        jsonResponse({
+          items: [searchItem({ match: url.searchParams.get('q') ? 'Can I return shoes I wore once?' : null, rating: 2, thumbsDown: 1 })],
+          nextCursor: null,
+        }),
     });
     renderInbox('/inbox?view=waiting');
 
@@ -148,7 +165,13 @@ describe('InboxPage views and list', () => {
     await addFilter(user, 'Widget', 'Docs help');
     await waitFor(() => {
       const last = requestUrls(fetchMock, SEARCH).at(-1)!.searchParams;
-      expect([last.get('maxRating'), last.get('thumbsDown'), last.get('q'), last.get('status'), last.get('widgetId')]).toEqual(['2', 'true', 'shoes', 'handover_pending', widgetGuid(2)]);
+      expect([last.get('maxRating'), last.get('thumbsDown'), last.get('q'), last.get('status'), last.get('widgetId')]).toEqual([
+        '2',
+        'true',
+        'shoes',
+        'handover_pending',
+        widgetGuid(2),
+      ]);
     });
     await waitFor(() => expect(requestUrls(fetchMock, COUNTS).at(-1)!.searchParams.get('widgetId')).toBe(widgetGuid(2)));
     expect([address().searchParams.get('rating'), address().searchParams.get('thumbs')]).toEqual(['poor', 'down']);
@@ -305,15 +328,18 @@ describe('InboxPage conversation', () => {
     expect(within(view).getByText('Ada (staff)')).toBeInTheDocument();
   });
 
-  it('shows a visitor message as it arrives', async () => {
+  it('shows a visitor message as it arrives and reads it out, but not the messages already there', async () => {
     const { events, fetchMock } = setup(() => widgetConversation({ status: 'human' }));
+    const announced = () => screen.getAllByRole('status').map((region) => region.textContent);
 
     await screen.findByText('Can I return shoes I wore once?');
+    expect(announced().some((text) => text?.includes('Can I return shoes'))).toBe(false);
     await waitFor(() => expect(events.isOpen).toBe(true));
     expect(requestUrls(fetchMock, EVENTS)[0]!.searchParams.get('after')).toBe('3');
 
     events.send('message', messageDto({ sequence: 4, author: 'visitor', authorName: 'Jane', text: 'Are you still there?', turnId: null }), 4);
     expect(await screen.findByText('Are you still there?')).toBeInTheDocument();
+    await waitFor(() => expect(announced()).toContain('Jane: Are you still there?'));
   });
 
   it('marks a request nobody joined in time as missed, so the team can follow up even after the chat closed', async () => {
@@ -383,8 +409,26 @@ describe('InboxPage conversation', () => {
       [HANDOVER]: () => new Response(null, { status: 204 }),
       [HISTORY]: {
         feedback: [
-          { id: 'f1', messageId: null, kind: 'conversation', rating: 2, comment: 'Not what I hoped.', reasons: [], author: 'visitor', createdAt: '2026-10-31T09:06:00Z' },
-          { id: 'f2', messageId: answerId, kind: 'answer', rating: -1, comment: null, reasons: [], author: 'visitor', createdAt: '2026-10-31T09:01:00Z' },
+          {
+            id: 'f1',
+            messageId: null,
+            kind: 'conversation',
+            rating: 2,
+            comment: 'Not what I hoped.',
+            reasons: [],
+            author: 'visitor',
+            createdAt: '2026-10-31T09:06:00Z',
+          },
+          {
+            id: 'f2',
+            messageId: answerId,
+            kind: 'answer',
+            rating: -1,
+            comment: null,
+            reasons: [],
+            author: 'visitor',
+            createdAt: '2026-10-31T09:01:00Z',
+          },
         ],
         handovers: [],
         labels: [],
@@ -408,17 +452,21 @@ describe('InboxPage conversation', () => {
   it("narrows the list to one person from the address and links the conversation's person", async () => {
     const personId = '0199c1e2-0000-7000-8000-00000000ada1';
     const contact = { id: personId, name: 'Ada Lovelace', email: 'ada@example.com', identified: true };
-    const { fetchMock } = setup(() => ({ ...widgetConversation(), contact }), {
-      [SEARCH]: { items: [searchItem({ contact })], nextCursor: null },
-      [`GET /api/people/${personId}`]: {
-        id: personId,
-        name: 'Ada Lovelace',
-        identified: true,
-        attributes: {},
-        widgets: [],
-        stats: { conversations: 1, handovers: 1, averageRating: null, ratings: 0 },
+    const { fetchMock } = setup(
+      () => ({ ...widgetConversation(), contact }),
+      {
+        [SEARCH]: { items: [searchItem({ contact })], nextCursor: null },
+        [`GET /api/people/${personId}`]: {
+          id: personId,
+          name: 'Ada Lovelace',
+          identified: true,
+          attributes: {},
+          widgets: [],
+          stats: { conversations: 1, handovers: 1, averageRating: null, ratings: 0 },
+        },
       },
-    }, `/inbox?view=all&person=${personId}&c=${WIDGET_CONVERSATION_ID}`);
+      `/inbox?view=all&person=${personId}&c=${WIDGET_CONVERSATION_ID}`,
+    );
 
     const chips = await screen.findByRole('list', { name: 'Active filters' });
     expect(await within(chips).findByRole('button', { name: 'Remove filter: Contact: Ada Lovelace' })).toBeInTheDocument();
@@ -427,7 +475,10 @@ describe('InboxPage conversation', () => {
 
     const person = await screen.findAllByRole('link', { name: 'Ada Lovelace' });
     expect(person[0]).toHaveAttribute('href', `/contacts/${personId}`);
-    expect(screen.getByRole('link', { name: 'All conversations with this contact' })).toHaveAttribute('href', `/inbox?person=${personId}&c=${WIDGET_CONVERSATION_ID}`);
+    expect(screen.getByRole('link', { name: 'All conversations with this contact' })).toHaveAttribute(
+      'href',
+      `/inbox?person=${personId}&c=${WIDGET_CONVERSATION_ID}`,
+    );
 
     await userEvent.click(within(chips).getByRole('button', { name: 'Remove filter: Contact: Ada Lovelace' }));
     await waitFor(() => expect(address().searchParams.get('person')).toBeNull());
@@ -437,10 +488,21 @@ describe('InboxPage conversation', () => {
     const user = userEvent.setup();
     const personId = '0199c1e2-0000-7000-8000-00000000ada1';
     const contact = { id: personId, name: 'Ada Lovelace', email: 'ada@example.com', identified: true };
-    const { fetchMock } = setup(() => ({ ...widgetConversation(), contact }), {
-      [SEARCH]: { items: [searchItem({ contact })], nextCursor: null },
-      [`GET /api/people/${personId}`]: { id: personId, name: 'Ada Lovelace', identified: true, attributes: {}, widgets: [], stats: { conversations: 1, handovers: 1, averageRating: null, ratings: 0 } },
-    }, `/inbox?person=${personId}&c=${WIDGET_CONVERSATION_ID}`);
+    const { fetchMock } = setup(
+      () => ({ ...widgetConversation(), contact }),
+      {
+        [SEARCH]: { items: [searchItem({ contact })], nextCursor: null },
+        [`GET /api/people/${personId}`]: {
+          id: personId,
+          name: 'Ada Lovelace',
+          identified: true,
+          attributes: {},
+          widgets: [],
+          stats: { conversations: 1, handovers: 1, averageRating: null, ratings: 0 },
+        },
+      },
+      `/inbox?person=${personId}&c=${WIDGET_CONVERSATION_ID}`,
+    );
 
     expect(await screen.findByRole('heading', { level: 2, name: 'Return an order' })).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Remove filter: Contact: Ada Lovelace' })).toBeInTheDocument();
@@ -487,7 +549,14 @@ describe('InboxPage conversation', () => {
       ...baseRoutes,
       [SEARCH]: { items: [], nextCursor: null },
       [COUNTS]: countsDto({ handoverPending: 0, ai: 0, all: 0, unassigned: 0 }),
-      [`GET /api/people/${personId}`]: { id: personId, name: 'Visitor 1645', identified: false, attributes: {}, widgets: [], stats: { conversations: 0, handovers: 0, averageRating: null, ratings: 0 } },
+      [`GET /api/people/${personId}`]: {
+        id: personId,
+        name: 'Visitor 1645',
+        identified: false,
+        attributes: {},
+        widgets: [],
+        stats: { conversations: 0, handovers: 0, averageRating: null, ratings: 0 },
+      },
     });
     renderInbox(`/inbox?view=all&person=${personId}`);
 
@@ -519,7 +588,10 @@ describe('InboxPage conversation', () => {
     setup(() => widgetConversation({ channel: 'portal', status: 'ai' }), { [HANDOVER]: () => new Response(null, { status: 204 }) });
 
     const view = await screen.findByRole('region', { name: 'Conversation' });
-    expect(await within(view).findByRole('link', { name: 'Open it in the playground' })).toHaveAttribute('href', `/playground/${WIDGET_CONVERSATION_ID}`);
+    expect(await within(view).findByRole('link', { name: 'Open it in the playground' })).toHaveAttribute(
+      'href',
+      `/playground/${WIDGET_CONVERSATION_ID}`,
+    );
     expect(within(view).queryByRole('button', { name: 'Take over' })).toBeNull();
     expect(within(view).queryByRole('textbox', { name: 'Reply' })).toBeNull();
   });
@@ -533,7 +605,9 @@ describe('InboxPage pins', () => {
       [COUNTS]: countsDto({ pinned: 2 }),
       [`PATCH /api/conversations/${WIDGET_CONVERSATION_ID}`]: async (_url: URL, init: RequestInit) => {
         await new Promise((resolve) => setTimeout(resolve, 300));
-        return refuse ? jsonResponse({ title: 'Nope' }, 500) : jsonResponse({ ...searchItem(), pinned: (JSON.parse(String(init.body)) as { pinned: boolean }).pinned });
+        return refuse
+          ? jsonResponse({ title: 'Nope' }, 500)
+          : jsonResponse({ ...searchItem(), pinned: (JSON.parse(String(init.body)) as { pinned: boolean }).pinned });
       },
     });
 
@@ -568,9 +642,12 @@ describe('InboxPage assignment and unread', () => {
   const me = currentUser({ id: 'kc-ada' });
   const ana = { id: 'kc-ana', name: 'Ana Novak', email: 'ana@example.com', role: 'support' };
 
-  it('puts the team\'s work first: Mine and Unassigned with their counts and what is unread', async () => {
+  it("puts the team's work first: Mine and Unassigned with their counts and what is unread", async () => {
     const user = userEvent.setup();
-    const fetchMock = mockFetch({ ...baseRoutes, [COUNTS]: countsDto({ mine: 2, unassigned: 1, handoverPending: 3, unread: { mine: 1, handoverPending: 2 } }) });
+    const fetchMock = mockFetch({
+      ...baseRoutes,
+      [COUNTS]: countsDto({ mine: 2, unassigned: 1, handoverPending: 3, unread: { mine: 1, handoverPending: 2 } }),
+    });
     renderInbox();
 
     const views = await screen.findByRole('tablist', { name: 'Views' });
@@ -635,7 +712,10 @@ describe('InboxPage labels', () => {
   it('shows labels on the conversations and sets them in the details, creating one', async () => {
     const user = userEvent.setup();
     const { fetchMock } = setup(() => widgetConversation(), {
-      [SEARCH]: { items: [searchItem({ pinned: true, labels: [{ id: QUESTION_LABEL_ID, name: 'Question', color: 'blue', source: 'auto' }] }), withAssistant], nextCursor: null },
+      [SEARCH]: {
+        items: [searchItem({ pinned: true, labels: [{ id: QUESTION_LABEL_ID, name: 'Question', color: 'blue', source: 'auto' }] }), withAssistant],
+        nextCursor: null,
+      },
       [HISTORY]: { feedback: [], handovers: [handoverDto()], labels: [{ id: QUESTION_LABEL_ID, name: 'Question', color: 'blue', source: 'auto' }] },
       'GET /api/labels': labelList(),
       [`PUT /api/conversations/${WIDGET_CONVERSATION_ID}/labels`]: (_url: URL, init: RequestInit) => {
@@ -654,12 +734,16 @@ describe('InboxPage labels', () => {
     await user.click(within(labels).getByRole('button', { name: 'Edit labels' }));
     const picker = await screen.findByRole('dialog', { name: 'Labels' });
     await user.click(await within(picker).findByRole('checkbox', { name: 'Problem' }));
-    await waitFor(() => expect(body(fetchMock, `PUT /api/conversations/${WIDGET_CONVERSATION_ID}/labels`)).toEqual({ labelIds: [QUESTION_LABEL_ID, PROBLEM_LABEL_ID] }));
+    await waitFor(() =>
+      expect(body(fetchMock, `PUT /api/conversations/${WIDGET_CONVERSATION_ID}/labels`)).toEqual({ labelIds: [QUESTION_LABEL_ID, PROBLEM_LABEL_ID] }),
+    );
 
     await user.type(within(picker).getByRole('searchbox', { name: 'Find a label' }), 'Billing');
     await user.click(within(picker).getByRole('button', { name: 'Create label “Billing”' }));
     await waitFor(() => expect(fetchCalls(fetchMock)).toContain('POST /api/labels'));
-    await waitFor(() => expect((body(fetchMock, `PUT /api/conversations/${WIDGET_CONVERSATION_ID}/labels`) as { labelIds: string[] }).labelIds).toContain('new-label'));
+    await waitFor(() =>
+      expect((body(fetchMock, `PUT /api/conversations/${WIDGET_CONVERSATION_ID}/labels`) as { labelIds: string[] }).labelIds).toContain('new-label'),
+    );
   });
 
   it('lets admins manage labels from the filters', async () => {
@@ -667,7 +751,8 @@ describe('InboxPage labels', () => {
     const fetchMock = mockFetch({
       ...baseRoutes,
       'GET /api/labels': labelList(),
-      [`PATCH /api/labels/${PROBLEM_LABEL_ID}`]: (_url: URL, init: RequestInit) => jsonResponse(labelDto({ id: PROBLEM_LABEL_ID, ...(JSON.parse(String(init.body)) as object) })),
+      [`PATCH /api/labels/${PROBLEM_LABEL_ID}`]: (_url: URL, init: RequestInit) =>
+        jsonResponse(labelDto({ id: PROBLEM_LABEL_ID, ...(JSON.parse(String(init.body)) as object) })),
     });
     renderInbox();
 
@@ -682,11 +767,15 @@ describe('InboxPage labels', () => {
   });
 
   it('works without labels or counts when the API has none (404)', async () => {
-    const { fetchMock } = setup(() => widgetConversation(), {
-      [COUNTS]: () => jsonResponse({ title: 'Not found' }, 404),
-      [HISTORY]: { feedback: [], handovers: [] },
-      [SEARCH]: { items: [{ ...searchItem(), pinned: undefined, labels: undefined }], nextCursor: null },
-    }, `/inbox?label=gone&c=${WIDGET_CONVERSATION_ID}`);
+    const { fetchMock } = setup(
+      () => widgetConversation(),
+      {
+        [COUNTS]: () => jsonResponse({ title: 'Not found' }, 404),
+        [HISTORY]: { feedback: [], handovers: [] },
+        [SEARCH]: { items: [{ ...searchItem(), pinned: undefined, labels: undefined }], nextCursor: null },
+      },
+      `/inbox?label=gone&c=${WIDGET_CONVERSATION_ID}`,
+    );
 
     const view = await screen.findByRole('region', { name: 'Conversation' });
     expect(await within(view).findByText('Can I return shoes I wore once?')).toBeInTheDocument();

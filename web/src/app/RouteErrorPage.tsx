@@ -18,6 +18,7 @@ export function NotFoundPage() {
     <EmptyState
       icon={Compass}
       title="Page not found"
+      headingLevel={1}
       description="The address does not match any page of the portal."
       action={
         <Link to="/" className="text-sm font-medium text-accent-text hover:underline">
@@ -57,6 +58,7 @@ export function RouteErrorPage() {
       <EmptyState
         icon={CircleAlert}
         title="Something went wrong"
+        headingLevel={1}
         description={
           moduleError && recovery === 'waiting' ? (
             <>

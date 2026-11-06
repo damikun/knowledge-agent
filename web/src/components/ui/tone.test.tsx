@@ -69,6 +69,14 @@ describe('StatusDot', () => {
     expect(dot).toHaveAttribute('data-tone', 'warning');
     expect(dot).toHaveClass('animate-pulse');
   });
+
+  it('tells warnings and errors apart by shape, not only by color', () => {
+    const shapes = (['success', 'warning', 'danger'] as const).map((tone) => {
+      const { container } = render(<StatusDot tone={tone} />);
+      return container.firstElementChild!.getAttribute('data-shape');
+    });
+    expect(shapes).toEqual(['circle', 'triangle', 'square']);
+  });
 });
 
 describe('Banner', () => {

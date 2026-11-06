@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button';
 import { capitalize, formatNumber } from '../../lib/format';
 import { useCopyToClipboard } from '../../lib/hooks/useCopyToClipboard';
 import type { PromptMessageDto } from './types';
+import { ScrollBox } from '../../components/ui/ScrollBox';
 
 export function roleLabel(role: string): string {
   return capitalize(role);
@@ -32,18 +33,22 @@ export function RenderedOutput({ text, messages }: { text: string | null; messag
         <CopyButton text={all} />
       </div>
       {text !== null ? (
-        <pre className="max-h-[32rem] overflow-auto px-3.5 py-3 font-mono text-small leading-5 break-words whitespace-pre-wrap text-fg" data-testid="rendered-output">
+        <ScrollBox
+          as="pre"
+          className="max-h-[32rem] overflow-auto px-3.5 py-3 font-mono text-small leading-5 break-words whitespace-pre-wrap text-fg"
+          data-testid="rendered-output"
+        >
           {text}
-        </pre>
+        </ScrollBox>
       ) : (
-        <ol className="max-h-[32rem] divide-y divide-border-subtle overflow-auto" data-testid="rendered-output">
+        <ScrollBox as="ol" className="max-h-[32rem] divide-y divide-border-subtle overflow-auto" data-testid="rendered-output">
           {(messages ?? []).map((message, index) => (
             <li key={index} className="px-3.5 py-3">
               <p className="mb-1 text-xs font-medium text-fg-muted">{roleLabel(message.role)}</p>
               <pre className="font-mono text-small leading-5 break-words whitespace-pre-wrap text-fg">{message.content}</pre>
             </li>
           ))}
-        </ol>
+        </ScrollBox>
       )}
     </div>
   );

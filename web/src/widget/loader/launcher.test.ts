@@ -1,5 +1,6 @@
 import { waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { axeViolations } from '../../test/a11y';
 import { mockFetch } from '../../test/utils';
 import { problem, WIDGET_API, WIDGET_KEY, widgetConfig } from '../test/fixtures';
 import { createLauncherView, findLoaderScript, startLoader, type LauncherConfig } from './launcher';
@@ -48,7 +49,11 @@ describe('widget loader', () => {
   });
 
   it('shows the launcher from the widget config in a shadow root', async () => {
-    const { fetchMock, host, shadow, launcher, root, frame } = await startWithConfig({ launcherLabel: 'Ask us', position: 'left', brandColor: '#7c3aed' });
+    const { fetchMock, host, shadow, launcher, root, frame } = await startWithConfig({
+      launcherLabel: 'Ask us',
+      position: 'left',
+      brandColor: '#7c3aed',
+    });
 
     expect(fetchMock.mock.calls[0]![0]).toBe(`${PORTAL}${WIDGET_API}/config`);
     expect(fetchMock.mock.calls[0]![1]).toMatchObject({ credentials: 'omit' });
@@ -62,6 +67,28 @@ describe('widget loader', () => {
     expect(host.style.getPropertyValue('--ka-panel-fill')).toBe('rgb(255 255 255 / 0.84)');
     expect(shadow.querySelector('style')?.textContent).toContain('.ka-launcher');
     expect(frame()).toBeNull();
+  });
+
+  it('passes axe closed and open, with a named launcher that tells its state and a titled frame', async () => {
+    const { launcher, frame } = await startWithConfig();
+    expect(launcher).toHaveAccessibleName('Chat with us');
+    expect(await axeViolations()).toEqual([]);
+
+    launcher.click();
+    expect(launcher).toHaveAttribute('aria-expanded', 'true');
+    expect(frame()).toHaveAttribute('title', 'Shop help');
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('gives the frame the language of the host page', async () => {
+    document.documentElement.lang = 'de-AT';
+    try {
+      const { launcher, frame } = await startWithConfig();
+      launcher.click();
+      expect(frame()).toHaveAttribute('src', `${PORTAL}/widget/v1/frame/${WIDGET_KEY}?lang=de-AT`);
+    } finally {
+      document.documentElement.lang = '';
+    }
   });
 
   it('uses an uploaded launcher image from the portal', async () => {
@@ -121,11 +148,22 @@ describe('widget loader', () => {
 
     fromFrame(iframe.contentWindow, { source: 'knowledge-agent', type: 'ready' });
     expect(toFrame).toHaveBeenCalledWith(
-      { source: 'knowledge-agent', type: 'identity', user: { userId: '42', userHash: hash, name: 'Ada' }, attributes: {}, page: expect.objectContaining({ url: window.location.href }) },
+      {
+        source: 'knowledge-agent',
+        type: 'identity',
+        user: { userId: '42', userHash: hash, name: 'Ada' },
+        attributes: {},
+        page: expect.objectContaining({ url: window.location.href }),
+      },
       PORTAL,
     );
 
-    window.KnowledgeAgent!.identify({ userId: '7', userHash: 'B'.repeat(64), email: 'grace@example.com', attributes: { plan: 'pro', seats: 3, coupon: null } });
+    window.KnowledgeAgent!.identify({
+      userId: '7',
+      userHash: 'B'.repeat(64),
+      email: 'grace@example.com',
+      attributes: { plan: 'pro', seats: 3, coupon: null },
+    });
     expect(toFrame).toHaveBeenLastCalledWith(
       expect.objectContaining({
         type: 'identity',
@@ -143,7 +181,9 @@ describe('widget loader', () => {
     const script = addScript();
     mockFetch({ [`GET ${WIDGET_API}/config`]: widgetConfig() });
     const handle = startLoader(script);
-    window.KnowledgeAgent!.update({ attributes: { plan: 'free', renews: new Date('2026-12-01T00:00:00Z') as unknown as string, nested: { a: 1 } as unknown as string } });
+    window.KnowledgeAgent!.update({
+      attributes: { plan: 'free', renews: new Date('2026-12-01T00:00:00Z') as unknown as string, nested: { a: 1 } as unknown as string },
+    });
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('"nested" was left out'));
     expect(await handle!.ready).toBe(true);
     const shadow = document.querySelector('knowledge-agent-widget')!.shadowRoot!;
@@ -276,7 +316,10 @@ describe('widget loader', () => {
     expect(view.button.querySelector('.ka-label')).toBeNull();
     const firstIcon = view.button.querySelector('.ka-open-icon svg');
 
-    view.render({ ...config, position: 'left', theme: 'dark', preset: 'solid', launcherLabel: 'Ask us', launcherIcon: 'sparkles', brandColor: '#facc15' }, 'dark');
+    view.render(
+      { ...config, position: 'left', theme: 'dark', preset: 'solid', launcherLabel: 'Ask us', launcherIcon: 'sparkles', brandColor: '#facc15' },
+      'dark',
+    );
     expect(view.root).toHaveClass('ka-left', 'ka-dark', 'ka-is-open');
     expect(view.root).not.toHaveClass('ka-round', 'ka-right', 'ka-glass', 'ka-glow');
     expect(view.button).toHaveTextContent('Ask us');

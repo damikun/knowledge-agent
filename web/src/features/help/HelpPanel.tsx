@@ -3,6 +3,7 @@ import { ArrowUp, Check, Cpu, RotateCcw, Square } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { Link } from 'react-router';
 import { Alert, EmptyState } from '../../components/ui/feedback';
+import { Announcer } from '../../components/ui/Announcer';
 import { Button, buttonClass } from '../../components/ui/Button';
 import { ComposerBox } from '../../components/ui/ComposerBox';
 import { UserMessage } from '../chat/AssistantMessage';
@@ -142,6 +143,7 @@ export function HelpPanel({ status, page, admin, onNavigate, inputRef }: HelpPan
   const setupOpen = admin && status.setup !== null && setupItems(status.setup).some((item) => !item.done);
   const empty = chat.turns.length === 0 && chat.live === null;
   const intro = empty && !disabled;
+  const [openedWith] = useState(() => chat.turns.at(-1)?.id);
 
   useEffect(() => {
     endRef.current?.scrollIntoView?.({ block: 'end' });
@@ -170,6 +172,8 @@ export function HelpPanel({ status, page, admin, onNavigate, inputRef }: HelpPan
   };
 
   const searching = chat.live?.tools.some((tool) => tool.status === 'running') ?? false;
+  // Answers already there when the panel opened are not announced; while one is written the region empties.
+  const answered = chat.turns.length > 0 && chat.turns.at(-1)?.id !== openedWith;
 
   return (
     <div className="flex min-h-full flex-col gap-4">
@@ -212,6 +216,7 @@ export function HelpPanel({ status, page, admin, onNavigate, inputRef }: HelpPan
           </ol>
         </>
       )}
+      <Announcer message={answered && !chat.busy ? 'The answer is ready.' : ''} />
       <div ref={endRef} />
       <form
         className="sticky bottom-0 mt-auto bg-raised pt-2"

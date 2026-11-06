@@ -4,6 +4,7 @@ import type { TurnView } from '../chat/chatReducer';
 import { extractCitationRefs } from '../chat/citations';
 import type { CitationDto } from '../chat/types';
 import type { TraceNode } from './traceGraph';
+import { ScrollBox } from '../../components/ui/ScrollBox';
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -48,7 +49,11 @@ function Passages({ citations }: { citations: readonly CitationDto[] }) {
 }
 
 function Json({ value }: { value: unknown }) {
-  return <pre className="max-h-48 overflow-auto rounded-lg bg-surface p-2 font-mono text-xs break-words whitespace-pre-wrap text-fg">{JSON.stringify(value, null, 2)}</pre>;
+  return (
+    <ScrollBox as="pre" className="max-h-48 overflow-auto rounded-lg bg-surface p-2 font-mono text-xs break-words whitespace-pre-wrap text-fg">
+      {JSON.stringify(value, null, 2)}
+    </ScrollBox>
+  );
 }
 
 export function TraceDetails({ node, turn }: { node: TraceNode | null; turn: TurnView }) {

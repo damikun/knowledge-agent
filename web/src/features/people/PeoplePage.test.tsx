@@ -9,70 +9,11 @@ import { widgetDto, widgetGuid, widgetsRoutes } from '../../test/widgetsApi';
 import { PeoplePage } from './PeoplePage';
 import { PersonFilter } from './PersonFilter';
 import { PersonPage } from './PersonPage';
-
-const ADA_ID = '0199c1e2-0000-7000-8000-00000000ada1';
-const VISITOR_ID = '0199c1e2-0000-7000-8000-000000004f2a';
-const CONVERSATION_ID = '0199c1e2-0000-7000-8000-00000000c001';
+import { ADA_ID, CONVERSATION_ID, ada, visitor, adaProfile, registry, SEGMENT_ID, proSegment, conversationsPage } from '../../test/peopleApi';
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
-
-const ada = {
-  id: ADA_ID,
-  name: 'Ada Lovelace',
-  email: 'ada@example.com',
-  externalId: 'user-42',
-  identified: true,
-  firstSeenAt: '2026-10-01T08:00:00Z',
-  lastSeenAt: '2026-11-04T09:00:00Z',
-  conversationCount: 3,
-  widgets: [{ id: widgetGuid(1), name: 'Shop help' }],
-  sessionCount: 4,
-  returning: true,
-  language: 'en-GB',
-  lastPageUrl: 'https://shop.example.com/pricing',
-  attributes: { plan: 'pro', seats: 5 },
-};
-
-const visitor = {
-  id: VISITOR_ID,
-  name: 'Visitor 4F2A',
-  email: null,
-  externalId: null,
-  identified: false,
-  firstSeenAt: '2026-11-02T08:00:00Z',
-  lastSeenAt: '2026-11-03T09:00:00Z',
-  conversationCount: 1,
-  widgets: [],
-};
-
-const adaProfile = {
-  ...ada,
-  savedName: 'Ada Lovelace',
-  notes: 'Prefers email.',
-  attributes: [
-    { key: 'plan', label: 'Plan', type: 'string', value: 'pro', source: 'server', updatedAt: '2026-11-01T08:00:00Z', visible: true },
-    { key: 'beta', label: 'Beta', type: 'boolean', value: true, source: 'browser', updatedAt: '2026-11-02T08:00:00Z', visible: true },
-  ],
-  widgets: [{ id: widgetGuid(1), name: 'Shop help', firstSeenAt: '2026-10-01T08:00:00Z', lastSeenAt: '2026-11-04T09:00:00Z' }],
-  stats: { conversations: 3, handovers: 1, averageRating: 4.5, ratings: 2, lastSeenAt: '2026-11-04T09:00:00Z' },
-};
-
-const registry = {
-  items: [
-    { key: 'plan', label: 'Plan', type: 'string', firstSeenAt: '2026-10-01T08:00:00Z', lastSeenAt: '2026-11-04T08:00:00Z', contacts: 120, visible: true, exposeToAgent: false, trust: 'any' },
-    { key: 'seats', label: 'Seats', type: 'number', firstSeenAt: '2026-10-01T08:00:00Z', lastSeenAt: '2026-11-04T08:00:00Z', contacts: 80, visible: true, exposeToAgent: false, trust: 'any' },
-  ],
-  builtIn: [
-    { key: 'identified', label: 'Identified', type: 'boolean', builtIn: true, ops: ['true', 'false'] },
-    { key: 'last_seen', label: 'Last seen', type: 'date', builtIn: true, ops: ['before', 'after', 'within_days'] },
-  ],
-  ops: { string: ['is', 'is_not', 'contains', 'set', 'not_set'], number: ['eq', 'neq', 'gt', 'lt', 'between', 'set', 'not_set'] },
-};
-
-const SEGMENT_ID = '0199c1e2-0000-7000-8000-0000000005e9';
-const proSegment = { id: SEGMENT_ID, name: 'Pro customers', description: null, filter: [{ attr: 'plan', op: 'is', value: 'pro' }], color: 'teal', icon: 'users', shared: true, mine: true, count: 120 };
 
 function decoded(url: URL | undefined): unknown {
   const filter = url?.searchParams.get('filter');
@@ -82,23 +23,6 @@ function decoded(url: URL | undefined): unknown {
   const base64 = filter.replace(/-/g, '+').replace(/_/g, '/');
   return JSON.parse(atob(base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')));
 }
-
-const conversationsPage = {
-  items: [
-    {
-      id: CONVERSATION_ID,
-      title: 'Return an order',
-      status: 'closed',
-      widgetId: widgetGuid(1),
-      updatedAt: '2026-11-04T09:00:00Z',
-      messageCount: 4,
-      preview: 'Thanks!',
-      handoverStatus: 'resolved',
-      rating: 5,
-    },
-  ],
-  nextCursor: null,
-};
 
 describe('PeoplePage', () => {
   it('lists people with their sign-in, widgets and conversations, searches them and picks a built-in segment', async () => {
@@ -146,7 +70,8 @@ describe('PeoplePage', () => {
       'GET /api/people/attributes': registry,
       'GET /api/people/attributes/plan/values': [{ value: 'pro', contacts: 120 }],
       'GET /api/segments': [],
-      'POST /api/segments': (_url: URL, init: RequestInit) => jsonResponse({ ...proSegment, ...(JSON.parse(String(init.body)) as object), id: SEGMENT_ID }, 201),
+      'POST /api/segments': (_url: URL, init: RequestInit) =>
+        jsonResponse({ ...proSegment, ...(JSON.parse(String(init.body)) as object), id: SEGMENT_ID }, 201),
       ...widgetsRoutes(() => [widgetDto()]),
     });
     renderWithProviders(<PeoplePage />, { route: '/contacts' });
@@ -166,7 +91,9 @@ describe('PeoplePage', () => {
     await userEvent.type(within(picker).getByRole('spinbutton', { name: 'To' }), '10');
     await userEvent.click(within(picker).getByRole('button', { name: 'Apply' }));
 
-    await waitFor(() => expect(decoded(requestUrls(fetchMock, 'GET /api/people').at(-1))).toEqual([{ attr: 'seats', op: 'between', value: [5, 10] }]));
+    await waitFor(() =>
+      expect(decoded(requestUrls(fetchMock, 'GET /api/people').at(-1))).toEqual([{ attr: 'seats', op: 'between', value: [5, 10] }]),
+    );
     expect(screen.getByRole('button', { name: 'Edit filter: Seats is between 5 and 10' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Filter' }));
@@ -186,7 +113,9 @@ describe('PeoplePage', () => {
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Pro teams');
     await userEvent.click(within(dialog).getByRole('button', { name: 'Save segment' }));
     await waitFor(() => expect(requestUrls(fetchMock, 'POST /api/segments')).toHaveLength(1));
-    const call = fetchMock.mock.calls.find(([input, init]) => String(input).includes('/api/segments') && (init as RequestInit | undefined)?.method === 'POST');
+    const call = fetchMock.mock.calls.find(
+      ([input, init]) => String(input).includes('/api/segments') && (init as RequestInit | undefined)?.method === 'POST',
+    );
     expect(JSON.parse(String((call![1] as RequestInit).body))).toMatchObject({
       name: 'Pro teams',
       shared: true,
@@ -207,7 +136,8 @@ describe('PeoplePage', () => {
   it('manages the attribute registry on its own tab', async () => {
     const fetchMock = mockFetch({
       'GET /api/people/attributes': registry,
-      'PATCH /api/people/attributes/plan': (_url: URL, init: RequestInit) => jsonResponse({ ...registry.items[0], ...(JSON.parse(String(init.body)) as object) }),
+      'PATCH /api/people/attributes/plan': (_url: URL, init: RequestInit) =>
+        jsonResponse({ ...registry.items[0], ...(JSON.parse(String(init.body)) as object) }),
       'DELETE /api/people/attributes/seats': { contacts: 80 },
     });
     renderWithProviders(<PeoplePage />, { route: '/contacts?view=attributes' });
@@ -225,7 +155,9 @@ describe('PeoplePage', () => {
     await userEvent.clear(label);
     await userEvent.type(label, 'Pricing plan{Enter}');
     await waitFor(() => expect(requestUrls(fetchMock, 'PATCH /api/people/attributes/plan')).toHaveLength(2));
-    const bodies = fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH').map(([, init]) => JSON.parse(String((init as RequestInit).body)) as unknown);
+    const bodies = fetchMock.mock.calls
+      .filter(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH')
+      .map(([, init]) => JSON.parse(String((init as RequestInit).body)) as unknown);
     expect(bodies).toEqual([{ exposeToAgent: true }, { label: 'Pricing plan' }]);
 
     await userEvent.click(within(table).getByRole('button', { name: 'Delete Seats' }));
@@ -298,7 +230,9 @@ describe('PersonPage', () => {
     expect(await screen.findByText('Name saved')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Undo' }));
     await waitFor(() => expect(requestUrls(fetchMock, `PATCH /api/people/${ADA_ID}`)).toHaveLength(2));
-    const bodies = fetchMock.mock.calls.filter(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH').map(([, init]) => JSON.parse(String((init as RequestInit).body)) as unknown);
+    const bodies = fetchMock.mock.calls
+      .filter(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH')
+      .map(([, init]) => JSON.parse(String((init as RequestInit).body)) as unknown);
     expect(bodies).toEqual([{ name: 'Ada King' }, { name: 'Ada Lovelace' }]);
   });
 
@@ -306,7 +240,8 @@ describe('PersonPage', () => {
     const fetchMock = mockFetch({
       [`GET /api/people/${ADA_ID}`]: adaProfile,
       'GET /api/conversations/search': conversationsPage,
-      [`PATCH /api/people/${ADA_ID}`]: (_url: URL, init: RequestInit) => jsonResponse({ ...adaProfile, notes: (JSON.parse(String(init.body)) as { notes: string }).notes }),
+      [`PATCH /api/people/${ADA_ID}`]: (_url: URL, init: RequestInit) =>
+        jsonResponse({ ...adaProfile, notes: (JSON.parse(String(init.body)) as { notes: string }).notes }),
     });
     renderWithProviders(<PersonPage />, { route: `/contacts/${ADA_ID}`, path: '/contacts/:personId' });
 
@@ -317,7 +252,9 @@ describe('PersonPage', () => {
     await userEvent.tab();
     await waitFor(() => expect(requestUrls(fetchMock, `PATCH /api/people/${ADA_ID}`)).toHaveLength(1));
     expect(await screen.findByText('Saved')).toBeInTheDocument();
-    const body = JSON.parse(String(fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH')![1]!.body)) as Record<string, string>;
+    const body = JSON.parse(
+      String(fetchMock.mock.calls.find(([, init]) => (init as RequestInit | undefined)?.method === 'PATCH')![1]!.body),
+    ) as Record<string, string>;
     expect(body).toEqual({ notes: 'VIP customer' });
 
     await userEvent.type(notes, '!');
@@ -383,7 +320,10 @@ describe('PersonPage', () => {
   });
 
   it('says when the person does not exist', async () => {
-    mockFetch({ [`GET /api/people/${ADA_ID}`]: () => problemResponse({ title: 'Not found' }, 404), 'GET /api/conversations/search': conversationsPage });
+    mockFetch({
+      [`GET /api/people/${ADA_ID}`]: () => problemResponse({ title: 'Not found' }, 404),
+      'GET /api/conversations/search': conversationsPage,
+    });
     renderWithProviders(<PersonPage />, { route: `/contacts/${ADA_ID}`, path: '/contacts/:personId' });
 
     expect(await screen.findByText('This person does not exist')).toBeInTheDocument();

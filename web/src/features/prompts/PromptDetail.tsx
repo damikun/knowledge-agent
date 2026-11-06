@@ -20,11 +20,15 @@ import { RenderedOutput, roleLabel } from './RenderedOutput';
 import { sampleVariables } from './samples';
 import { TemplateView } from './TemplateView';
 import type { PromptDetailDto, RenderedPromptDto } from './types';
+import { ScrollBox } from '../../components/ui/ScrollBox';
 
 function OriginBadge({ origin }: { origin: string }) {
   const langfuse = origin?.toLowerCase() === 'langfuse';
   return (
-    <Badge tone={langfuse ? 'accent' : 'neutral'} title={langfuse ? 'Stored in Langfuse' : 'Built-in default (Langfuse unavailable or not configured)'}>
+    <Badge
+      tone={langfuse ? 'accent' : 'neutral'}
+      title={langfuse ? 'Stored in Langfuse' : 'Built-in default (Langfuse unavailable or not configured)'}
+    >
       {langfuse ? 'Langfuse' : 'Built-in'}
     </Badge>
   );
@@ -83,14 +87,23 @@ function PromptPreview({ detail }: { detail: PromptDetailDto }) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
-        <p className="min-w-0 flex-1 basis-64 text-small text-fg-secondary">What the model receives, rendered on the API with sample variables. Change them to see the result follow.</p>
+        <p className="min-w-0 flex-1 basis-64 text-small text-fg-secondary">
+          What the model receives, rendered on the API with sample variables. Change them to see the result follow.
+        </p>
         <Button variant="ghost" size="sm" icon={RotateCcw} onClick={() => setText(sample)} disabled={text === sample}>
           Reset sample
         </Button>
       </div>
       <div className="@container">
         <div className="grid gap-5 @xl:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-          <JsonEditor id="prompt-variables" label="Sample variables" value={text} onChange={setText} error={parsed.ok ? null : parsed.error} rows={16} />
+          <JsonEditor
+            id="prompt-variables"
+            label="Sample variables"
+            value={text}
+            onChange={setText}
+            error={parsed.ok ? null : parsed.error}
+            rows={16}
+          />
           <div className="min-w-0 space-y-1.5">
             <div className="flex h-5 items-center justify-between gap-2">
               <span className="text-small font-medium text-fg">Result</span>
@@ -119,7 +132,9 @@ function PromptTemplate({ detail }: { detail: PromptDetailDto }) {
   return (
     <div className="flex h-full min-h-0 flex-col gap-2">
       <p className="shrink-0 text-xs text-fg-muted">
-        {chat ? 'A chat prompt: one template for each message. Values in {{ }} are filled in when it is used.' : 'Values in {{ }} are filled in when the prompt is used.'}
+        {chat
+          ? 'A chat prompt: one template for each message. Values in {{ }} are filled in when it is used.'
+          : 'Values in {{ }} are filled in when the prompt is used.'}
       </p>
       {chat ? (
         <ol className="min-h-0 flex-1 space-y-3 overflow-y-auto">
@@ -158,7 +173,12 @@ function PromptVariables({ detail }: { detail: PromptDetailDto }) {
       <div className="min-w-0 space-y-1.5">
         <h3 className="text-small font-medium text-fg">Config</h3>
         {configText ? (
-          <pre className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-subtle px-3 py-2 font-mono text-xs leading-relaxed text-fg-secondary">{configText}</pre>
+          <ScrollBox
+            as="pre"
+            className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-subtle px-3 py-2 font-mono text-xs leading-relaxed text-fg-secondary"
+          >
+            {configText}
+          </ScrollBox>
         ) : (
           <p className="text-small text-fg-muted">No config. Model settings come from the profile.</p>
         )}
@@ -169,7 +189,12 @@ function PromptVariables({ detail }: { detail: PromptDetailDto }) {
 
 function BackLink({ to }: { to: string }) {
   return (
-    <Link to={to} aria-label="All prompts" title="All prompts" className={clsx(buttonClass({ variant: 'ghost', size: 'icon-sm' }), '-ml-1.5 shrink-0')}>
+    <Link
+      to={to}
+      aria-label="All prompts"
+      title="All prompts"
+      className={clsx(buttonClass({ variant: 'ghost', size: 'icon-sm' }), '-ml-1.5 shrink-0')}
+    >
       <ArrowLeft className="size-4" aria-hidden />
     </Link>
   );
@@ -224,7 +249,7 @@ export function PromptDetail({ name, tab: requestedTab, onTabChange, backTo }: P
       <div className="p-4 lg:p-5">
         {backTo ? <BackLink to={backTo} /> : null}
         {prompt.error instanceof ApiError && prompt.error.status === 404 ? (
-          <EmptyState title="Prompt not found" description={`There is no prompt named “${name}”.`} />
+          <EmptyState title="Prompt not found" headingLevel={2} description={`There is no prompt named “${name}”.`} />
         ) : (
           <ErrorMessage error={prompt.error} title="Could not load the prompt" />
         )}
@@ -328,7 +353,12 @@ export function PromptDetail({ name, tab: requestedTab, onTabChange, backTo }: P
                   <PromptVersions
                     name={name}
                     onEdit={(version, liveVersion, label) =>
-                      setEditState({ name, source: { version: version.version, type: version.type, text: version.text, messages: version.messages }, liveVersion, label })
+                      setEditState({
+                        name,
+                        source: { version: version.version, type: version.type, text: version.text, messages: version.messages },
+                        liveVersion,
+                        label,
+                      })
                     }
                   />,
                 )

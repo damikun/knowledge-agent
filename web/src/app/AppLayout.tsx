@@ -43,7 +43,7 @@ export function AppLayout() {
             Skip to content
           </a>
 
-          <aside id={sidebarId} className={clsx('hidden shrink-0 flex-col py-2 md:flex', sidebar.collapsed ? 'w-14' : 'w-60')}>
+          <aside id={sidebarId} aria-label="Sidebar" className={clsx('hidden shrink-0 flex-col py-2 md:flex', sidebar.collapsed ? 'w-14' : 'w-60')}>
             <Brand compact={sidebar.collapsed} />
             <Navigation admin={admin} waiting={waiting} compact={sidebar.collapsed} />
             <MenuToggle admin={admin} collapsed={sidebar.collapsed} onToggle={sidebar.toggle} controls={sidebarId} />

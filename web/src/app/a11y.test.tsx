@@ -1,6 +1,6 @@
-import { screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Route, Routes } from 'react-router';
+import { createMemoryRouter, Route, RouterProvider, Routes } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AgentPage } from '../features/agents/AgentPage';
 import { AgentsPage } from '../features/agents/AgentsPage';
@@ -26,16 +26,33 @@ import { WidgetsPage } from '../features/widgets/WidgetsPage';
 import { axeViolations } from '../test/a11y';
 import { agentDto, agentGuid, agentsRoutes, builtInAgent } from '../test/agentsApi';
 import { embeddingProfile, orchestratorProfile, providersFixture, supportUser, systemInfoFixture } from '../test/apiFixtures';
-import { evalDatasetList, evalRunDto, evalRunsRoutes, evalRunSummary, runGuid } from '../test/evalsApi';
+import { evalDataset, evalDatasetList, evalRunDto, evalRunsRoutes, evalRunSummary, runGuid } from '../test/evalsApi';
 import { feedbackDto, feedbackSummary, portalRating } from '../test/feedbackApi';
 import { sourceDto } from '../test/fixtures';
 import { countsDto, handoverDto, inboxConversation, searchItem, WIDGET_CONVERSATION_ID, widgetConversation } from '../test/inboxApi';
 import { emailSettings, integrationsRoutes, slackSettings, workingEmail } from '../test/integrationsApi';
 import { sourceFolder, sourcesRoutes } from '../test/sourcesApi';
-import { controlledEventStream, mockFetch, problemResponse, renderWithProviders, signedOutResponse } from '../test/utils';
+import {
+  controlledEventStream,
+  createTestQueryClient,
+  mockFetch,
+  problemResponse,
+  renderWithProviders,
+  signedOutResponse,
+  sseResponse,
+} from '../test/utils';
 import { cancelTool, mcpServer } from '../test/mcpApi';
 import { fakePreview } from '../test/widgetPreview';
 import { widgetDto, widgetSettings, widgetsRoutes } from '../test/widgetsApi';
+import { DatasetPage } from '../features/evals/DatasetPage';
+import { HelpLauncher } from '../features/help/HelpLauncher';
+import { PeoplePage } from '../features/people/PeoplePage';
+import { PersonPage } from '../features/people/PersonPage';
+import { NotFoundPage, RouteErrorPage } from './RouteErrorPage';
+import { ADA_ID, ada, adaProfile, conversationsPage, proSegment, registry, visitor } from '../test/peopleApi';
+import { alertDto, alertsRoutes, waitingAlert } from '../test/alertsApi';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { AlertsBell } from '../features/alerts';
 import { AppLayout } from './AppLayout';
 import { AuthGate } from './AuthGate';
 
@@ -83,7 +100,10 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Playground' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main');
     expect(screen.getByRole('main')).toBeInTheDocument();
-    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Playground' })).toHaveAttribute('aria-current', 'page');
+    expect(within(screen.getByRole('navigation', { name: 'Main' })).getByRole('link', { name: 'Playground' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     await screen.findByRole('button', { name: 'Account: Ada Lovelace' });
     expect(await axeViolations()).toEqual([]);
   });
@@ -131,8 +151,23 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
       ...sourcesRoutes(() => [
         sourceDto(),
         sourceDto({ id: 'failed', title: 'Broken', status: 'failed', error: 'Timeout', jobRunUrl: runUrl }),
-        sourceDto({ id: 'embedding', title: 'Leave policy', status: 'processing', stage: 'embedding', chunkCount: 400, embeddedChunks: 120, jobRunUrl: runUrl }),
-        sourceDto({ id: 'waiting', title: 'Travel guide', status: 'waiting', chunkCount: 0, embeddingModel: null, error: 'No embedding model is configured.' }),
+        sourceDto({
+          id: 'embedding',
+          title: 'Leave policy',
+          status: 'processing',
+          stage: 'embedding',
+          chunkCount: 400,
+          embeddedChunks: 120,
+          jobRunUrl: runUrl,
+        }),
+        sourceDto({
+          id: 'waiting',
+          title: 'Travel guide',
+          status: 'waiting',
+          chunkCount: 0,
+          embeddingModel: null,
+          error: 'No embedding model is configured.',
+        }),
       ]),
       'GET /api/models/profiles': profiles,
     });
@@ -149,7 +184,14 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
     const sources = [
       sourceDto({ folderId: 'contracts' }),
       sourceDto({ id: 'loose', title: 'Loose notes' }),
-      sourceDto({ id: 'page', type: 'url', title: 'Python tutorial', url: 'https://docs.python.org/3/tutorial/', site: 'docs.python.org', fileName: null }),
+      sourceDto({
+        id: 'page',
+        type: 'url',
+        title: 'Python tutorial',
+        url: 'https://docs.python.org/3/tutorial/',
+        site: 'docs.python.org',
+        fileName: null,
+      }),
     ];
     mockFetch({
       ...sourcesRoutes(
@@ -217,11 +259,33 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
         () => folders,
       ),
       ...widgetsRoutes(() => [widgetDto()]),
-      'GET /api/analytics': { days: 7, totals: {}, daily: [], widgets: [{ widgetId: widgetDto().id, conversations: 4, handedToPerson: 1, ratings: 0 }], unanswered: [], labels: [] },
+      'GET /api/analytics': {
+        days: 7,
+        totals: {},
+        daily: [],
+        widgets: [{ widgetId: widgetDto().id, conversations: 4, handedToPerson: 1, ratings: 0 }],
+        unanswered: [],
+        labels: [],
+      },
       'GET /api/connections/mcp': [mcpServer()],
-      [`GET /api/agents/${agent.id}/access`]: { mcpServerEnabled: true, httpApiEnabled: false, mcpPath: '/mcp/agents/website-helper', apiPath: '/api/public/agents/website-helper', activeKeys: 1 },
+      [`GET /api/agents/${agent.id}/access`]: {
+        mcpServerEnabled: true,
+        httpApiEnabled: false,
+        mcpPath: '/mcp/agents/website-helper',
+        apiPath: '/api/public/agents/website-helper',
+        activeKeys: 1,
+      },
       [`GET /api/agents/${agent.id}/api-keys`]: [
-        { id: 'k1', name: 'Cursor', prefix: 'ka_abc123', requestsPerMinute: 30, createdBy: null, createdAt: '2026-11-01T08:00:00Z', lastUsedAt: null, revokedAt: null },
+        {
+          id: 'k1',
+          name: 'Cursor',
+          prefix: 'ka_abc123',
+          requestsPerMinute: 30,
+          createdBy: null,
+          createdAt: '2026-11-01T08:00:00Z',
+          lastUsedAt: null,
+          revokedAt: null,
+        },
       ],
     });
     const list = renderWithProviders(<AgentsPage />);
@@ -310,11 +374,31 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
   it('prompts page', async () => {
     mockFetch({
       'GET /api/prompts': [
-        { name: 'orchestrator-system', type: 'text', version: 3, labels: ['production'], tags: ['knowledge-agent'], origin: 'langfuse', langfuseUrl: null, variables: ['appName'], lastUpdatedAt: null, error: null },
+        {
+          name: 'orchestrator-system',
+          type: 'text',
+          version: 3,
+          labels: ['production'],
+          tags: ['knowledge-agent'],
+          origin: 'langfuse',
+          langfuseUrl: null,
+          variables: ['appName'],
+          lastUpdatedAt: null,
+          error: null,
+        },
       ],
       'GET /api/prompts/orchestrator-system': {
-        name: 'orchestrator-system', type: 'text', version: 3, labels: ['production'], tags: ['knowledge-agent'], origin: 'langfuse', langfuseUrl: null,
-        text: 'You are {{appName}}.', messages: [], config: {}, variables: ['appName'],
+        name: 'orchestrator-system',
+        type: 'text',
+        version: 3,
+        labels: ['production'],
+        tags: ['knowledge-agent'],
+        origin: 'langfuse',
+        langfuseUrl: null,
+        text: 'You are {{appName}}.',
+        messages: [],
+        config: {},
+        variables: ['appName'],
       },
     });
     renderWithProviders(<PromptsPage />);
@@ -325,15 +409,51 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
 
   it('prompt edit mode, the versions with a diff and the publish confirmation', async () => {
     const user = userEvent.setup();
-    const version = (number: number, text: string, live: boolean) => ({ version: number, type: 'text', text, messages: [], config: null, labels: live ? ['production'] : [], commitMessage: null, live });
+    const version = (number: number, text: string, live: boolean) => ({
+      version: number,
+      type: 'text',
+      text,
+      messages: [],
+      config: null,
+      labels: live ? ['production'] : [],
+      commitMessage: null,
+      live,
+    });
     mockFetch({
-      'GET /api/prompts': [{ name: 'conversation-title', origin: 'langfuse', version: 2, type: 'text', labels: ['production'], variables: ['message'], externalUrl: null }],
+      'GET /api/prompts': [
+        {
+          name: 'conversation-title',
+          origin: 'langfuse',
+          version: 2,
+          type: 'text',
+          labels: ['production'],
+          variables: ['message'],
+          externalUrl: null,
+        },
+      ],
       'GET /api/prompts/conversation-title': {
-        name: 'conversation-title', origin: 'langfuse', version: 2, type: 'text', text: 'Title for {{message}}', messages: [], config: null, labels: ['production'], variables: ['message'], externalUrl: null,
+        name: 'conversation-title',
+        origin: 'langfuse',
+        version: 2,
+        type: 'text',
+        text: 'Title for {{message}}',
+        messages: [],
+        config: null,
+        labels: ['production'],
+        variables: ['message'],
+        externalUrl: null,
       },
       'GET /api/prompts/conversation-title/versions': {
-        name: 'conversation-title', editable: true, label: 'production', liveVersion: 2, totalVersions: 3,
-        versions: [version(3, 'Short title for {{message}}', false), version(2, 'Title for {{message}}', true), version(1, 'Title: {{message}}', false)],
+        name: 'conversation-title',
+        editable: true,
+        label: 'production',
+        liveVersion: 2,
+        totalVersions: 3,
+        versions: [
+          version(3, 'Short title for {{message}}', false),
+          version(2, 'Title for {{message}}', true),
+          version(1, 'Title: {{message}}', false),
+        ],
       },
       'POST /api/prompts/render': { output: 'Title for Hello', variables: ['message'] },
     });
@@ -415,7 +535,10 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
       ...agentsRoutes(() => [builtInAgent, agentDto()]),
       ...integrationsRoutes(() => ({ email: emailSettings(), slack: slackSettings() })),
       'POST /api/widgets': () =>
-        problemResponse({ title: 'One or more validation errors occurred.', errors: { 'settings.appearance.brandColor': ['Enter a color such as #0f766e.'] } }, 400),
+        problemResponse(
+          { title: 'One or more validation errors occurred.', errors: { 'settings.appearance.brandColor': ['Enter a color such as #0f766e.'] } },
+          400,
+        ),
     });
     const { unmount } = renderWithProviders(<WidgetsPage />, { route: '/widgets', path: '/widgets/:widgetId?' });
 
@@ -482,7 +605,10 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
   it('inbox with a conversation waiting for a person', async () => {
     const events = controlledEventStream();
     mockFetch({
-      'GET /api/conversations/search': { items: [searchItem(), searchItem({ id: 'c2', title: 'Opening hours', status: 'ai', preview: 'We open at nine.', rating: 2, thumbsDown: 1 })], nextCursor: 'next' },
+      'GET /api/conversations/search': {
+        items: [searchItem(), searchItem({ id: 'c2', title: 'Opening hours', status: 'ai', preview: 'We open at nine.', rating: 2, thumbsDown: 1 })],
+        nextCursor: 'next',
+      },
       'GET /api/conversations/counts': countsDto(),
       [`GET /api/conversations/${WIDGET_CONVERSATION_ID}`]: widgetConversation(),
       [`GET /api/conversations/${WIDGET_CONVERSATION_ID}/events`]: (_url: URL, init: RequestInit) => events.respond(init),
@@ -523,7 +649,16 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
         days: 30,
         from: '2026-10-07T00:00:00Z',
         to: '2026-11-05T12:00:00Z',
-        totals: { conversations: 4, answeredWithoutPerson: 3, handedToPerson: 1, ratings: 1, averageRating: 4, thumbsUp: 2, thumbsDown: 1, noSourceAnswers: 1 },
+        totals: {
+          conversations: 4,
+          answeredWithoutPerson: 3,
+          handedToPerson: 1,
+          ratings: 1,
+          averageRating: 4,
+          thumbsUp: 2,
+          thumbsDown: 1,
+          noSourceAnswers: 1,
+        },
         daily: Array.from({ length: 30 }, (_, index) => ({
           date: new Date(Date.UTC(2026, 9, 7 + index)).toISOString().slice(0, 10),
           conversations: index % 3,
@@ -560,7 +695,11 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
   it('feedback page', async () => {
     mockFetch({
       'GET /api/feedback/summary': [feedbackSummary(), feedbackSummary({ widgetId: null, agentId: null })],
-      'GET /api/feedback': [feedbackDto(), portalRating, feedbackDto({ id: 'f3', kind: 'agent', rating: 0, reasons: [], comment: 'Asked for phone support.' })],
+      'GET /api/feedback': [
+        feedbackDto(),
+        portalRating,
+        feedbackDto({ id: 'f3', kind: 'agent', rating: 0, reasons: [], comment: 'Asked for phone support.' }),
+      ],
       ...widgetsRoutes(() => [widgetDto()]),
       ...agentsRoutes(() => [builtInAgent, agentDto()]),
     });
@@ -593,7 +732,13 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
     mockFetch({
       'GET /api/connections/mcp': [
         mcpServer({ usedBy: [{ agentId: 'a1', agentName: 'Shop helper', toolCount: 2, mode: 'all' }] }),
-        mcpServer({ id: 's2', key: 'crm', name: 'CRM', lastCheck: { checkedAt: '2026-11-05T08:00:00Z', ok: false, error: 'The server could not be reached.' }, tools: [cancelTool] }),
+        mcpServer({
+          id: 's2',
+          key: 'crm',
+          name: 'CRM',
+          lastCheck: { checkedAt: '2026-11-05T08:00:00Z', ok: false, error: 'The server could not be reached.' },
+          tools: [cancelTool],
+        }),
       ],
     });
     renderWithProviders(<ToolsPage />);
@@ -602,6 +747,171 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
     expect(await axeViolations()).toEqual([]);
     await user.click(screen.getByRole('button', { name: 'Add MCP server' }));
     await screen.findByRole('dialog');
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('contacts list and its empty state', async () => {
+    mockFetch({
+      'GET /api/people': { items: [ada, visitor], nextCursor: null },
+      'GET /api/people/count': { count: 2 },
+      'GET /api/people/attributes': registry,
+      'GET /api/segments': [proSegment],
+      ...widgetsRoutes(() => [widgetDto()]),
+    });
+    const { unmount } = renderWithProviders(<PeoplePage />, { route: '/contacts' });
+    await screen.findByRole('table', { name: 'Contacts' });
+    expect(await axeViolations()).toEqual([]);
+    unmount();
+
+    mockFetch({ 'GET /api/people': { items: [], nextCursor: null }, 'GET /api/auth/me': supportUser });
+    renderWithProviders(<PeoplePage />, { route: '/contacts' });
+    await screen.findByText('No people yet');
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('a contact, the erase dialog, and a contact that does not exist', async () => {
+    const user = userEvent.setup();
+    mockFetch({ [`GET /api/people/${ADA_ID}`]: adaProfile, 'GET /api/conversations/search': conversationsPage });
+    const { unmount } = renderWithProviders(<PersonPage />, { route: `/contacts/${ADA_ID}`, path: '/contacts/:personId' });
+    await screen.findByRole('heading', { level: 1, name: 'Ada Lovelace' });
+    await screen.findByRole('link', { name: /Return an order/ });
+    expect(await axeViolations()).toEqual([]);
+
+    await user.click(screen.getByRole('button', { name: 'Erase' }));
+    await screen.findByRole('dialog', { name: 'Erase Ada Lovelace?' });
+    expect(await axeViolations()).toEqual([]);
+    unmount();
+
+    mockFetch({ [`GET /api/people/${ADA_ID}`]: () => problemResponse({ title: 'Not found' }, 404) });
+    renderWithProviders(<PersonPage />, { route: `/contacts/${ADA_ID}`, path: '/contacts/:personId' });
+    expect(await screen.findByRole('heading', { level: 1, name: 'This person does not exist' })).toBeInTheDocument();
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('a dataset with its questions', async () => {
+    const id = '0199c1e2-0000-7000-8000-0000000b0001';
+    mockFetch({
+      'GET /api/evals/datasets': evalDatasetList({
+        datasets: [evalDataset({ id, name: 'Shipping questions', source: 'custom', itemCount: 1, corpusDocuments: 0 })],
+      }),
+      [`GET /api/evals/datasets/${id}/items`]: [
+        {
+          id: 'i1',
+          question: 'Do you ship to Norway?',
+          referenceAnswer: 'Yes, in 5 days.',
+          expectedFacts: ['5 days'],
+          expectedSources: [],
+          answerable: true,
+          tags: ['shipping'],
+          conversationId: null,
+          messageId: null,
+          createdAt: '2026-11-04T10:00:00Z',
+          updatedAt: '2026-11-04T10:00:00Z',
+          source: 'manual',
+          history: [],
+        },
+      ],
+      ...evalRunsRoutes(() => []),
+    });
+    renderWithProviders(<DatasetPage />, { route: `/evals/datasets/${id}`, path: '/evals/datasets/:id' });
+
+    await screen.findByRole('table', { name: 'Questions' });
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('an agents page that failed to load, and an agent that does not exist', async () => {
+    mockFetch({ 'GET /api/agents': () => problemResponse({ title: 'Server error', detail: 'The database is not reachable.' }, 500) });
+    const { unmount } = renderWithProviders(<AgentsPage />, { route: '/agents' });
+    await screen.findByText('The database is not reachable.');
+    expect(await axeViolations()).toEqual([]);
+    unmount();
+
+    mockFetch({ ...agentsRoutes(() => [builtInAgent]), 'GET /api/models/profiles': profiles });
+    renderWithProviders(<AgentPage />, { route: `/agents/${agentGuid(9)}`, path: '/agents/:agentId' });
+    expect(await screen.findByRole('heading', { level: 1, name: 'This agent does not exist' })).toBeInTheDocument();
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('an open actions menu and the delete confirmation it leads to', async () => {
+    const user = userEvent.setup();
+    mockFetch({ ...agentsRoutes(() => [builtInAgent, agentDto()]), ...widgetsRoutes(() => [widgetDto()]) });
+    renderWithProviders(<AgentsPage />, { route: '/agents' });
+
+    const trigger = await screen.findByRole('button', { name: /^Actions for / });
+    await user.click(trigger);
+    await screen.findByRole('menu');
+    expect(await axeViolations()).toEqual([]);
+
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    await screen.findByRole('dialog');
+    expect(await axeViolations()).toEqual([]);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('the alerts popover and the help panel with an answer', async () => {
+    const user = userEvent.setup();
+    mockFetch({
+      ...alertsRoutes(() => ({ alerts: [waitingAlert, alertDto()], snoozed: 0 })),
+      'GET /api/help': {
+        enabled: true,
+        canManage: true,
+        modelReady: true,
+        setup: { chatModel: true, embeddingModel: true, sources: true, agent: true, widget: true },
+      },
+      'POST /api/help/chat': () =>
+        sseResponse([
+          { event: 'conversation', data: { agent: 'help', parentCallId: null, conversationId: 's1', title: 'Help', isNew: true } },
+          { event: 'text-delta', data: { agent: 'help', parentCallId: null, text: 'Open [AI models](/models) and paste the key.' } },
+          { event: 'done', data: { agent: 'help', parentCallId: null, conversationId: 's1', turnId: 't1', finishReason: 'stop' } },
+        ]),
+    });
+    renderWithProviders(
+      <>
+        <AlertsBell />
+        <HelpLauncher />
+      </>,
+      { route: '/sources' },
+    );
+
+    await user.click(await screen.findByRole('button', { name: /^Alerts, 2 things need attention/ }));
+    await screen.findByRole('dialog', { name: 'Alerts' });
+    expect(await axeViolations()).toEqual([]);
+    await user.keyboard('{Escape}');
+
+    await user.click(await screen.findByRole('button', { name: 'Help' }));
+    const panel = await screen.findByRole('dialog', { name: 'Help' });
+    expect(await axeViolations()).toEqual([]);
+    await user.type(within(panel).getByRole('textbox', { name: 'Ask the help' }), 'How do I add an API key?{Enter}');
+    await within(panel).findByRole('link', { name: 'AI models' });
+    await waitFor(() =>
+      expect(
+        within(panel)
+          .getAllByRole('status')
+          .some((region) => region.textContent === 'The answer is ready.'),
+      ).toBe(true),
+    );
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('page not found and a page that failed', async () => {
+    const { unmount } = renderWithProviders(<NotFoundPage />);
+    expect(screen.getByRole('heading', { level: 1, name: 'Page not found' })).toBeInTheDocument();
+    expect(await axeViolations()).toEqual([]);
+    unmount();
+
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    const Broken = () => {
+      throw new Error('The page broke.');
+    };
+    const router = createMemoryRouter([{ path: '/', element: <Broken />, errorElement: <RouteErrorPage /> }]);
+    render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByRole('heading', { level: 1, name: 'Something went wrong' })).toBeInTheDocument();
     expect(await axeViolations()).toEqual([]);
   });
 

@@ -1,5 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { axeViolations } from '../../test/a11y';
 import { Table, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from './Table';
 
@@ -32,8 +32,16 @@ describe('Table', () => {
     render(<Widgets />);
 
     const table = screen.getByRole('table', { name: 'Widgets' });
-    expect(within(table).getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual(['Name', 'Public key', 'Chats']);
-    expect(within(table).getAllByRole('rowheader').map((cell) => cell.textContent)).toEqual(['Demo shop', 'Help center']);
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Name', 'Public key', 'Chats']);
+    expect(
+      within(table)
+        .getAllByRole('rowheader')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Demo shop', 'Help center']);
     expect(await axeViolations()).toEqual([]);
   });
 
@@ -51,5 +59,43 @@ describe('Table', () => {
     const [, demo, help] = screen.getAllByRole('row');
     expect(help).toHaveAttribute('data-selected', 'true');
     expect(demo).not.toHaveAttribute('data-selected');
+  });
+
+  it('lets the keyboard reach a table wider than its box, and names that box like the table', () => {
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+    // jsdom loads no CSS, so the box gets the overflow-x of its class here.
+    const computed = window.getComputedStyle.bind(window);
+    vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => {
+      const style = computed(element);
+      return new Proxy(style, {
+        get: (target, property) => {
+          if (property === 'overflowX' && element instanceof HTMLElement && element.classList.contains('overflow-x-auto')) {
+            return 'auto';
+          }
+          const value: unknown = Reflect.get(target, property);
+          return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+        },
+      });
+    });
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(900);
+    vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(320);
+    render(<Widgets />);
+
+    const box = screen.getByRole('region', { name: 'Widgets' });
+    expect(box).toHaveAttribute('tabindex', '0');
+    expect(box).toContainElement(screen.getByRole('table', { name: 'Widgets' }));
+  });
+
+  it('leaves a table that fits out of the tab order', () => {
+    render(<Widgets />);
+
+    expect(screen.queryByRole('region')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Widgets' }).parentElement).not.toHaveAttribute('tabindex');
   });
 });

@@ -19,6 +19,7 @@ import { ItemsTable } from './RunItems';
 import { GateChecks, QualityCards, TagTable, TechnicalDetails } from './RunMetrics';
 import { previousCompletedRun, runDurationMs, runPath, RUNS_LIMIT } from './runs';
 import type { EvalRunDto } from './types';
+import { scrollBehavior } from '../../lib/motion';
 
 function RunDetails({ run, now }: { run: EvalRunDto; now: number }) {
   const queryClient = useQueryClient();
@@ -40,7 +41,7 @@ function RunDetails({ run, now }: { run: EvalRunDto; now: number }) {
   }, [run.items]);
   const showMissed = (area: QualityAreaId) => {
     setItemFilter(area);
-    itemsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    itemsRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
   };
 
   // The run lists may still show it as running.
@@ -149,7 +150,6 @@ function RunDetails({ run, now }: { run: EvalRunDto; now: number }) {
           <ItemsTable items={run.items} active={active} filter={itemFilter} onFilterChange={setItemFilter} />
         </Card>
       </section>
-
     </>
   );
 }
@@ -174,6 +174,7 @@ export function EvalRunPage() {
           <EmptyState
             icon={SearchX}
             title="Run not found"
+            headingLevel={1}
             description="It may have been deleted."
             action={
               <Link to="/evals" className={buttonClass()}>

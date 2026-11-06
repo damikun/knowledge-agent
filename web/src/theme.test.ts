@@ -110,7 +110,9 @@ const SURFACES = ['canvas', 'sidebar', 'surface', 'surface-subtle', 'raised', 'f
 const FILLS = ['fill-hover/canvas', 'fill-hover/sidebar', 'fill-hover/raised', 'fill-active/canvas', 'fill-active/sidebar', 'fill-active/raised'];
 
 const tokenPairs: Pair[] = [
-  ...['fg', 'fg-secondary', 'fg-muted', 'accent-text'].flatMap((text) => [...SURFACES, ...FILLS].map((surface): Pair => [text, surface, 4.5])),
+  ...['fg', 'fg-secondary', 'fg-muted', 'accent-text', 'success-text', 'warning-text', 'danger-text'].flatMap((text) =>
+    [...SURFACES, ...FILLS].map((surface): Pair => [text, surface, 4.5]),
+  ),
   ['fg', 'segment-active', 4.5],
   ...['accent', 'accent-hover', 'accent-active'].map((fill): Pair => ['fg-on-accent', fill, 4.5]),
   ...['danger', 'danger-hover'].map((fill): Pair => ['fg-on-solid', fill, 4.5]),
@@ -134,7 +136,8 @@ const tokenPairs: Pair[] = [
     ...['canvas', 'surface', 'sidebar'].map((surface): Pair => [tone, surface, 3]),
   ]),
   ['accent', 'accent-subtle', 3],
-  ...['canvas', 'surface', 'raised'].flatMap((surface): Pair[] => [
+  // Fields also sit on muted fills, such as a toolbar or a disabled row.
+  ...['canvas', 'surface', 'raised', 'surface-subtle', 'fill-muted'].flatMap((surface): Pair[] => [
     ['border-strong', surface, 3],
     ['accent', surface, 3],
   ]),
@@ -147,7 +150,10 @@ const proseText = ['body', 'headings', 'lead', 'links', 'bold', 'counters', 'cap
 /** The tokens the Markdown answers use, from `.prose-zinc` in index.css. */
 function proseTokens(): Record<string, string> {
   return Object.fromEntries(
-    Object.entries(declarations(indexCss).get('.prose-zinc') ?? {}).map(([name, value]) => [name.replace('--tw-prose-', ''), /^var\(--ka-([\w-]+)\)$/.exec(value)?.[1] ?? value]),
+    Object.entries(declarations(indexCss).get('.prose-zinc') ?? {}).map(([name, value]) => [
+      name.replace('--tw-prose-', ''),
+      /^var\(--ka-([\w-]+)\)$/.exec(value)?.[1] ?? value,
+    ]),
   );
 }
 
@@ -157,7 +163,10 @@ function ratioOf([foreground, back, minimum]: Pair, theme: Theme) {
 
 describe('design tokens', () => {
   it('defines the same tokens in light and dark', () => {
-    const tokens = (block: Record<string, string>) => Object.keys(block).filter((name) => name.startsWith('--ka-')).sort();
+    const tokens = (block: Record<string, string>) =>
+      Object.keys(block)
+        .filter((name) => name.startsWith('--ka-'))
+        .sort();
     expect(tokens(lightBlock)).toEqual(expect.arrayContaining(SPEC_TOKENS.map((name) => `--ka-${name}`)));
     expect(tokens(darkBlock)).toEqual(tokens(lightBlock));
   });
@@ -207,7 +216,9 @@ describe('copies of the colors outside the tokens', () => {
   it('index.html paints the browser chrome in the canvas color of each scheme', () => {
     const html = read('index.html');
     const meta = (scheme: string) =>
-      new RegExp(`<meta name="theme-color" content="(#[0-9a-f]{6})" media="\\(prefers-color-scheme: ${scheme}\\)"`, 'i').exec(html)?.[1]?.toLowerCase();
+      new RegExp(`<meta name="theme-color" content="(#[0-9a-f]{6})" media="\\(prefers-color-scheme: ${scheme}\\)"`, 'i')
+        .exec(html)?.[1]
+        ?.toLowerCase();
     expect(meta('light')).toBe(color('light', 'canvas'));
     expect(meta('dark')).toBe(color('dark', 'canvas'));
   });

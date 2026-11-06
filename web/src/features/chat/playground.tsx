@@ -33,7 +33,14 @@ function widgetRulesLabel(widget: Pick<WidgetDto, 'name'>): string {
 const CHANNEL_NAMES: Record<string, string> = { portal: 'Inbox', inbox: 'Inbox', email: 'Email', slack: 'Slack' };
 
 function channelNames(channel: string): string[] {
-  return [...new Set(channel.split(/[,\s]+/).filter(Boolean).map((name) => CHANNEL_NAMES[name.toLowerCase()] ?? name))];
+  return [
+    ...new Set(
+      channel
+        .split(/[,\s]+/)
+        .filter(Boolean)
+        .map((name) => CHANNEL_NAMES[name.toLowerCase()] ?? name),
+    ),
+  ];
 }
 
 /** ?widgetId= or ?agentId= picks the target; otherwise the first enabled widget, then the first own agent. */
@@ -157,24 +164,30 @@ export function TargetSummary({ target, folderCount }: { target: TestTarget; fol
     { icon: UserRound, label: 'Person', value: handover },
   ];
   return (
-    <dl className="grid gap-x-4 gap-y-1.5 rounded-xl border border-border bg-surface-subtle px-4 py-3 text-left text-small sm:grid-cols-[auto_1fr]" data-testid="test-target">
-      {rows.map((row) => (
-        <div key={row.label} className="contents">
-          <dt className="flex items-center gap-1.5 text-fg-muted">
-            <row.icon className="size-3.5" aria-hidden />
-            {row.label}
-          </dt>
-          <dd className="min-w-0 break-words text-fg max-sm:mb-1 max-sm:pl-5">{row.value}</dd>
-        </div>
-      ))}
+    <div className="space-y-2 rounded-xl border border-border bg-surface-subtle px-4 py-3 text-left text-small" data-testid="test-target">
+      <dl className="grid gap-x-4 gap-y-1.5 sm:grid-cols-[auto_1fr]">
+        {rows.map((row) => (
+          <div key={row.label} className="contents">
+            <dt className="flex items-center gap-1.5 text-fg-muted">
+              <row.icon className="size-3.5" aria-hidden />
+              {row.label}
+            </dt>
+            <dd className="min-w-0 break-words text-fg max-sm:mb-1 max-sm:pl-5">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
       {target.kind === 'widget' ? (
-        <p className="border-t border-border-subtle pt-2 text-xs text-fg-muted sm:col-span-2">
-          <Link to={`/widgets/${target.widget.id}?preview`} state={returnState} className="inline-flex items-center gap-1 font-medium text-accent-text hover:underline">
+        <p className="border-t border-border-subtle pt-2 text-xs text-fg-muted">
+          <Link
+            to={`/widgets/${target.widget.id}?preview`}
+            state={returnState}
+            className="inline-flex min-h-6 items-center gap-1 font-medium text-accent-text hover:underline"
+          >
             <AppWindow className="size-3.5" aria-hidden />
             Open the real widget preview
           </Link>
         </p>
       ) : null}
-    </dl>
+    </div>
   );
 }

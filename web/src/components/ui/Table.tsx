@@ -1,17 +1,27 @@
 import { clsx } from 'clsx';
 import type { ComponentProps } from 'react';
+import { useScrollFocus } from '../../lib/hooks/useScrollFocus';
 
 /* Name each table with aria-label or a caption. */
 
 export interface TableProps extends ComponentProps<'table'> {
   /** Give it a height to keep the header row in view. */
   containerClassName?: string;
+  /** False for a table only screen readers get, which must not become an invisible scroll box. */
+  scroll?: boolean;
 }
 
 // Separate borders, because collapsed ones scroll away from a sticky header row.
-export function Table({ containerClassName, className, ...props }: TableProps) {
+export function Table({ containerClassName, scroll: scrolls = true, className, ...props }: TableProps) {
+  const scroll = useScrollFocus<HTMLDivElement>();
   return (
-    <div className={clsx('relative w-full overflow-x-auto', containerClassName)}>
+    <div
+      {...scroll}
+      // A table wider than its box scrolls; named like the table, so the focused box says what it holds.
+      role={scroll.tabIndex === 0 ? 'region' : undefined}
+      aria-label={scroll.tabIndex === 0 ? props['aria-label'] : undefined}
+      className={clsx('relative w-full', scrolls && 'overflow-x-auto', containerClassName)}
+    >
       <table className={clsx('w-full border-separate border-spacing-0 text-small', className)} {...props} />
     </div>
   );
@@ -64,12 +74,21 @@ export interface TableCellProps extends ComponentProps<'td'> {
 
 function BodyCell({ as: Cell, className, ...props }: ComponentProps<'td'> & { as: 'td' | 'th' }) {
   return (
-    <Cell className={clsx('border-b border-border-subtle px-3 py-2 align-middle group-last/row:border-b-0 first:pl-6 last:pr-6', className)} {...props} />
+    <Cell
+      className={clsx('border-b border-border-subtle px-3 py-2 align-middle group-last/row:border-b-0 first:pl-6 last:pr-6', className)}
+      {...props}
+    />
   );
 }
 
 export function TableCell({ numeric = false, mono = false, className, ...props }: TableCellProps) {
-  return <BodyCell as="td" className={clsx('text-fg-secondary', numeric && 'text-right tabular-nums', mono && 'font-mono text-xs', className)} {...props} />;
+  return (
+    <BodyCell
+      as="td"
+      className={clsx('text-fg-secondary', numeric && 'text-right tabular-nums', mono && 'font-mono text-xs', className)}
+      {...props}
+    />
+  );
 }
 
 /** Screen readers announce this cell with each cell of the row. */

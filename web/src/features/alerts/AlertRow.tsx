@@ -91,7 +91,7 @@ export function AlertRow({ alert, canSnooze, snoozeStyle, onNavigate }: AlertRow
             to={alert.link}
             state={returnState}
             onClick={onNavigate}
-            className="inline-flex items-center gap-1 rounded-sm text-small font-medium text-accent-text hover:underline"
+            className="inline-flex min-h-6 items-center gap-1 rounded-sm text-small font-medium text-accent-text hover:underline"
             aria-label={`Fix “${alert.title}”`}
           >
             Fix
@@ -102,7 +102,9 @@ export function AlertRow({ alert, canSnooze, snoozeStyle, onNavigate }: AlertRow
               {formatRelativeTime(alert.since)}
             </time>
           ) : null}
-          {canSnooze ? <span className="ml-auto">{snoozeStyle === 'inline' ? <InlineSnooze alert={alert} /> : <MenuSnooze alert={alert} />}</span> : null}
+          {canSnooze ? (
+            <span className="ml-auto">{snoozeStyle === 'inline' ? <InlineSnooze alert={alert} /> : <MenuSnooze alert={alert} />}</span>
+          ) : null}
         </div>
       </div>
     </div>

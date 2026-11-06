@@ -13,6 +13,7 @@ import type { DatasetQuestionSource } from '../evals/AddToDatasetDialog';
 import { FEEDBACK_ICON_TONES, FeedbackNote, feedbackLabel } from './ConversationDetails';
 import { MISSED_REQUEST, type InboxItem } from './inboxTimeline';
 import type { ConversationFeedbackItem, ConversationHistory } from './types';
+import { Announcer } from '../../components/ui/Announcer';
 
 function Time({ value }: { value: string }) {
   return (
@@ -143,7 +144,9 @@ function MessageItem({ item, citations, assistantName, rating, onAddToDataset }:
         <div className="space-y-1.5">
           {/* Staff see which specialist answered, whatever name the visitor saw. */}
           <Author name={message.authorName ?? assistantName} time={message.createdAt} ai>
-            {rating ? <Badge tone={rating.rating > 0 ? 'success' : 'danger'}>{rating.rating > 0 ? 'Rated helpful' : 'Rated not helpful'}</Badge> : null}
+            {rating ? (
+              <Badge tone={rating.rating > 0 ? 'success' : 'danger'}>{rating.rating > 0 ? 'Rated helpful' : 'Rated not helpful'}</Badge>
+            ) : null}
           </Author>
           <AssistantMessage turn={item.turn!} conversationCitations={citations} />
           {rating ? <FeedbackNote item={rating} /> : null}
@@ -187,16 +190,24 @@ export function ConversationThread({ items, messages, history, assistantName, co
   // Keyed on finished answers, so earlier answers don't re-render on every streamed token.
   const citations = useMemo(() => citationIndex(finished), [finishedKey]);
   const ratings = useMemo(
-    () => new Map((history?.feedback ?? []).filter((item) => item.kind === 'answer' && item.messageId).map((item) => [item.messageId!, item] as const)),
+    () =>
+      new Map((history?.feedback ?? []).filter((item) => item.kind === 'answer' && item.messageId).map((item) => [item.messageId!, item] as const)),
     [history],
   );
   const entries = useMemo(() => interleave(items, historyEvents(history)), [items, history]);
+  const announcement = useIncomingAnnouncement(messages, assistantName);
 
   if (items.length === 0) {
-    return <EmptyState icon={MessagesSquare} title="No messages yet" className="h-full" />;
+    return (
+      <>
+        <EmptyState icon={MessagesSquare} title="No messages yet" className="h-full" />
+        <Announcer message={announcement} />
+      </>
+    );
   }
   return (
     <FollowingScroll changes={entries}>
+      <Announcer message={announcement} />
       <ol className="mx-auto max-w-3xl space-y-5 px-4 py-5" aria-label="Messages">
         {entries.map((entry) => {
           if (entry.kind === 'event') {
@@ -223,6 +234,23 @@ export function ConversationThread({ items, messages, history, assistantName, co
       </ol>
     </FollowingScroll>
   );
+}
+
+/** What a screen reader hears when the visitor writes or the assistant answers while the conversation is open. */
+function useIncomingAnnouncement(messages: readonly ConversationMessageDto[], assistantName: string): string {
+  const latest = messages.at(-1);
+  // Everything up to the first loaded message was there before; only what arrives later is news.
+  const [seenUpTo, setSeenUpTo] = useState<number | null>(latest?.sequence ?? null);
+  if (seenUpTo === null && latest) {
+    setSeenUpTo(latest.sequence);
+  }
+  if (!latest || seenUpTo === null || latest.sequence <= seenUpTo || latest.staffOnly) {
+    return '';
+  }
+  if (latest.author === 'visitor') {
+    return `${latest.authorName ?? 'Visitor'}: ${latest.text.slice(0, 200)}`;
+  }
+  return latest.author === 'assistant' ? `${assistantName}: ${latest.text.slice(0, 200)}` : '';
 }
 
 /**

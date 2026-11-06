@@ -46,7 +46,11 @@ describe('Menu', () => {
 
     await user.click(trigger());
     expect(trigger()).toHaveAttribute('aria-expanded', 'true');
-    expect(within(menu()).getAllByRole('menuitem').map((element) => element.textContent)).toEqual(['Move to folder', 'Re-ingest', 'Delete']);
+    expect(
+      within(menu())
+        .getAllByRole('menuitem')
+        .map((element) => element.textContent),
+    ).toEqual(['Move to folder', 'Re-ingest', 'Delete']);
     expect(await axeViolations()).toEqual([]);
 
     await user.click(trigger());
@@ -130,6 +134,13 @@ describe('Menu', () => {
     await user.keyboard('{Enter}');
     await waitFor(() => expect(item('Move to folder')).toHaveFocus());
     await user.tab();
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
+    expect(screen.getByRole('button', { name: 'Next on the page' })).toHaveFocus();
+
+    trigger().focus();
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(item('Move to folder')).toHaveFocus());
+    await user.tab({ shift: true });
     await waitFor(() => expect(screen.queryByRole('menu')).toBeNull());
     expect(trigger()).not.toHaveFocus();
   });

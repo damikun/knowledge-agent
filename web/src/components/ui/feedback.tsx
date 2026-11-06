@@ -56,9 +56,7 @@ export function ErrorMessage({ error, title, className }: { error: unknown; titl
     <Alert tone="danger" title={title} className={className} live>
       {showList ? (
         <ul className="list-disc space-y-0.5 pl-4">
-          {fieldErrors.flatMap(([field, messages]) =>
-            messages.map((message, index) => <li key={`${field}-${index}`}>{message}</li>),
-          )}
+          {fieldErrors.flatMap(([field, messages]) => messages.map((message, index) => <li key={`${field}-${index}`}>{message}</li>))}
         </ul>
       ) : (
         errorMessage(error)
@@ -73,13 +71,17 @@ export function EmptyState({
   description,
   action,
   className,
+  headingLevel,
 }: {
   icon?: LucideIcon;
   title: ReactNode;
   description?: ReactNode;
   action?: ReactNode;
   className?: string;
+  /** When the empty state is the whole page, such as Page not found, its title is the page's heading. */
+  headingLevel?: 1 | 2;
 }) {
+  const Title = headingLevel ? (`h${headingLevel}` as const) : 'div';
   return (
     <div className={clsx('flex flex-col items-center justify-center px-6 py-10 text-center', className)}>
       <div className="flex max-w-100 flex-col items-center">
@@ -88,7 +90,7 @@ export function EmptyState({
             <Icon className="size-5" aria-hidden />
           </div>
         ) : null}
-        <div className="text-sm font-semibold text-fg">{title}</div>
+        <Title className="text-sm font-semibold text-fg">{title}</Title>
         {description ? <div className="mt-1 text-sm text-fg-secondary">{description}</div> : null}
         {action ? <div className="mt-4">{action}</div> : null}
       </div>

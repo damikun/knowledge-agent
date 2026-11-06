@@ -410,9 +410,10 @@ export function SourcesPage() {
 
         <div className="flex items-start gap-4">
           {/* Beside the list, so sources can be dragged onto any folder; it hides to give the list the room. */}
-          <aside id="source-folders" className={clsx('sticky top-0 w-48 shrink-0', foldersHidden ? 'hidden' : 'hidden lg:block')}>
+          {/* Not an aside: the tree is a "Folders" navigation landmark of its own. */}
+          <div id="source-folders" className={clsx('sticky top-0 w-48 shrink-0', foldersHidden ? 'hidden' : 'hidden lg:block')}>
             <FolderTree {...treeProps} />
-          </aside>
+          </div>
 
           <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
             {/* A compact notice in the table instead of a page banner: what waits, and where to fix it. */}

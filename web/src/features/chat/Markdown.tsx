@@ -2,6 +2,7 @@ import { clsx } from 'clsx';
 import { Fragment, memo, useMemo, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { ScrollBox } from '../../components/ui/ScrollBox';
 import { safeExternalUrl } from '../../lib/format';
 import { CitationGroup } from './CitationChip';
 import { refsFromHref, remarkCitations } from './citations';
@@ -30,10 +31,11 @@ function createComponents(renderCitation?: (ref: string) => ReactNode, renderLin
       );
     },
     table: ({ node: _node, ...props }) => (
-      <div className="relative overflow-x-auto">
+      <ScrollBox className="relative overflow-x-auto">
         <table {...props} />
-      </div>
+      </ScrollBox>
     ),
+    pre: ({ node: _node, ...props }) => <ScrollBox as="pre" {...props} />,
     img: ({ node: _node, alt }) => <span className="text-fg-muted">[image{alt ? `: ${alt}` : ''}]</span>,
   };
 }

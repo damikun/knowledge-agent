@@ -43,7 +43,6 @@ export interface ChatPanelProps {
   onBusy?: (busy: boolean) => void;
 }
 
-
 export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
   const { config, t, mark } = useWidget();
   const state = useChatState(session);
@@ -84,8 +83,7 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
     reportBusy(busy);
   }, [busy]);
 
-  const needsContact =
-    config.contactCapture === 'before_chat' && !state.visitor.email && !state.conversationId && state.phase === 'ready';
+  const needsContact = config.contactCapture === 'before_chat' && !state.visitor.email && !state.conversationId && state.phase === 'ready';
   const chatContact = contactPrompt?.reason === 'chat' || needsContact;
   const showSuggestions = config.suggestedQuestions.length > 0 && messages.length === 0 && !pending && !state.followed && !needsContact;
   const canHandOver =
@@ -137,7 +135,9 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
     bottom = (
       <div {...mark('status.ended')} className="space-y-3 px-4 pt-3 pb-1 text-center">
         <p className="text-sm font-medium text-ink">{t('ended')}</p>
-        {config.feedbackEnabled ? <ConversationRating rating={state.conversationRating} onRate={(rating) => session.rateConversation(rating)} /> : null}
+        {config.feedbackEnabled ? (
+          <ConversationRating rating={state.conversationRating} onRate={(rating) => session.rateConversation(rating)} />
+        ) : null}
         <AccentButton onClick={startNewChat}>{t('newChat')}</AccentButton>
       </div>
     );
@@ -193,8 +193,9 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
     );
   }
 
+  // The chat is the frame's whole page, so it is the main landmark, named apart from the host page's own.
   return (
-    <div className="flex h-full min-h-0 flex-col text-ink">
+    <main aria-label={config.title} className="flex h-full min-h-0 flex-col text-ink">
       <Header menuItems={menuItems} onClose={onClose} />
       <div
         ref={scrollRef}
@@ -232,6 +233,6 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
         ) : null}
       </div>
       <ActivityAnnouncer session={session} />
-    </div>
+    </main>
   );
 }

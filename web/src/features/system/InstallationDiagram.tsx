@@ -18,8 +18,18 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react';
+import { ConnectionList } from '../../components/flow/ConnectionList';
 import { StatusDot } from '../../components/ui/StatusDot';
-import { BOUNDARIES, nodeSize, STATUS_LABELS, STATUS_TONES, type Installation, type InstallationNode, type InstallationNodeId, type Side } from './installation';
+import {
+  BOUNDARIES,
+  nodeSize,
+  STATUS_LABELS,
+  STATUS_TONES,
+  type Installation,
+  type InstallationNode,
+  type InstallationNodeId,
+  type Side,
+} from './installation';
 import '../../components/flow/flow.css';
 import './installation.css';
 
@@ -81,16 +91,27 @@ function PartView({ data }: NodeProps<PartNode>) {
       className={clsx(
         'flex h-full w-full flex-col justify-center overflow-hidden rounded-xl border bg-raised text-left shadow-card hover:border-border-hover',
         node.small ? 'gap-0.5 px-2.5 py-2' : 'gap-0.5 px-3 py-2.5',
-        selected ? 'border-accent ring-1 ring-accent' : node.status === 'down' ? 'border-danger' : node.status === 'degraded' ? 'border-warning' : 'border-border',
+        selected
+          ? 'border-accent ring-1 ring-accent'
+          : node.status === 'down'
+            ? 'border-danger'
+            : node.status === 'degraded'
+              ? 'border-warning'
+              : 'border-border',
         node.dimmed && !selected && 'opacity-60',
       )}
     >
       <Handles />
       <div className="flex min-w-0 items-center gap-2">
-        <span aria-hidden className={clsx('flex shrink-0 items-center justify-center rounded-md bg-fill-muted text-fg-secondary', node.small ? 'size-5' : 'size-6')}>
+        <span
+          aria-hidden
+          className={clsx('flex shrink-0 items-center justify-center rounded-md bg-fill-muted text-fg-secondary', node.small ? 'size-5' : 'size-6')}
+        >
           <Icon className={node.small ? 'size-3' : 'size-3.5'} />
         </span>
-        <span className={clsx('min-w-0 flex-1 truncate leading-5 font-medium text-fg', node.small ? 'text-[13px]' : 'text-[15px]')}>{node.title}</span>
+        <span className={clsx('min-w-0 flex-1 truncate leading-5 font-medium text-fg', node.small ? 'text-[13px]' : 'text-[15px]')}>
+          {node.title}
+        </span>
         {node.status ? <StatusDot tone={STATUS_TONES[node.status]} className={node.status === 'unknown' ? 'opacity-50' : undefined} /> : null}
       </div>
       {node.small ? null : <p className="truncate text-[13px] leading-[18px] text-fg-secondary">{node.role}</p>}
@@ -108,7 +129,9 @@ function FrameView({ data }: NodeProps<FrameNode>) {
         data.inner ? 'border-border bg-surface-subtle/40' : 'border-border-strong',
       )}
     >
-      <span className={clsx('absolute top-2 text-xs font-medium tracking-wide text-fg-muted uppercase', data.inner ? 'right-3' : 'left-3')}>{data.label}</span>
+      <span className={clsx('absolute top-2 text-xs font-medium tracking-wide text-fg-muted uppercase', data.inner ? 'right-3' : 'left-3')}>
+        {data.label}
+      </span>
     </div>
   );
 }
@@ -217,7 +240,14 @@ function Diagram({ installation, selectedId, onSelect, size }: InstallationDiagr
   };
 
   return (
-    <div ref={measure} className="relative w-full" style={{ height }} onKeyDown={onKeyDown} role="region" aria-label="How your installation is built, as a diagram">
+    <div
+      ref={measure}
+      className="relative w-full"
+      style={{ height }}
+      onKeyDown={onKeyDown}
+      role="region"
+      aria-label="How your installation is built, as a diagram"
+    >
       <svg aria-hidden width="0" height="0" className="absolute">
         <defs>
           <marker id={markerId} viewBox="-6 -5 8 10" refX="0" refY="0" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
@@ -255,6 +285,15 @@ function Diagram({ installation, selectedId, onSelect, size }: InstallationDiagr
       >
         <FitOnResize />
       </ReactFlow>
+      <ConnectionList
+        label="Connections"
+        connections={installation.edges.map((edge) => ({
+          id: edge.id,
+          from: byId.get(edge.source as InstallationNodeId)?.title ?? edge.source,
+          to: byId.get(edge.target as InstallationNodeId)?.title ?? edge.target,
+          label: edge.label,
+        }))}
+      />
     </div>
   );
 }

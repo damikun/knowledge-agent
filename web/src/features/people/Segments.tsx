@@ -1,6 +1,7 @@
 import { clsx } from 'clsx';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
+import { fieldAria } from '../../components/ui/aria';
 import { Button } from '../../components/ui/Button';
 import { Field } from '../../components/ui/Field';
 import { ErrorMessage, Spinner } from '../../components/ui/feedback';
@@ -87,7 +88,9 @@ export function SegmentList({ value, onChange, admin, onEdit, onNew, className }
 
   return (
     <nav aria-label="Segments" className={clsx('space-y-5', className)}>
-      <ul className="space-y-0.5">{BUILT_IN_SEGMENTS.map((segment) => item(segment.id, segment.name, { count: <BuiltInCount filter={segment.filter} /> }))}</ul>
+      <ul className="space-y-0.5">
+        {BUILT_IN_SEGMENTS.map((segment) => item(segment.id, segment.name, { count: <BuiltInCount filter={segment.filter} /> }))}
+      </ul>
       <div className="space-y-0.5">
         <p className="flex h-7 items-center px-2 text-xs font-medium text-fg-muted">Segments</p>
         {segments.isPending ? (
@@ -211,17 +214,32 @@ export function SegmentDialog({ open, onClose, segment, filter, onSaved }: Segme
           {segment ? ' Saving keeps the current filter of the list.' : ''}
         </p>
         <Field label="Name" htmlFor={`${id}-name`} errors={errors('name')}>
-          <input id={`${id}-name`} className="field" value={name} maxLength={80} autoFocus onChange={(event) => setName(event.target.value)} />
+          <input
+            {...fieldAria(`${id}-name`, errors('name'))}
+            className="field"
+            value={name}
+            maxLength={80}
+            autoFocus
+            onChange={(event) => setName(event.target.value)}
+          />
         </Field>
         <Field label="Description" htmlFor={`${id}-description`} optional errors={errors('description')}>
-          <input id={`${id}-description`} className="field" value={description} maxLength={300} onChange={(event) => setDescription(event.target.value)} />
+          <input
+            {...fieldAria(`${id}-description`, errors('description'))}
+            className="field"
+            value={description}
+            maxLength={300}
+            onChange={(event) => setDescription(event.target.value)}
+          />
         </Field>
         <Field label="Color" htmlFor={`${id}-color`}>
           <Select id={`${id}-color`} value={color} options={COLOR_OPTIONS} onChange={setColor} />
         </Field>
         <Switch checked={shared} onChange={setShared} label="Shared with the team" disabled={segment ? !segment.mine : false} />
         {errors('filter') ? <ErrorMessage error={save.error} title="The filter cannot be saved" /> : null}
-        {save.error && !errors('name') && !errors('filter') && !errors('description') ? <ErrorMessage error={save.error} title="The segment could not be saved" /> : null}
+        {save.error && !errors('name') && !errors('filter') && !errors('description') ? (
+          <ErrorMessage error={save.error} title="The segment could not be saved" />
+        ) : null}
         <button type="submit" hidden />
       </form>
     </Modal>

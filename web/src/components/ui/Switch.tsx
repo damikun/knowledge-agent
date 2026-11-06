@@ -11,9 +11,7 @@ export interface SwitchProps {
 
 export function Switch({ checked, onChange, label, disabled = false, describedBy }: SwitchProps) {
   return (
-    <label
-      className={clsx('flex w-fit items-center gap-2 text-sm text-fg', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer')}
-    >
+    <label className={clsx('flex min-h-6 w-fit items-center gap-2 text-sm text-fg', disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer')}>
       <input
         type="checkbox"
         role="switch"

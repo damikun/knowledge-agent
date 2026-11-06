@@ -11,6 +11,7 @@ import { formatNumber } from '../../lib/format';
 import { usePromptVersions, usePublishPrompt } from './api';
 import { diffLines, diffStats, promptText, type DiffLine } from './diff';
 import type { PromptVersionDto } from './types';
+import { ScrollBox } from '../../components/ui/ScrollBox';
 
 const LINE_CLASSES: Record<DiffLine['type'], string> = {
   same: 'text-fg-secondary',
@@ -29,9 +30,14 @@ function LineDiff({ before, after }: { before: string; after: string }) {
   return (
     <div className="space-y-1.5">
       <p className="text-xs text-fg-muted tabular-nums">
-        <span className="text-success-text">+{formatNumber(stats.added)}</span> <span className="text-danger-text">-{formatNumber(stats.removed)}</span> lines against the live version
+        <span className="text-success-text">+{formatNumber(stats.added)}</span>{' '}
+        <span className="text-danger-text">-{formatNumber(stats.removed)}</span> lines against the live version
       </p>
-      <pre aria-label="Changes against the live version" className="overflow-auto rounded-lg border border-border-subtle bg-surface-subtle py-2 font-mono text-xs leading-5 break-words whitespace-pre-wrap">
+      <ScrollBox
+        as="pre"
+        aria-label="Changes against the live version"
+        className="overflow-auto rounded-lg border border-border-subtle bg-surface-subtle py-2 font-mono text-xs leading-5 break-words whitespace-pre-wrap"
+      >
         {lines.map((line, index) => (
           <div key={index} className={clsx('px-3', LINE_CLASSES[line.type])}>
             <span aria-hidden className="mr-2 inline-block w-2 select-none">
@@ -41,12 +47,22 @@ function LineDiff({ before, after }: { before: string; after: string }) {
             {line.text || ' '}
           </div>
         ))}
-      </pre>
+      </ScrollBox>
     </div>
   );
 }
 
-function VersionRow({ version, liveLabel, selected, onSelect }: { version: PromptVersionDto; liveLabel: string; selected: boolean; onSelect: () => void }) {
+function VersionRow({
+  version,
+  liveLabel,
+  selected,
+  onSelect,
+}: {
+  version: PromptVersionDto;
+  liveLabel: string;
+  selected: boolean;
+  onSelect: () => void;
+}) {
   const labels = version.labels.filter((label) => label !== 'latest');
   return (
     <li>
@@ -54,7 +70,10 @@ function VersionRow({ version, liveLabel, selected, onSelect }: { version: Promp
         type="button"
         aria-pressed={selected}
         onClick={onSelect}
-        className={clsx('w-full rounded-lg px-3 py-2 text-left transition-colors', selected ? 'bg-fill-active text-fg' : 'text-fg-secondary hover:bg-fill-hover')}
+        className={clsx(
+          'w-full rounded-lg px-3 py-2 text-left transition-colors',
+          selected ? 'bg-fill-active text-fg' : 'text-fg-secondary hover:bg-fill-hover',
+        )}
       >
         <span className="flex flex-wrap items-center gap-1.5">
           <span className="text-small font-medium text-fg">Version {version.version}</span>
@@ -104,7 +123,13 @@ export function PromptVersions({
 
   const data = versions.data;
   if (!data.editable) {
-    return <EmptyState icon={History} title="No versions here" description="Prompts are not stored in Langfuse on this server, so the built-in defaults are used and cannot be edited." />;
+    return (
+      <EmptyState
+        icon={History}
+        title="No versions here"
+        description="Prompts are not stored in Langfuse on this server, so the built-in defaults are used and cannot be edited."
+      />
+    );
   }
 
   const live = data.versions.find((version) => version.live) ?? null;
@@ -141,8 +166,10 @@ export function PromptVersions({
       <div className="grid gap-5 @2xl:grid-cols-[16rem_minmax(0,1fr)]">
         <div className="min-w-0 space-y-2">
           <p className="text-xs text-fg-muted">
-            {data.totalVersions > data.versions.length ? `The newest ${formatNumber(data.versions.length)} of ${formatNumber(data.totalVersions)} versions.` : `${formatNumber(data.totalVersions)} versions.`} The live one has the{' '}
-            <code className="font-mono">{data.label}</code> label.
+            {data.totalVersions > data.versions.length
+              ? `The newest ${formatNumber(data.versions.length)} of ${formatNumber(data.totalVersions)} versions.`
+              : `${formatNumber(data.totalVersions)} versions.`}{' '}
+            The live one has the <code className="font-mono">{data.label}</code> label.
           </p>
           <ul aria-label="Versions" className="space-y-1">
             {data.versions.map((version) => (
@@ -194,7 +221,8 @@ export function PromptVersions({
         error={publish.isError ? <ErrorMessage error={publish.error} title="Could not move the label" /> : null}
         message={
           <p>
-            The <strong className="font-medium text-fg">{data.label}</strong> label moves {live ? `from version ${live.version} ` : ''}to version {selected.version}, and new answers use it at once.
+            The <strong className="font-medium text-fg">{data.label}</strong> label moves {live ? `from version ${live.version} ` : ''}to version{' '}
+            {selected.version}, and new answers use it at once.
             {live ? ` You can move it back the same way.` : ''}
           </p>
         }

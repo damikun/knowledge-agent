@@ -2,8 +2,10 @@ import { clsx } from 'clsx';
 import { Table2 } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 import { Button } from '../../components/ui/Button';
+import { ScrollBox } from '../../components/ui/ScrollBox';
 import { Table, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from '../../components/ui/Table';
 import { formatNumber } from '../../lib/format';
+import { useKeydown } from '../../lib/hooks/useKeydown';
 
 interface ChartSeries {
   key: string;
@@ -97,6 +99,8 @@ export function DailyChart({
   const id = useId();
   const [active, setActive] = useState<number | null>(null);
   const [showTable, setShowTable] = useState(false);
+  // Esc hides the hover card without moving the pointer (WCAG 1.4.13).
+  useKeydown((event) => event.key === 'Escape' && setActive(null), { enabled: active !== null });
   const diverging = mode === 'diverging';
   const buckets = bucketsOf(days);
   const weekly = buckets.length < days.length;
@@ -220,7 +224,11 @@ export function DailyChart({
                 <span
                   className={clsx(
                     'absolute top-1 whitespace-nowrap',
-                    index === 0 && dates.length > 7 ? 'left-0' : index === dates.length - 1 && dates.length > 7 ? 'right-0' : 'left-1/2 -translate-x-1/2',
+                    index === 0 && dates.length > 7
+                      ? 'left-0'
+                      : index === dates.length - 1 && dates.length > 7
+                        ? 'right-0'
+                        : 'left-1/2 -translate-x-1/2',
                   )}
                 >
                   {dates.length <= 7 && !weekly ? weekdayFormat.format(toDate(day)) : formatDay(day)}
@@ -230,11 +238,18 @@ export function DailyChart({
           ))}
         </div>
       </div>
-      <Button size="sm" variant="ghost" icon={Table2} aria-expanded={showTable} aria-controls={`${id}-table`} onClick={() => setShowTable((shown) => !shown)}>
+      <Button
+        size="sm"
+        variant="ghost"
+        icon={Table2}
+        aria-expanded={showTable}
+        aria-controls={`${id}-table`}
+        onClick={() => setShowTable((shown) => !shown)}
+      >
         {showTable ? 'Hide the numbers' : 'Show the numbers'}
       </Button>
-      <div id={`${id}-table`} className={showTable ? 'max-h-72 overflow-y-auto rounded-lg border border-border-subtle' : 'sr-only'}>
-        <Table aria-label={label}>
+      <ScrollBox id={`${id}-table`} className={showTable ? 'max-h-72 overflow-y-auto rounded-lg border border-border-subtle' : 'sr-only'}>
+        <Table aria-label={label} scroll={showTable}>
           <TableHead>
             <TableHeader>Day</TableHeader>
             {dailySeries.map((item) => (
@@ -256,7 +271,7 @@ export function DailyChart({
             ))}
           </tbody>
         </Table>
-      </div>
+      </ScrollBox>
     </figure>
   );
 }

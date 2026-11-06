@@ -7,6 +7,8 @@ export async function axeViolations(context: Element = document.body): Promise<s
   const results = await axe.run(context, {
     runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa', 'best-practice'] },
     resultTypes: ['violations'],
+    // jsdom never loads a frame's page, and axe would wait for an answer from inside it.
+    iframes: false,
     rules: {
       'color-contrast': { enabled: false },
       // Pages are rendered without the app shell in most tests, so landmarks are checked on the shell test only.

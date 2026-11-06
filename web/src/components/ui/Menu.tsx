@@ -86,10 +86,15 @@ export function Menu({ label, items, trigger, busy = false, align = 'end', class
 
   return (
     <>
-      {trigger ? trigger(triggerProps) : <Button {...triggerProps} variant="ghost" size="icon-sm" icon={Ellipsis} loading={busy} aria-label={label} />}
+      {trigger ? (
+        trigger(triggerProps)
+      ) : (
+        <Button {...triggerProps} variant="ghost" size="icon-sm" icon={Ellipsis} loading={busy} aria-label={label} />
+      )}
       {open ? (
-        <FloatingPortal>
-          <FloatingFocusManager context={context} modal={false} returnFocus={false}>
+        // No focus guards: they are focusable but hidden, which screen readers trip over. Tab is handled below instead.
+        <FloatingPortal preserveTabOrder={false}>
+          <FloatingFocusManager context={context} modal={false} returnFocus={false} guards={false}>
             <div
               ref={refs.setFloating}
               style={{ ...floatingStyles, transformOrigin }}
@@ -102,6 +107,9 @@ export function Menu({ label, items, trigger, busy = false, align = 'end', class
                 onKeyDown: (event) => {
                   if (event.key === 'Escape') {
                     event.stopPropagation();
+                    close(true);
+                  } else if (event.key === 'Tab') {
+                    // Back on the trigger before the browser moves focus, so Tab goes on from there as a menu button's does.
                     close(true);
                   }
                 },

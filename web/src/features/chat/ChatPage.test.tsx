@@ -39,7 +39,10 @@ function chatBody(fetchMock: ReturnType<typeof mockFetch>, index = 0): unknown {
   return JSON.parse((calls[index]![1] as RequestInit).body as string);
 }
 
-const doneEvent = { event: 'done', data: { conversationId: CONVERSATION_ID, turnId: 'next', finishReason: 'stop', agent: 'orchestrator', parentCallId: null } };
+const doneEvent = {
+  event: 'done',
+  data: { conversationId: CONVERSATION_ID, turnId: 'next', finishReason: 'stop', agent: 'orchestrator', parentCallId: null },
+};
 
 const encoder = new TextEncoder();
 
@@ -53,7 +56,10 @@ describe('ChatPage', () => {
     const user = userEvent.setup();
     let conversations: ConversationSummaryDto[] = [];
     const fetchMock = mockFetch({
-      ...sourcesRoutes(() => [sourceDto(), sourceDto({ id: 'src-policy', title: 'Leave policy', type: 'url', url: 'https://intranet.example.com/leave-policy' })]),
+      ...sourcesRoutes(() => [
+        sourceDto(),
+        sourceDto({ id: 'src-policy', title: 'Leave policy', type: 'url', url: 'https://intranet.example.com/leave-policy' }),
+      ]),
       'GET /api/conversations': () => new Response(JSON.stringify(conversations), { headers: { 'Content-Type': 'application/json' } }),
       'POST /api/chat': () => {
         conversations = [conversationSummaryDto()];
@@ -70,6 +76,7 @@ describe('ChatPage', () => {
     await user.keyboard('{Enter}');
 
     expect(await screen.findByText(/Managers approve requests/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByRole('status').some((region) => region.textContent === 'The answer is ready.')).toBe(true));
     expect(screen.getByText('How many vacation days do I get?')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Source 1: Employee handbook/ }).length).toBeGreaterThan(0);
 
@@ -106,11 +113,20 @@ describe('ChatPage', () => {
     const fetchMock = mockFetch({
       ...sourcesRoutes(() => [
         sourceDto(),
-        sourceDto({ id: 'src-policy', title: 'Leave policy', type: 'url', url: 'https://intranet.example.com/leave-policy', createdAt: '2026-10-22T09:00:00Z' }),
+        sourceDto({
+          id: 'src-policy',
+          title: 'Leave policy',
+          type: 'url',
+          url: 'https://intranet.example.com/leave-policy',
+          createdAt: '2026-10-22T09:00:00Z',
+        }),
         sourceDto({ id: 'src-draft', title: 'Draft memo', status: 'processing' }),
       ]),
       'GET /api/conversations': [],
-      'POST /api/chat': () => sseResponse([{ event: 'done', data: { conversationId: CONVERSATION_ID, turnId: 't', finishReason: 'stop', agent: 'orchestrator', parentCallId: null } }]),
+      'POST /api/chat': () =>
+        sseResponse([
+          { event: 'done', data: { conversationId: CONVERSATION_ID, turnId: 't', finishReason: 'stop', agent: 'orchestrator', parentCallId: null } },
+        ]),
       [`GET /api/conversations/${CONVERSATION_ID}`]: { ...conversationDto(), turns: [] },
     });
     renderWithProviders(<ChatPage />, { route: '/chat', path: '/chat/:conversationId?' });
@@ -118,7 +134,10 @@ describe('ChatPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Source scope: All sources' }));
     const picker = await screen.findByRole('dialog', { name: 'Choose sources' });
     const options = await within(picker).findAllByRole('checkbox');
-    expect(options.map((option) => option.closest('label')!.textContent)).toEqual(['Leave policyurl · 42 chunks', 'Employee handbookpdf · 42 chunks']);
+    expect(options.map((option) => option.closest('label')!.textContent)).toEqual([
+      'Leave policyurl · 42 chunks',
+      'Employee handbookpdf · 42 chunks',
+    ]);
     expect(Object.fromEntries(requestUrls(fetchMock, 'GET /api/sources')[0]!.searchParams)).toEqual({ status: 'ready', limit: '50' });
 
     await user.click(within(picker).getByRole('checkbox', { name: /Leave policy/ }));
@@ -141,7 +160,13 @@ describe('ChatPage', () => {
       ...sourcesRoutes(() => [sourceDto()]),
       'GET /api/conversations': [],
       [`GET /api/conversations/${CONVERSATION_ID}`]: conversationDto(),
-      'POST /api/chat': () => sseResponse([{ event: 'done', data: { conversationId: CONVERSATION_ID, turnId: 'next', finishReason: 'stop', agent: 'orchestrator', parentCallId: null } }]),
+      'POST /api/chat': () =>
+        sseResponse([
+          {
+            event: 'done',
+            data: { conversationId: CONVERSATION_ID, turnId: 'next', finishReason: 'stop', agent: 'orchestrator', parentCallId: null },
+          },
+        ]),
     });
     renderWithProviders(<ChatPage />, { route: `/chat/${CONVERSATION_ID}`, path: '/chat/:conversationId?' });
 
@@ -153,7 +178,10 @@ describe('ChatPage', () => {
     await user.type(screen.getByRole('textbox', { name: 'Message' }), 'And for part-time staff?{Enter}');
     await waitFor(() => expect(fetchCalls(fetchMock)).toContain('POST /api/chat'));
     const chatCall = fetchMock.mock.calls.find(([url]) => String(url).endsWith('/api/chat'));
-    expect(JSON.parse((chatCall![1] as RequestInit).body as string)).toMatchObject({ conversationId: CONVERSATION_ID, message: 'And for part-time staff?' });
+    expect(JSON.parse((chatCall![1] as RequestInit).body as string)).toMatchObject({
+      conversationId: CONVERSATION_ID,
+      message: 'And for part-time staff?',
+    });
   });
 
   it('stops the answer on the server and keeps reading until the stream says it stopped', async () => {
@@ -161,7 +189,8 @@ describe('ChatPage', () => {
     let answer: ReadableStreamDefaultController<Uint8Array> | null = null;
     let chatSignal: AbortSignal | null | undefined;
     let answerStop: (response: Response) => void = () => undefined;
-    const write = (event: string, data: Record<string, unknown>) => answer!.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+    const write = (event: string, data: Record<string, unknown>) =>
+      answer!.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
     const fetchMock = mockFetch({
       ...sourcesRoutes(() => [sourceDto()]),
       'GET /api/conversations': [],
@@ -175,7 +204,9 @@ describe('ChatPage', () => {
         new Promise<Response>((resolve) => {
           answerStop = resolve;
         }),
-      [`GET /api/conversations/${CONVERSATION_ID}`]: conversationDto({ turns: [turnDto({ assistantMessage: 'New employees get', citations: [], finishReason: 'stopped' })] }),
+      [`GET /api/conversations/${CONVERSATION_ID}`]: conversationDto({
+        turns: [turnDto({ assistantMessage: 'New employees get', citations: [], finishReason: 'stopped' })],
+      }),
     });
     renderWithProviders(<ChatPage />, { route: '/chat', path: '/chat/:conversationId?' });
 
