@@ -55,3 +55,8 @@ model under **AI models**. Langfuse signs admins in through the same Keycloak ac
 dotnet test --solution KnowledgeAgent.slnx
 cd web && npm run lint && npm test
 ```
+
+## License
+
+Source available for viewing only. Using, deploying or modifying it requires written permission; see
+[LICENSE](LICENSE).
