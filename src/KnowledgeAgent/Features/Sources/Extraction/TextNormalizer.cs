@@ -91,6 +91,12 @@ internal static class TextNormalizer
                 case '\u2060': // word joiner
                 case '\uFEFF': // byte order mark
                     break;
+                case '\uDB40' when i + 1 < text.Length && text[i + 1] is >= '\uDC00' and <= '\uDC7F':
+                    // Unicode tags mirror ASCII invisibly and can hide whole sentences from readers.
+                    i++;
+                    break;
+                case var hidden when IsHidden(hidden):
+                    break;
                 default:
                     if (char.IsControl(c))
                     {
@@ -111,6 +117,10 @@ internal static class TextNormalizer
 
         return builder.ToString();
     }
+
+    // Zero-width joiners and bidi controls: they hide or reorder text for readers but not for the model.
+    private static bool IsHidden(char c) => c is '\u200C' or '\u200D' or '\u200E' or '\u200F' or '\u180E'
+        or (>= '\u2061' and <= '\u2064') or (>= '\u202A' and <= '\u202E') or (>= '\u2066' and <= '\u2069');
 
     private static void CollapseLine(string line, bool preserveIndentation, StringBuilder output)
     {

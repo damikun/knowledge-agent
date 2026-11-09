@@ -85,7 +85,7 @@ internal sealed class GrepSourcesTool(IOptions<AgentOptions> options) : IAgentTo
             var sources = await search.FindSourcesAsync(
                 new ExactSearchRequest(text, matchCase, wholeWords, sourceIds, offset, Math.Clamp(limit ?? DefaultSourceLimit, 1, MaxSourceLimit)),
                 cancellationToken);
-            return new ToolResult(FormatSources(match, sources), SummarizeSources(match, sources));
+            return new ToolResult(FormatSources(match, sources), SummarizeSources(match, sources)) { Untrusted = true };
         }
 
         var page = await search.FindPassagesAsync(
@@ -104,7 +104,7 @@ internal sealed class GrepSourcesTool(IOptions<AgentOptions> options) : IAgentTo
         return new ToolResult(
             FormatPassages(match, page, hits, citations),
             Summarize(match, page.TotalPassages, page.TotalSources),
-            Citations: citations.DistinctBy(citation => citation.Ref).ToList());
+            Citations: citations.DistinctBy(citation => citation.Ref).ToList()) { Untrusted = true };
     }
 
     public static string FormatPassages(

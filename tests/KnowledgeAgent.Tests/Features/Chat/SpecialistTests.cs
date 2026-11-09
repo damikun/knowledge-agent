@@ -214,6 +214,52 @@ public sealed class SpecialistTests
         host.Conversations.Get(events.ConversationId()).ActiveAgentId.ShouldBeNull();
     }
 
+    [Fact]
+    public async Task A_hand_off_drops_the_thinking_of_the_turn_so_far_and_keeps_the_transfer_call_and_its_result()
+    {
+        using var host = new AgentTestHost();
+        AddTeam(host, showNames: true);
+        host.ChatClients.Script("orchestrator").Then((_, _) => new ChatResponse(new ChatMessage(ChatRole.Assistant,
+        [
+            new TextReasoningContent("This is about billing.") { ProtectedData = "sig-front" },
+            new FunctionCallContent("call_t", ToolNames.TransferToAgent, new Dictionary<string, object?> { ["agent"] = "billing", ["reason"] = "invoice" }),
+        ])) { FinishReason = ChatFinishReason.ToolCalls });
+        var billingModel = host.ChatClients.Script("billing").ThenText("Invoice 42 is paid.", reasoning: "It is paid.");
+
+        var events = await host.ChatAsync(new ChatRequestDto(null, "Is invoice 42 paid?", Agent: "front"), Ct);
+
+        events.OfType<ErrorEvent>().ShouldBeEmpty();
+        var request = billingModel.Requests.ShouldHaveSingleItem().Messages;
+        request.SelectMany(message => message.Contents).OfType<TextReasoningContent>().ShouldBeEmpty();
+        request.Select(message => message.Role).ShouldBe([ChatRole.System, ChatRole.User, ChatRole.Assistant, ChatRole.Tool]);
+        request[2].Contents.ShouldHaveSingleItem().ShouldBeOfType<FunctionCallContent>().CallId.ShouldBe("call_t");
+        request[3].ToolResults().ShouldHaveSingleItem().CallId.ShouldBe("call_t");
+
+        var stored = host.SingleTurn(events.ConversationId()).ModelMessages();
+        stored.Select(message => message.Role).ShouldBe([ChatRole.User, ChatRole.Assistant, ChatRole.Tool, ChatRole.Assistant]);
+        stored.SelectMany(message => message.Contents).OfType<TextReasoningContent>().ShouldHaveSingleItem().Text.ShouldBe("It is paid.");
+    }
+
+    [Fact]
+    public async Task An_active_specialist_gets_the_same_system_prompt_on_later_days()
+    {
+        using var host = new AgentTestHost();
+        AddTeam(host, showNames: true);
+        host.ChatClients.Script("orchestrator").ThenToolCall(ToolNames.TransferToAgent, new { agent = "billing", reason = "invoice" });
+        var billingModel = host.ChatClients.Script("billing").ThenText("Invoice 42 is paid.").ThenText("Invoice 43 is paid too.");
+
+        var first = await host.ChatAsync(new ChatRequestDto(null, "Is invoice 42 paid?", Agent: "front"), Ct);
+        host.Time.Advance(TimeSpan.FromDays(3));
+        var second = await host.ChatAsync("And 43?", first.ConversationId(), Ct);
+
+        second.OfType<ErrorEvent>().ShouldBeEmpty();
+        billingModel.Requests.Count.ShouldBe(2);
+        var prompt = billingModel.Requests[0].Messages[0].Text;
+        prompt.ShouldContain("Billing assistant");
+        prompt.ShouldContain("Today is 2026-10-22.");
+        billingModel.Requests[1].Messages[0].Text.ShouldBe(prompt);
+    }
+
     private static (AgentConfig Front, AgentConfig Billing) AddTeam(AgentTestHost host, bool showNames)
     {
         var billing = host.Agents.Add(new AgentConfig

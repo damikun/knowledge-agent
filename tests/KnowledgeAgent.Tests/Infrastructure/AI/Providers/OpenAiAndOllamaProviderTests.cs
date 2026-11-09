@@ -142,6 +142,40 @@ public sealed class OpenAiAndOllamaProviderTests
         embeddings.GetService<EmbeddingGeneratorMetadata>().ShouldNotBeNull().DefaultModelId.ShouldBe("nomic-embed-text");
     }
 
+    [Theory]
+    [InlineData(null, 32768)]
+    [InlineData("8192", 8192)]
+    [InlineData("default", null)]
+    [InlineData("0", null)]
+    public async Task Ollama_chat_requests_carry_the_context_size(string? setting, int? expected)
+    {
+        await using var server = await CapturingHttpServer.StartAsync();
+        server.Responder = _ => new CannedResponse(200, "application/x-ndjson", OllamaReply);
+        var config = TestConfig.Base().With(
+            ("AI:Providers:ollama:Endpoint", server.BaseAddress.ToString()),
+            ("AI:Profiles:utility:Provider", "ollama"),
+            ("AI:Providers:ollama:Settings:NumCtx", setting));
+        using var host = AiTestHost.Create(config);
+
+        var handle = await host.ChatClients.CreateAsync("utility", cancellationToken: Ct);
+        var response = await handle.Client.GetResponseAsync([new ChatMessage(ChatRole.User, "hi")], handle.CreateOptions(), Ct);
+
+        response.Text.ShouldBe("Hi from fake Ollama");
+        server.LastRequest.PathAndQuery.ShouldBe("/api/chat");
+        var numCtx = server.LastRequest.Json["options"]?["num_ctx"];
+        if (expected is null)
+        {
+            numCtx.ShouldBeNull();
+        }
+        else
+        {
+            numCtx!.GetValue<int>().ShouldBe(expected.Value);
+        }
+    }
+
+    internal const string OllamaReply =
+        "{\"model\":\"qwen3\",\"created_at\":\"2026-11-09T10:00:00Z\",\"message\":{\"role\":\"assistant\",\"content\":\"Hi from fake Ollama\"},\"done\":true,\"done_reason\":\"stop\",\"prompt_eval_count\":5,\"eval_count\":3}\n";
+
     private static ResolvedModelProfile Profile(string model, ModelKind kind, int? dimensions = null) => new()
     {
         Name = kind == ModelKind.Embedding ? "embedding" : "utility",

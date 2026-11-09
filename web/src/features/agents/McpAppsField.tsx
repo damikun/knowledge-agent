@@ -1,10 +1,10 @@
 import { clsx } from 'clsx';
-import { Blocks, Trash2 } from 'lucide-react';
+import { Blocks, ShieldCheck, Trash2 } from 'lucide-react';
 import { Link } from 'react-router';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
 import { CollapsibleSection } from '../../components/ui/CollapsibleSection';
-import { ErrorMessage } from '../../components/ui/feedback';
+import { Alert, ErrorMessage } from '../../components/ui/feedback';
 import { Select } from '../../components/ui/Select';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { StatusLabel } from '../../components/ui/StatusDot';
@@ -13,9 +13,19 @@ import { ApiError } from '../../lib/api';
 import { pluralize } from '../../lib/format';
 import { sameId } from '../../lib/ids';
 import { useReturnState } from '../../lib/returnTo';
-import { POLICY_CHOICES, serverStatus, toolEffect, toolLabel, toolsSummary, useMcpServers, type McpServerDto, type McpToolDto, type McpToolPolicy } from '../tools/mcp';
+import {
+  POLICY_CHOICES,
+  serverStatus,
+  toolEffect,
+  toolLabel,
+  toolsSummary,
+  useMcpServers,
+  type McpServerDto,
+  type McpToolPolicy,
+} from '../tools/mcp';
 import { namesList } from './agentSummary';
 import type { FieldKit } from './agentFields';
+import { approvalOf, APPROVAL_LABELS, approve, defaultPolicy, needsApproval, withAllTools, type McpApproval } from './mcpApproval';
 import type { AgentMcpAppDto, McpChangesPolicy } from './types';
 
 const CHANGES_CHOICES: ReadonlyArray<{ value: McpChangesPolicy; label: string }> = [
@@ -23,9 +33,10 @@ const CHANGES_CHOICES: ReadonlyArray<{ value: McpChangesPolicy; label: string }>
   { value: 'verifiedOnly', label: 'Only for verified visitors' },
 ];
 
-/** When a tool of the app may run without a pick of its own: read-only tools on their own, the rest as the app says. */
-function defaultPolicy(tool: McpToolDto, app: Pick<AgentMcpAppDto, 'changesPolicy'>): McpToolPolicy {
-  return tool.readOnly ? 'auto' : app.changesPolicy;
+const NOT_APPROVED_NOTE = 'Until you approve them, they run only after the person confirms.';
+
+function ApprovalBadge({ approval }: { approval: McpApproval | null }) {
+  return approval === 'changed' || approval === 'needed' ? <Badge tone="warning">{APPROVAL_LABELS[approval]}</Badge> : null;
 }
 
 export function appsSummary(apps: readonly AgentMcpAppDto[] | undefined, servers: readonly McpServerDto[] | undefined): string | null {
@@ -80,8 +91,7 @@ export function McpAppsField({ values, set, id }: FieldKit) {
     );
   }
 
-  const update = (serverId: string, next: AgentMcpAppDto) =>
-    set('mcpApps', [...apps.filter((app) => !sameId(app.serverId, serverId)), next]);
+  const update = (serverId: string, next: AgentMcpAppDto) => set('mcpApps', [...apps.filter((app) => !sameId(app.serverId, serverId)), next]);
 
   // Apps of servers deleted since are dropped by the API when the connection goes.
   return (
@@ -129,13 +139,24 @@ function AppRow({
 
   const chooseMode = (chosen: boolean) => {
     if (!chosen) {
-      onChange({ ...current, mode: 'all' });
+      onChange(withAllTools(current, server));
       return;
     }
     // The first time, every tool starts picked with the policy it has now, so nothing changes until a tool is turned off.
-    const tools = current.tools.length > 0 ? current.tools : server.tools.map((tool) => ({ name: tool.name, policy: defaultPolicy(tool, current) }));
+    const tools =
+      current.tools.length > 0
+        ? current.tools
+        : server.tools.map((tool) => ({ name: tool.name, policy: defaultPolicy(tool, current), fingerprint: tool.fingerprint }));
     onChange({ ...current, mode: 'chosen', tools });
   };
+
+  // Turning an app on for all its tools approves the ones it lists now.
+  const turnOn = (checked: boolean) =>
+    onChange(
+      checked && current.mode === 'all' && current.tools.length === 0
+        ? withAllTools({ ...current, enabled: true }, server)
+        : { ...current, enabled: checked },
+    );
 
   return (
     <li>
@@ -161,7 +182,7 @@ function AppRow({
           </div>
           <Switch
             checked={on}
-            onChange={(checked) => onChange({ ...current, enabled: checked })}
+            onChange={turnOn}
             describedBy={summaryId}
             label={
               <span>
@@ -180,6 +201,7 @@ function AppRow({
                   : 'Uses every tool the app lists, also ones it adds later. It lists none right now; test it on the Tools page.'}
               </p>
             ) : null}
+            {current.mode === 'all' ? <PendingApprovals server={server} app={current} onChange={onChange} /> : null}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
               <label htmlFor={`${idPrefix}-changes`} className="text-small font-medium text-fg">
                 Tools that make changes
@@ -194,7 +216,9 @@ function AppRow({
               />
               {server.tools.length > 0 ? (
                 <span className="text-xs text-fg-muted">
-                  {changes > 0 ? `${pluralize(changes, 'tool')} of this app ${changes === 1 ? 'makes' : 'make'} changes.` : 'None of its tools make changes right now.'}
+                  {changes > 0
+                    ? `${pluralize(changes, 'tool')} of this app ${changes === 1 ? 'makes' : 'make'} changes.`
+                    : 'None of its tools make changes right now.'}
                 </span>
               ) : null}
             </div>
@@ -204,7 +228,15 @@ function AppRow({
               defaultOpen={current.mode === 'chosen'}
             >
               <div className="space-y-3">
-                <Switch checked={current.mode === 'chosen'} onChange={chooseMode} label={<span>Only the tools I pick<span className="sr-only">: {server.name}</span></span>} />
+                <Switch
+                  checked={current.mode === 'chosen'}
+                  onChange={chooseMode}
+                  label={
+                    <span>
+                      Only the tools I pick<span className="sr-only">: {server.name}</span>
+                    </span>
+                  }
+                />
                 {current.mode === 'chosen' ? <ToolChoices server={server} app={current} idPrefix={idPrefix} onChange={onChange} /> : null}
               </div>
             </CollapsibleSection>
@@ -215,13 +247,73 @@ function AppRow({
   );
 }
 
-function ToolChoices({ server, app, idPrefix, onChange }: { server: McpServerDto; app: AgentMcpAppDto; idPrefix: string; onChange: (next: AgentMcpAppDto) => void }) {
-  const setTool = (name: string, policy: McpToolPolicy | null) => {
-    const others = app.tools.filter((tool) => tool.name !== name);
-    const index = app.tools.findIndex((tool) => tool.name === name);
-    const tools = policy === null ? others : index >= 0 ? app.tools.map((tool) => (tool.name === name ? { name, policy } : tool)) : [...app.tools, { name, policy }];
+function PendingApprovals({ server, app, onChange }: { server: McpServerDto; app: AgentMcpAppDto; onChange: (next: AgentMcpAppDto) => void }) {
+  const pending = needsApproval(server, app);
+  if (pending.length === 0) {
+    return null;
+  }
+  return (
+    <Alert
+      tone="warning"
+      title={`${pluralize(pending.length, 'tool')} new or changed`}
+      action={
+        pending.length > 1 ? (
+          <Button size="sm" icon={ShieldCheck} onClick={() => onChange(approve(app, pending))}>
+            Approve all<span className="sr-only">: {server.name}</span>
+          </Button>
+        ) : null
+      }
+    >
+      <p>{NOT_APPROVED_NOTE}</p>
+      <ul aria-label={`Tools of ${server.name} to approve`} className="mt-2 space-y-1.5">
+        {pending.map((tool) => (
+          <li key={tool.name} className="flex flex-wrap items-center gap-2">
+            <span className="min-w-0 font-medium text-fg">{toolLabel(tool)}</span>
+            <ApprovalBadge approval={approvalOf(tool, app)} />
+            <Button
+              size="sm"
+              variant="ghost"
+              icon={ShieldCheck}
+              onClick={() => onChange(approve(app, [tool]))}
+              aria-label={`Approve ${toolLabel(tool)}`}
+            >
+              Approve
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </Alert>
+  );
+}
+
+function ToolChoices({
+  server,
+  app,
+  idPrefix,
+  onChange,
+}: {
+  server: McpServerDto;
+  app: AgentMcpAppDto;
+  idPrefix: string;
+  onChange: (next: AgentMcpAppDto) => void;
+}) {
+  // A newly picked tool is approved as the app lists it now; a changed policy keeps the approval.
+  const setTool = (tool: { name: string; fingerprint?: string | null }, policy: McpToolPolicy | null) => {
+    const { name } = tool;
+    const others = app.tools.filter((item) => item.name !== name);
+    const index = app.tools.findIndex((item) => item.name === name);
+    const tools =
+      policy === null
+        ? others
+        : index >= 0
+          ? app.tools.map((item) => (item.name === name ? { ...item, policy } : item))
+          : [...app.tools, { name, policy, fingerprint: tool.fingerprint ?? null }];
     onChange({ ...app, tools });
   };
+  const unapproved = server.tools.some((tool) => {
+    const approval = approvalOf(tool, app);
+    return approval === 'changed' || approval === 'needed';
+  });
   // Picks of tools the app no longer lists, such as after a rename: they are skipped while answering.
   const gone = app.tools.filter((tool) => !server.tools.some((item) => item.name === tool.name));
 
@@ -229,63 +321,84 @@ function ToolChoices({ server, app, idPrefix, onChange }: { server: McpServerDto
     return <p className="text-small text-fg-muted">The app lists no tools. Test it on the Tools page.</p>;
   }
   return (
-    <ul aria-label={`Tools of ${server.name}`} className="space-y-2">
-      {server.tools.map((tool) => {
-        const pick = app.tools.find((item) => item.name === tool.name);
-        const policy = pick ? (pick.policy ?? defaultPolicy(tool, app)) : null;
-        const effect = toolEffect(tool);
-        const labelId = `${idPrefix}-${tool.name}`;
-        return (
-          <li
-            key={tool.name}
-            className={clsx('flex flex-wrap items-start gap-3 rounded-lg border p-3', policy ? 'border-accent-edge bg-accent-subtle' : 'border-border')}
-          >
-            <input
-              type="checkbox"
-              checked={policy !== null}
-              onChange={(event) => setTool(tool.name, event.target.checked ? defaultPolicy(tool, app) : null)}
-              aria-labelledby={labelId}
-              aria-describedby={`${labelId}-text`}
-              className="mt-0.5 size-4 shrink-0"
-            />
+    <>
+      {unapproved ? <p className="text-small text-fg-secondary">Some picked tools are new or changed. {NOT_APPROVED_NOTE}</p> : null}
+      <ul aria-label={`Tools of ${server.name}`} className="space-y-2">
+        {server.tools.map((tool) => {
+          const pick = app.tools.find((item) => item.name === tool.name);
+          const policy = pick ? (pick.policy ?? defaultPolicy(tool, app)) : null;
+          const effect = toolEffect(tool);
+          const approval = approvalOf(tool, app);
+          const labelId = `${idPrefix}-${tool.name}`;
+          return (
+            <li
+              key={tool.name}
+              className={clsx(
+                'flex flex-wrap items-start gap-3 rounded-lg border p-3',
+                policy ? 'border-accent-edge bg-accent-subtle' : 'border-border',
+              )}
+            >
+              <input
+                type="checkbox"
+                checked={policy !== null}
+                onChange={(event) => setTool(tool, event.target.checked ? defaultPolicy(tool, app) : null)}
+                aria-labelledby={labelId}
+                aria-describedby={`${labelId}-text`}
+                className="mt-0.5 size-4 shrink-0"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span id={labelId} className="text-sm font-medium text-fg">
+                    {toolLabel(tool)}
+                  </span>
+                  <Badge tone={effect.tone}>{effect.label}</Badge>
+                  <ApprovalBadge approval={approval} />
+                </span>
+                <span id={`${labelId}-text`} className="mt-0.5 line-clamp-2 block text-small text-fg-secondary">
+                  {tool.description ?? tool.name}
+                </span>
+              </span>
+              {policy ? (
+                <span className="flex flex-wrap items-center gap-2">
+                  {approval === 'changed' || approval === 'needed' ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      icon={ShieldCheck}
+                      onClick={() => onChange(approve(app, [tool]))}
+                      aria-label={`Approve ${toolLabel(tool)}`}
+                    >
+                      Approve
+                    </Button>
+                  ) : null}
+                  <Select
+                    aria-label={`When ${toolLabel(tool)} may run`}
+                    size="sm"
+                    className="w-52"
+                    value={policy}
+                    onChange={(next) => setTool(tool, next)}
+                    options={POLICY_CHOICES.map((choice) => ({ value: choice.value, label: choice.label }))}
+                  />
+                </span>
+              ) : null}
+            </li>
+          );
+        })}
+        {gone.map((tool) => (
+          <li key={tool.name} className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-border p-3">
             <span className="min-w-0 flex-1">
               <span className="flex flex-wrap items-center gap-2">
-                <span id={labelId} className="text-sm font-medium text-fg">
-                  {toolLabel(tool)}
-                </span>
-                <Badge tone={effect.tone}>{effect.label}</Badge>
+                <span className="font-mono text-small text-fg">{tool.name}</span>
+                <Badge tone="neutral">No longer offered</Badge>
               </span>
-              <span id={`${labelId}-text`} className="mt-0.5 line-clamp-2 block text-small text-fg-secondary">
-                {tool.description ?? tool.name}
-              </span>
+              <span className="mt-0.5 block text-small text-fg-muted">The app does not list it any more, so the agent skips it.</span>
             </span>
-            {policy ? (
-              <Select
-                aria-label={`When ${toolLabel(tool)} may run`}
-                size="sm"
-                className="w-52"
-                value={policy}
-                onChange={(next) => setTool(tool.name, next)}
-                options={POLICY_CHOICES.map((choice) => ({ value: choice.value, label: choice.label }))}
-              />
-            ) : null}
+            <Button size="sm" variant="ghost" icon={Trash2} onClick={() => setTool(tool, null)} aria-label={`Remove ${tool.name}`}>
+              Remove
+            </Button>
           </li>
-        );
-      })}
-      {gone.map((tool) => (
-        <li key={tool.name} className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-border p-3">
-          <span className="min-w-0 flex-1">
-            <span className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-small text-fg">{tool.name}</span>
-              <Badge tone="neutral">No longer offered</Badge>
-            </span>
-            <span className="mt-0.5 block text-small text-fg-muted">The app does not list it any more, so the agent skips it.</span>
-          </span>
-          <Button size="sm" variant="ghost" icon={Trash2} onClick={() => setTool(tool.name, null)} aria-label={`Remove ${tool.name}`}>
-            Remove
-          </Button>
-        </li>
-      ))}
-    </ul>
+        ))}
+      </ul>
+    </>
   );
 }

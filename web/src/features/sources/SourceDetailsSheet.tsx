@@ -7,6 +7,7 @@ import { SideSheet } from '../../components/ui/SideSheet';
 import { formatBytes, formatDateTime, formatNumber, safeExternalUrl } from '../../lib/format';
 import { useChunks } from './api';
 import { SourceStatusBadge } from './SourceStatusBadge';
+import { SuspiciousBadge, suspiciousChunks, suspiciousText } from './SuspiciousContent';
 import { SOURCE_TYPES } from './sourceTypes';
 import type { CrawlScope, SourceDto } from './types';
 import { WebsitePages } from './WebsitePages';
@@ -140,6 +141,7 @@ export function SourceDetailsSheet({ source, folder, stale, onClose }: SourceDet
   const status = source?.status?.toLowerCase();
   const failed = status === 'failed' || status === 'needsbrowser';
   const website = source?.type === 'website';
+  const suspicious = source ? suspiciousChunks(source) : 0;
 
   return (
     <SideSheet open={source !== null} onClose={onClose} size="lg" title={source?.title || source?.fileName || 'Untitled'} description={type}>
@@ -150,6 +152,14 @@ export function SourceDetailsSheet({ source, folder, stale, onClose }: SourceDet
               <SourceStatusBadge source={source} />
             </Detail>
             <Detail label="Added">{formatDateTime(source.createdAt)}</Detail>
+            {suspicious > 0 ? (
+              <Detail label="Content check" wide>
+                <span className="flex flex-col items-start gap-1">
+                  <SuspiciousBadge count={suspicious} />
+                  <span className="text-small text-fg-secondary">{suspiciousText(suspicious)}</span>
+                </span>
+              </Detail>
+            ) : null}
             {url ? (
               <Detail label="Address" wide>
                 <a

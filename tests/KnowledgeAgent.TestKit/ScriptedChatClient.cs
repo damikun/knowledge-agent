@@ -38,6 +38,15 @@ public sealed class ScriptedChatClient : IChatClient
         return new ChatResponse(new ChatMessage(ChatRole.Assistant, contents)) { FinishReason = ChatFinishReason.ToolCalls };
     });
 
+    // A short note before the call, as models often write: "I'll check the returns policy."
+    public ScriptedChatClient ThenTextAndToolCall(string text, string toolName, object? arguments = null) => Then((_, _) =>
+        new ChatResponse(new ChatMessage(
+            ChatRole.Assistant,
+            [new TextContent(text), new FunctionCallContent(NextCallId(), toolName, ToArguments(arguments))]))
+        {
+            FinishReason = ChatFinishReason.ToolCalls,
+        });
+
     public ScriptedChatClient ThenThrow(Exception exception) => Then((_, _) => throw exception);
 
     public ScriptedChatClient Then(Func<IReadOnlyList<ChatMessage>, ChatOptions?, ChatResponse> step)

@@ -6,6 +6,7 @@ public static class EvalMetrics
     public const string RetrievalRecallAt10 = "retrieval_recall_at_10";
     public const string RetrievalMrrAt10 = "retrieval_mrr_at_10";
     public const string AgentSourceRecall = "agent_source_recall";
+    public const string AnsweredWithCitation = "answered_with_citation";
     public const string CitationValidity = "citation_validity";
     public const string CitationSourceRecall = "citation_source_recall";
     public const string CitationPrecision = "citation_precision";
@@ -22,6 +23,7 @@ public static class EvalMetrics
         RetrievalRecallAt10,
         RetrievalMrrAt10,
         AgentSourceRecall,
+        AnsweredWithCitation,
         CitationValidity,
         CitationSourceRecall,
         CitationPrecision,

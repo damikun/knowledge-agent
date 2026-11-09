@@ -9,6 +9,7 @@ public static class QualityGate
     public const string KindMinimum = "minimum";
     public const string KindMaximum = "maximum";
     public const string KindRegression = "regression";
+    public const string KindRequired = "required";
     public const string BaselineCheck = "baseline";
 
     private const double Epsilon = 1e-9;
@@ -19,7 +20,8 @@ public static class QualityGate
         int failedItems,
         EvalBaseline? baseline,
         int? evaluatedItems = null,
-        int? datasetItems = null)
+        int? datasetItems = null,
+        bool judged = false)
     {
         ArgumentNullException.ThrowIfNull(config);
         ArgumentNullException.ThrowIfNull(metrics);
@@ -35,9 +37,20 @@ public static class QualityGate
                 failedItems == 0 ? "No item failed." : $"{failedItems} item(s) failed (agent errors), so their scores are incomplete."),
         };
 
+        // A subset (--max-items, --tag) may hold no item a metric applies to, so there a missing metric is only noted.
+        var subset = evaluatedItems is { } measured && datasetItems is { } all && measured < all;
+        foreach (var metric in config.RequiredFor(judged).Where(metric => !metrics.ContainsKey(metric)).OrderBy(Order))
+        {
+            checks.Add(subset
+                ? new EvalGateCheckDto(metric, KindRequired, null, 0, true,
+                    $"{metric} was not measured on this subset of {evaluatedItems} of {datasetItems} items.")
+                : new EvalGateCheckDto(metric, KindRequired, null, 0, false,
+                    $"{metric} was not measured, but the gate requires it."));
+        }
+
         foreach (var (metric, minimum) in config.Minimums.OrderBy(entry => Order(entry.Key)))
         {
-            // Unmeasured metrics skip their minimum: judge metrics are absent when the judge is off.
+            // Required metrics that are missing were reported above; the others may simply not apply to this run.
             if (!metrics.TryGetValue(metric, out var value))
             {
                 continue;
@@ -72,7 +85,8 @@ public static class QualityGate
             var compared = config.RegressionMetrics ?? baseline.Metrics.Keys.ToList();
             foreach (var metric in compared.Where(baseline.Metrics.ContainsKey).OrderBy(Order))
             {
-                var expected = Math.Max(0, baseline.Metrics[metric] - config.MaxRegression);
+                var tolerance = config.ToleranceFor(metric);
+                var expected = Math.Max(0, baseline.Metrics[metric] - tolerance);
 
                 // A metric the baseline has but the run lacks fails: something stopped working.
                 if (!metrics.TryGetValue(metric, out var value))
@@ -90,7 +104,7 @@ public static class QualityGate
                     value.Mean,
                     expected,
                     passed,
-                    $"{metric} {Percent(value.Mean)} vs baseline {Percent(baseline.Metrics[metric])} ({Points(delta)}; allowed drop {Points(-config.MaxRegression)})."));
+                    $"{metric} {Percent(value.Mean)} vs baseline {Percent(baseline.Metrics[metric])} ({Points(delta)}; allowed drop {Points(-tolerance)})."));
             }
         }
 

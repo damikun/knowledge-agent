@@ -7,20 +7,25 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KnowledgeAgent.Tests.Features.Evaluations;
 
-// Ingestion, chunking and hybrid retrieval of the golden set on deterministic test embeddings.
-// Answer and citation quality need a real model and run through `make eval`.
+// Ingestion, chunking and hybrid retrieval of the golden set on deterministic test embeddings, and the citation
+// plumbing with a rule-based agent. Answer quality needs a real model and runs through `make eval`.
+// The minimums are gate.offline in dataset.json, a few points below what the test embeddings score.
 public sealed class GoldenSetGateTests(EvalContainers containers) : IClassFixture<EvalContainers>
 {
     public const string DatasetName = "orbitwell-golden";
 
-    // Five points below what the TestKit embeddings score, so only a real regression fails.
-    private static readonly Dictionary<string, double> Minimums = new(StringComparer.Ordinal)
+    [Fact]
+    public void The_offline_gate_covers_retrieval_and_citations()
     {
-        [EvalMetrics.RetrievalRecallAt5] = 0.85,
-        [EvalMetrics.RetrievalRecallAt10] = 0.93,
-        [EvalMetrics.RetrievalMrrAt10] = 0.78,
-        [EvalMetrics.AgentSourceRecall] = 0.87,
-    };
+        var minimums = EvalDatasetLoader.LoadEmbedded().Single(dataset => dataset.Name == DatasetName).Gate.OfflineMinimums;
+
+        minimums.Keys.ShouldBe(
+            [
+                EvalMetrics.RetrievalRecallAt5, EvalMetrics.RetrievalRecallAt10, EvalMetrics.RetrievalMrrAt10,
+                EvalMetrics.AgentSourceRecall, EvalMetrics.AnsweredWithCitation, EvalMetrics.CitationValidity,
+            ],
+            ignoreOrder: true);
+    }
 
     [Fact]
     public async Task The_golden_set_passes_the_retrieval_gate()
@@ -51,11 +56,13 @@ public sealed class GoldenSetGateTests(EvalContainers containers) : IClassFixtur
             cancellationToken: ct);
 
         result.FailedItems.ShouldBe(0, "an item that fails leaves its scores out");
-        var misses = Minimums
-            .Where(minimum => result.Metrics[minimum.Key].Mean < minimum.Value)
-            .Select(minimum => $"{minimum.Key}: {result.Metrics[minimum.Key].Mean:P1} is below {minimum.Value:P0}")
+        var minimums = dataset.Gate.OfflineMinimums;
+        minimums.ShouldNotBeEmpty();
+        var misses = minimums
+            .Where(minimum => !result.Metrics.TryGetValue(minimum.Key, out var value) || value.Mean + 1e-9 < minimum.Value)
+            .Select(minimum => $"{minimum.Key}: {(result.Metrics.TryGetValue(minimum.Key, out var value) ? $"{value.Mean:P1}" : "not measured")} is below {minimum.Value:P0}")
             .ToList();
-        misses.ShouldBeEmpty(string.Join(Environment.NewLine, Minimums.Keys.Select(key => $"{key} = {result.Metrics[key].Mean:P1}")));
+        misses.ShouldBeEmpty(string.Join(Environment.NewLine, result.Metrics.Select(metric => $"{metric.Key} = {metric.Value.Mean:P1}")));
         return result;
     }
 }

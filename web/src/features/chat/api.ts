@@ -53,11 +53,20 @@ function normalizeLabels(value: unknown): ConversationLabelDto[] {
   if (!Array.isArray(value)) {
     return [];
   }
-  return value.filter(isRecord).flatMap((label) =>
-    typeof label.id === 'string' && typeof label.name === 'string'
-      ? [{ id: label.id, name: label.name, color: labelColor(label.color), source: label.source === 'auto' ? ('auto' as const) : ('manual' as const) }]
-      : [],
-  );
+  return value
+    .filter(isRecord)
+    .flatMap((label) =>
+      typeof label.id === 'string' && typeof label.name === 'string'
+        ? [
+            {
+              id: label.id,
+              name: label.name,
+              color: labelColor(label.color),
+              source: label.source === 'auto' ? ('auto' as const) : ('manual' as const),
+            },
+          ]
+        : [],
+    );
 }
 
 /** Fills in fields older API versions leave out. */
@@ -146,6 +155,10 @@ export const chatApi = {
     request<unknown>(`/api/conversations/${encodeURIComponent(id)}/labels`, { method: 'PUT', body: { labelIds } }),
   listLabels: async (signal?: AbortSignal) =>
     asArray<unknown>(await request<unknown>('/api/labels', { signal })).flatMap((label) => normalizeLabel(label) ?? []),
+  listLinkHosts: async (signal?: AbortSignal) => {
+    const result = await request<unknown>('/api/link-hosts', { signal });
+    return isRecord(result) ? asArray<unknown>(result.hosts).filter((host): host is string => typeof host === 'string') : [];
+  },
   getConversation: async (id: Guid, signal?: AbortSignal) =>
     normalizeConversation(await request<ConversationDto>(`/api/conversations/${encodeURIComponent(id)}`, { signal })),
   deleteConversation: (id: Guid) => request<void>(`/api/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
@@ -312,6 +325,14 @@ export function useLabels() {
     },
     staleTime: 60_000,
   });
+}
+
+const NO_HOSTS: readonly string[] = [];
+
+/** Hosts answers may link to; until they load, or when they cannot, links show as text. */
+export function useLinkHosts(): readonly string[] {
+  const query = useQuery({ queryKey: ['link-hosts'], queryFn: ({ signal }) => chatApi.listLinkHosts(signal), staleTime: 5 * 60_000, retry: false });
+  return query.data ?? NO_HOSTS;
 }
 
 /** Changes or removes (null) a conversation in every loaded list, for optimistic updates. */

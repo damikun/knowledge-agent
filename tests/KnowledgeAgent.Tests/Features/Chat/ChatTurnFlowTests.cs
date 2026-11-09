@@ -29,9 +29,11 @@ public sealed class ChatTurnFlowTests
         [
             ChatEventTypes.Conversation,
             ChatEventTypes.AgentStarted,
+            ChatEventTypes.StepFinished,
             ChatEventTypes.ToolCall,
             ChatEventTypes.ToolResult,
             ChatEventTypes.TextDelta,
+            ChatEventTypes.StepFinished,
             ChatEventTypes.Usage,
             ChatEventTypes.AgentCompleted,
             ChatEventTypes.Conversation,
@@ -80,7 +82,7 @@ public sealed class ChatTurnFlowTests
         orchestrator.Requests.Count.ShouldBe(2);
         var toolMessage = orchestrator.Requests[1].Messages[^1];
         toolMessage.Role.ShouldBe(ChatRole.Tool);
-        toolMessage.ToolResults().ShouldHaveSingleItem().ResultText().ShouldStartWith("Found 1 passage(s) for \"pro plan price\".");
+        toolMessage.ToolResults().ShouldHaveSingleItem().ResultText().Unwrapped().ShouldStartWith("Found 1 passage(s) for \"pro plan price\".");
 
         var conversation = host.Conversations.Get(first.ConversationId);
         conversation.Title.ShouldBe("Pro plan pricing");

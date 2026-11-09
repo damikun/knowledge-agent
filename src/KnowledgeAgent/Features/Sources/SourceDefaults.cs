@@ -13,6 +13,9 @@ internal static class SourceMetadataKeys
     public const string LastModified = "lastModified";
     public const string SitemapLastModified = "sitemapLastModified";
     public const string CrawlRun = "crawlRun";
+
+    // How many chunks look written to the assistant rather than the reader; absent when none do.
+    public const string SuspiciousChunks = "suspiciousChunks";
 }
 
 internal static class SourceDefaults

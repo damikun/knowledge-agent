@@ -1,7 +1,9 @@
+using System.Globalization;
 using KnowledgeAgent.Infrastructure.AI.Configuration;
 using KnowledgeAgent.Infrastructure.AI.Profiles;
 using Microsoft.Extensions.AI;
 using OllamaSharp;
+using OllamaSharp.Models;
 
 namespace KnowledgeAgent.Infrastructure.AI.Providers.Ollama;
 
@@ -9,6 +11,11 @@ internal sealed class OllamaAiProvider : IAiProvider, IAiProviderDescriptor
 {
     // Local inference can be slow, and the HttpClient default of 100 seconds is too short for it.
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromMinutes(10);
+
+    public const string NumCtxKey = "NumCtx";
+
+    // Ollama's own default is a few thousand tokens and it drops the oldest messages beyond it without an error.
+    public const int DefaultNumCtx = 32768;
 
     public string Type => ProviderTypes.Ollama;
 
@@ -31,6 +38,23 @@ internal sealed class OllamaAiProvider : IAiProvider, IAiProviderDescriptor
     {
         // Not forwarded: sending thinking settings to a local model without thinking support fails.
         chatOptions.Reasoning = null;
+
+        if (NumCtx(options) is { } numCtx)
+        {
+            chatOptions.AddOllamaOption(OllamaOption.NumCtx, numCtx);
+        }
+    }
+
+    // "default" or "0" leaves the context size to the Ollama server.
+    internal static int? NumCtx(AiProviderOptions options)
+    {
+        var value = options.Settings.FirstOrDefault(entry => entry.Key.Equals(NumCtxKey, StringComparison.OrdinalIgnoreCase)).Value?.Trim();
+        if (string.IsNullOrEmpty(value))
+        {
+            return DefaultNumCtx;
+        }
+
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var size) && size > 0 ? size : null;
     }
 
     public async Task<ProviderConnectionTest> TestConnectionAsync(AiProviderOptions options, CancellationToken cancellationToken = default)

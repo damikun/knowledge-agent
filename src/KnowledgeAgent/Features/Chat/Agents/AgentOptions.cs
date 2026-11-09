@@ -17,4 +17,17 @@ public sealed class AgentOptions
     public int MaxTopK { get; set; } = 20;
     public int MaxToolResultChars { get; set; } = 12000;
     public int ToolTimeoutSeconds { get; set; } = 120;
+
+    // "final" stores only the last step of the answering agent; "all" joins every step, as older versions did.
+    public string AnswerText { get; set; } = AnswerTextFinal;
+
+    public const string AnswerTextFinal = "final";
+    public const string AnswerTextAll = "all";
+
+    public bool AnswerIsFinalStep => !string.Equals(AnswerText?.Trim(), AnswerTextAll, StringComparison.OrdinalIgnoreCase);
+
+    // Side effects a single turn may cause, however many tool calls the model makes.
+    public int MaxHandoverOffersPerTurn { get; set; } = 1;
+    public int MaxFeedbackPerTurn { get; set; } = 1;
+    public int MaxFeedbackPerConversation { get; set; } = 3;
 }

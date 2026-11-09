@@ -1,4 +1,5 @@
 using KnowledgeAgent.Features.Chat;
+using KnowledgeAgent.Features.Chat.Live;
 using KnowledgeAgent.Features.Evaluations.Datasets;
 using KnowledgeAgent.Features.Prompts;
 using KnowledgeAgent.Features.Search;
@@ -112,6 +113,7 @@ public sealed class IsolatedEvalTarget : IEvalTarget
 
             // The isolated knowledge base never hands its ingestion to the app's job engine.
             ["Jobs:Provider"] = JobEngines.InProcess,
+            ["Live:Provider"] = LiveProviders.InProcess,
             ["VectorStore:Provider"] = "InMemory",
             ["VectorStore:EnsureSchemaOnStartup"] = "false",
             ["Prompts:SeedOnStartup"] = "false",

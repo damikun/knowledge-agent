@@ -33,12 +33,19 @@ internal sealed record ToolResult(string Text, string Summary, bool IsError = fa
 
     public bool EndsRun { get; init; }
 
+    // Content from sources or other systems; the runner wraps it before the model sees it.
+    public bool Untrusted { get; init; }
+
     public static ToolResult Failure(string message) => new("Error: " + message, message, IsError: true);
 }
 
 internal sealed class ToolArgumentException(string message) : Exception(message);
 
-internal sealed record ToolConfirmationPrompt(string Title, string? Connection);
+internal sealed record ToolConfirmationPrompt(string Title, string? Connection)
+{
+    // Built by the server from the arguments, so what the person confirms is what runs.
+    public IReadOnlyList<ConfirmationDetailDto> Details { get; init; } = [];
+}
 
 internal interface IAgentToolSource
 {

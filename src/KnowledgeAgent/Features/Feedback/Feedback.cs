@@ -13,6 +13,9 @@ public enum FeedbackAuthor
 {
     Visitor,
     Staff,
+
+    // A note the assistant wrote from the chat; nobody confirmed it.
+    Agent,
 }
 
 public sealed class Feedback

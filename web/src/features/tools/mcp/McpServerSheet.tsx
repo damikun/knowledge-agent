@@ -26,6 +26,7 @@ interface Values {
   headerName: string;
   secret: SecretValue;
   enabled: boolean;
+  sendIdentity: boolean;
 }
 
 type FieldName = 'name' | 'url' | 'authType' | 'headerName' | 'secret';
@@ -45,6 +46,7 @@ function initialValues(server: McpServerDto | null): Values {
     headerName: server?.headerName ?? '',
     secret: NO_SECRET,
     enabled: server?.enabled ?? true,
+    sendIdentity: server?.sendIdentity ?? false,
   };
 }
 
@@ -82,6 +84,7 @@ export function validateMcpServer(
       headerName: values.authType === 'header' ? headerName : null,
       secret: values.authType === 'none' ? null : secret,
       enabled: values.enabled,
+      sendIdentity: values.sendIdentity,
     },
     errors,
   };
@@ -218,7 +221,14 @@ export function McpServerSheet({ server, onClose, onSaved }: McpServerSheetProps
         </>
       }
     >
-      <form ref={formRef} id={formId} onSubmit={submit} noValidate className="space-y-5" aria-label={server ? `Settings of ${server.name}` : 'New MCP server'}>
+      <form
+        ref={formRef}
+        id={formId}
+        onSubmit={submit}
+        noValidate
+        className="space-y-5"
+        aria-label={server ? `Settings of ${server.name}` : 'New MCP server'}
+      >
         <Field label="Name" htmlFor={id('name')} errors={errorsFor('name')} hint="How your team and agents recognize it, such as Shop.">
           <input
             {...fieldAria(id('name'), errorsFor('name'), true)}
@@ -228,7 +238,12 @@ export function McpServerSheet({ server, onClose, onSaved }: McpServerSheetProps
             className="field"
           />
         </Field>
-        <Field label="Address" htmlFor={id('url')} errors={errorsFor('url')} hint="The server's MCP endpoint. Only https, unless your server allows private networks.">
+        <Field
+          label="Address"
+          htmlFor={id('url')}
+          errors={errorsFor('url')}
+          hint="The server's MCP endpoint. Only https, unless your server allows private networks."
+        >
           <input
             {...fieldAria(id('url'), errorsFor('url'), true)}
             {...inputProps}
@@ -270,6 +285,18 @@ export function McpServerSheet({ server, onClose, onSaved }: McpServerSheetProps
           ) : null}
         </div>
         {server ? <Switch checked={values.enabled} onChange={(checked) => set('enabled', checked)} label="Agents may use its tools" /> : null}
+        <div className="space-y-1">
+          <Switch
+            checked={values.sendIdentity}
+            onChange={(checked) => set('sendIdentity', checked)}
+            label="Send the visitor's verified user ID"
+            describedBy={id('sendIdentity')}
+          />
+          <p id={id('sendIdentity')} className="text-xs text-fg-muted">
+            Each tool call then carries the user ID your site signed, in _meta under knowledge-agent/caller, so the app can return only that
+            person&apos;s data.
+          </p>
+        </div>
 
         {testResult ? <TestResult result={testResult} /> : null}
         {test.isError ? <ErrorMessage error={test.error} title="The test did not run" /> : null}
@@ -285,7 +312,8 @@ export function McpServerSheet({ server, onClose, onSaved }: McpServerSheetProps
             Tools {tools.length > 0 ? <span className="font-normal text-fg-muted">({tools.length})</span> : null}
           </h3>
           <p className="text-xs text-fg-muted">
-            What the server says each tool does. Tools that may change something ask the person before they run, unless you choose otherwise on the agent.
+            What the server says each tool does. Tools that may change something ask the person before they run, unless you choose otherwise on the
+            agent.
           </p>
           <McpToolList tools={tools} label={`Tools of ${values.name || 'the server'}`} />
         </section>

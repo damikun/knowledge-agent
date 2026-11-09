@@ -44,6 +44,9 @@ public sealed class McpServer
 
     public bool Enabled { get; set; } = true;
 
+    // Sends who the call is for in each tool call's _meta, so the server can limit data to a verified user.
+    public bool SendIdentity { get; set; }
+
     public DateTimeOffset? LastCheckedAt { get; set; }
 
     public bool? LastCheckOk { get; set; }

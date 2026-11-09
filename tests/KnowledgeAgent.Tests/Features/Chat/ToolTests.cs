@@ -3,6 +3,7 @@ using System.Threading.Channels;
 using KnowledgeAgent.Features.Chat;
 using KnowledgeAgent.Features.Chat.Agents;
 using KnowledgeAgent.Features.Chat.Tools;
+using KnowledgeAgent.Features.Search;
 using KnowledgeAgent.Features.Sources;
 using KnowledgeAgent.Tests.Features.Chat.Support;
 using Microsoft.Extensions.DependencyInjection;
@@ -67,6 +68,24 @@ public sealed class ToolTests : IDisposable
         {
             CultureInfo.CurrentCulture = previousCulture;
         }
+    }
+
+    [Fact]
+    public async Task A_degraded_search_tells_the_model_what_may_be_missing()
+    {
+        _host.Search.AddHit("Manual", "Error E-214 means an encoder mismatch.", sourceId: SourceA);
+        _host.Search.Degraded = [SearchDegradations.KeywordFailed];
+
+        var found = await Tool<SearchKnowledgeBaseTool>().InvokeAsync(Invocation(new() { ["query"] = "E-214" }), Ct);
+        _host.Search.Degraded = [SearchDegradations.RerankFailed];
+        var reranked = await Tool<SearchKnowledgeBaseTool>().InvokeAsync(Invocation(new() { ["query"] = "E-214" }), Ct);
+
+        found.Text.Split('\n')[..2].ShouldBe(["Found 1 passage(s) for \"E-214\".", SearchKnowledgeBaseTool.KeywordUnavailableNote]);
+        found.Text.ShouldContain("[S1] Manual");
+        SearchKnowledgeBaseTool.KeywordUnavailableNote.ShouldContain(ToolNames.GrepSources);
+        reranked.Text.Split('\n')[1].ShouldBe(SearchKnowledgeBaseTool.DegradedSearchNote);
+        SearchKnowledgeBaseTool.FormatNoResults("E-214", [SearchDegradations.KeywordFailed])
+            .ShouldBe("No passages found for \"E-214\".\n" + SearchKnowledgeBaseTool.KeywordUnavailableNote);
     }
 
     [Fact]

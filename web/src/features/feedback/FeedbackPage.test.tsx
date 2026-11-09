@@ -19,7 +19,20 @@ const SUMMARY = 'GET /api/feedback/summary';
 const LIST = 'GET /api/feedback';
 
 const routes = {
-  [SUMMARY]: [feedbackSummary(), feedbackSummary({ widgetId: null, agentId: null, answers: 0, positive: 0, negative: 0, positiveRatio: null, ratings: 1, averageRating: 5, agentRecorded: 0 })],
+  [SUMMARY]: [
+    feedbackSummary(),
+    feedbackSummary({
+      widgetId: null,
+      agentId: null,
+      answers: 0,
+      positive: 0,
+      negative: 0,
+      positiveRatio: null,
+      ratings: 1,
+      averageRating: 5,
+      agentRecorded: 0,
+    }),
+  ],
   [LIST]: [feedbackDto(), portalRating],
   ...widgetsRoutes(() => [widgetDto()]),
   ...agentsRoutes(() => [builtInAgent, agentDto()]),
@@ -42,6 +55,25 @@ describe('FeedbackPage', () => {
     expect(within(portal).getByText('Knowledge Agent')).toBeInTheDocument();
     expect(within(portal).getByText('No answer ratings')).toBeInTheDocument();
     expect(within(portal).getByText('5.0/5')).toBeInTheDocument();
+  });
+
+  it('marks notes the assistant wrote as unverified', async () => {
+    const note = feedbackDto({
+      id: 'note-1',
+      kind: 'agent',
+      author: 'agent',
+      rating: -1,
+      comment: 'Says the checkout is broken.',
+      reasons: [],
+      messageId: null,
+    });
+    mockFetch({ ...routes, [LIST]: [note] });
+    renderWithProviders(<FeedbackPage />);
+
+    const list = await screen.findByRole('list', { name: 'Feedback' });
+    const item = within(list).getByRole('listitem');
+    expect(item).toHaveTextContent('Noted by the assistant, unverified');
+    expect(item).not.toHaveTextContent('By a visitor');
   });
 
   it('lists the latest feedback and links each to its conversation', async () => {
@@ -83,7 +115,14 @@ describe('FeedbackPage', () => {
     await chooseOption(user, screen.getByRole('combobox', { name: 'Agent' }), 'Website helper');
     await waitFor(() => expect(requestUrls(fetchMock, LIST).at(-1)!.searchParams.get('agentId')).toBe(agentGuid(2)));
     const last = requestUrls(fetchMock, LIST).at(-1)!.searchParams;
-    expect(Object.fromEntries(last)).toEqual({ widgetId: widgetGuid(1), agentId: agentGuid(2), kind: 'answer', positive: 'false', days: '7', take: '100' });
+    expect(Object.fromEntries(last)).toEqual({
+      widgetId: widgetGuid(1),
+      agentId: agentGuid(2),
+      kind: 'answer',
+      positive: 'false',
+      days: '7',
+      take: '100',
+    });
   });
 
   it('shows support users widget ids, as they cannot read the widgets', async () => {

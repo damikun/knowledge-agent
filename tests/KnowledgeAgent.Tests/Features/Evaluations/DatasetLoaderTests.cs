@@ -26,7 +26,15 @@ public sealed class DatasetLoaderTests : IDisposable
                 { "id": "days", "question": "How many days?", "expectedSources": ["Handbook.md"], "expectedFacts": ["20 days|twenty days"], "referenceAnswer": "Twenty.", "tags": ["hr", "single-source"] },
                 { "id": "ceo", "question": "Who is the CEO?", "answerable": false, "tags": ["unanswerable"] },
               ],
-              "gate": { "minimums": { "citation_validity": 1 }, "maxRegression": 0.1, "regressionMetrics": ["answer_fact_recall"] },
+              "gate": {
+                "required": ["answered_with_citation", "citation_validity"],
+                "requiredWithJudge": ["judge_faithfulness"],
+                "minimums": { "citation_validity": 1 },
+                "maxRegression": 0.1,
+                "tolerances": { "answer_abstained": 0.15 },
+                "regressionMetrics": ["answer_fact_recall"],
+                "offline": { "minimums": { "answered_with_citation": 1, "retrieval_recall_at_5": 0.85 } },
+              },
             }
             """);
 
@@ -47,6 +55,11 @@ public sealed class DatasetLoaderTests : IDisposable
         dataset.Gate.Minimums[EvalMetrics.CitationValidity].ShouldBe(1);
         dataset.Gate.MaxRegression.ShouldBe(0.1);
         dataset.Gate.RegressionMetrics.ShouldBe([EvalMetrics.AnswerFactRecall]);
+        dataset.Gate.Required.ShouldBe([EvalMetrics.AnsweredWithCitation, EvalMetrics.CitationValidity]);
+        dataset.Gate.RequiredFor(judged: true).ShouldBe([EvalMetrics.AnsweredWithCitation, EvalMetrics.CitationValidity, EvalMetrics.JudgeFaithfulness]);
+        dataset.Gate.ToleranceFor(EvalMetrics.AnswerAbstained).ShouldBe(0.15);
+        dataset.Gate.ToleranceFor(EvalMetrics.AnswerFactRecall).ShouldBe(0.1);
+        dataset.Gate.OfflineMinimums[EvalMetrics.AnsweredWithCitation].ShouldBe(1);
         dataset.Baselines["sig"].Metrics[EvalMetrics.AnswerFactRecall].ShouldBe(0.5);
     }
 
@@ -64,7 +77,12 @@ public sealed class DatasetLoaderTests : IDisposable
                 { "id": "u", "question": "Unanswerable?", "answerable": false, "expectedFacts": ["x"] },
                 { "id": "f", "question": "Facts?", "expectedFacts": ["a||b"] }
               ],
-              "gate": { "minimums": { "made_up": 0.5, "citation_validity": 2 } }
+              "gate": {
+                "minimums": { "made_up": 0.5, "citation_validity": 2 },
+                "required": ["not_a_metric"],
+                "tolerances": { "answer_abstained": 1.5 },
+                "offline": { "minimums": { "also_made_up": 1 } }
+              }
             }
             """);
 
@@ -79,6 +97,9 @@ public sealed class DatasetLoaderTests : IDisposable
         error.Problems.ShouldContain(problem => problem.Contains("empty alternatives"));
         error.Problems.ShouldContain(problem => problem.Contains("unknown metric 'made_up'"));
         error.Problems.ShouldContain(problem => problem.Contains("between 0 and 1"));
+        error.Problems.ShouldContain("gate.required: unknown metric 'not_a_metric'.");
+        error.Problems.ShouldContain("gate.tolerances.answer_abstained must be between 0 and 1.");
+        error.Problems.ShouldContain("gate.offline.minimums: unknown metric 'also_made_up'.");
     }
 
     [Fact]
@@ -101,6 +122,9 @@ public sealed class DatasetLoaderTests : IDisposable
         dataset.Items.Count(item => !item.Answerable).ShouldBe(4);
         dataset.Items.Count(item => item.Tags.Contains("multi-source")).ShouldBe(5);
         dataset.Items.Where(item => item.Answerable).ShouldAllBe(item => item.ExpectedSources.Count > 0 && item.ExpectedFacts.Count > 0);
+        dataset.Gate.Required.ShouldContain(EvalMetrics.AnsweredWithCitation);
+        dataset.Gate.Required.ShouldContain(EvalMetrics.AnswerAbstained);
+        dataset.Gate.OfflineMinimums.ShouldNotBeEmpty();
 
         foreach (var document in dataset.Corpus)
         {

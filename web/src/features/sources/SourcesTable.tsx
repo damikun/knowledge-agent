@@ -8,6 +8,7 @@ import { formatBytes, formatDateTime, formatNumber, formatRelativeTime, hostname
 import { endDrag, startDrag, type DragPayload } from './dragAndDrop';
 import type { SelectMode } from './selection';
 import { SourceStatusBadge } from './SourceStatusBadge';
+import { SuspiciousBadge, suspiciousChunks } from './SuspiciousContent';
 import { SOURCE_TYPES } from './sourceTypes';
 import type { SourceDto } from './types';
 import { scrollBehavior } from '../../lib/motion';
@@ -244,6 +245,11 @@ export function SourcesTable({
                       />
                     ) : null}
                   </span>
+                  {suspiciousChunks(source) > 0 ? (
+                    <div className="mt-1">
+                      <SuspiciousBadge count={suspiciousChunks(source)} />
+                    </div>
+                  ) : null}
                   {failed && source.error ? (
                     <p className="mt-1 line-clamp-2 max-w-64 text-xs break-words text-danger-text" title={source.error}>
                       {source.error}

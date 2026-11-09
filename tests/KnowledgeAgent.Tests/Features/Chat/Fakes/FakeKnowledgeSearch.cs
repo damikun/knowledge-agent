@@ -13,6 +13,9 @@ public sealed class FakeKnowledgeSearch : IKnowledgeSearch
 
     public Func<KnowledgeSearchRequest, CancellationToken, Task<IReadOnlyList<KnowledgeSearchHit>>>? Handler { get; set; }
 
+    // Reported with every result, as if those parts of the search had failed.
+    public IReadOnlyList<string> Degraded { get; set; } = [];
+
     public KnowledgeSearchHit AddHit(
         string sourceTitle,
         string content,
@@ -32,13 +35,13 @@ public sealed class FakeKnowledgeSearch : IKnowledgeSearch
         return hit;
     }
 
-    public Task<IReadOnlyList<KnowledgeSearchHit>> SearchAsync(KnowledgeSearchRequest request, CancellationToken cancellationToken = default)
+    public async Task<KnowledgeSearchResult> SearchAsync(KnowledgeSearchRequest request, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
         _requests.Enqueue(request);
         if (Handler is { } handler)
         {
-            return handler(request, cancellationToken);
+            return new KnowledgeSearchResult(await handler(request, cancellationToken), Degraded);
         }
 
         lock (_gate)
@@ -47,7 +50,7 @@ public sealed class FakeKnowledgeSearch : IKnowledgeSearch
                 .Where(hit => request.SourceIds is null || request.SourceIds.Contains(hit.SourceId))
                 .Take(request.TopK)
                 .ToList();
-            return Task.FromResult(hits);
+            return new KnowledgeSearchResult(hits, Degraded);
         }
     }
 }

@@ -206,6 +206,10 @@ public sealed class EvalRunner(ILogger logger, TimeProvider? timeProvider = null
         {
             warnings.Enqueue($"The retrieval check failed for item {item.Id}: {retrieval.Error}");
         }
+        else if (retrieval.Degraded.Count > 0)
+        {
+            warnings.Enqueue($"The retrieval check for item {item.Id} ran degraded ({string.Join(", ", retrieval.Degraded)}), so its retrieval scores may be low.");
+        }
 
         AgentTurnResult turn;
         Guid? conversationId = null;
@@ -269,6 +273,8 @@ public sealed class EvalRunner(ILogger logger, TimeProvider? timeProvider = null
                 {
                     metrics[metric] = value;
                 }
+
+                ItemScorer.ApplyJudge(metrics);
             }
         }
 
@@ -329,9 +335,9 @@ public sealed class EvalRunner(ILogger logger, TimeProvider? timeProvider = null
         try
         {
             await using var scope = services.CreateAsyncScope();
-            var hits = await scope.ServiceProvider.GetRequiredService<IKnowledgeSearch>()
+            var result = await scope.ServiceProvider.GetRequiredService<IKnowledgeSearch>()
                 .SearchAsync(new KnowledgeSearchRequest(item.Question, topK), cancellationToken);
-            return new RetrievalResult(hits, null);
+            return new RetrievalResult(result.Hits, null) { Degraded = result.Degraded };
         }
         catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {

@@ -187,6 +187,7 @@ internal sealed partial class IngestionPipeline(
         }
 
         source.ChunkCount = chunks.Count;
+        FlagSuspicious(source, chunks);
         await SaveStageAsync(source, SourceStage.Contextualizing, cancellationToken).ConfigureAwait(false);
         IReadOnlyList<string> contexts;
         using (IngestionTelemetry.ActivitySource.StartActivity("contextualize"))
@@ -223,6 +224,25 @@ internal sealed partial class IngestionPipeline(
         activity?.SetTag(IngestionTelemetry.Tags.PageCount, document.PageCount);
         activity?.SetTag(IngestionTelemetry.Tags.EmbeddingModel, modelKey);
         IngestionTelemetry.ChunksStored.Add(chunks.Count);
+    }
+
+    // Labels the source for a person to read; on the daily refresh too, so a changed page is caught.
+    private void FlagSuspicious(Source source, IReadOnlyList<TextChunk> chunks)
+    {
+        var suspicious = InjectionScan.CountSuspicious(chunks.Select(chunk => chunk.Content));
+        var metadata = new Dictionary<string, string>(source.Metadata);
+        if (suspicious > 0)
+        {
+            metadata[SourceMetadataKeys.SuspiciousChunks] = suspicious.ToString(CultureInfo.InvariantCulture);
+            IngestionTelemetry.SuspiciousChunks.Add(suspicious);
+            LogSuspicious(logger, source.Id, suspicious);
+        }
+        else
+        {
+            metadata.Remove(SourceMetadataKeys.SuspiciousChunks);
+        }
+
+        source.Metadata = metadata;
     }
 
     private async Task<ExtractedDocument> ObtainDocumentAsync(Source source, CancellationToken cancellationToken)
@@ -519,6 +539,9 @@ internal sealed partial class IngestionPipeline(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Source {SourceId} was deleted while it was being ingested")]
     private static partial void LogDeletedWhileProcessing(ILogger logger, Guid sourceId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Source {SourceId} has {Count} chunk(s) that look written to the assistant; it is labelled for review")]
+    private static partial void LogSuspicious(ILogger logger, Guid sourceId, int count);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Could not remove the vectors of deleted source {SourceId}")]
     private static partial void LogVectorCleanupFailed(ILogger logger, Exception exception, Guid sourceId);

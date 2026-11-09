@@ -15,10 +15,17 @@ internal sealed record AgentRunRequest(
 
 internal sealed record AgentRunError(string Code, string Message, Exception? Exception = null);
 
+// FinalText is the text of the last model call when no tool call followed it; empty after a hand-off or a failed call.
+// FullText joins the text of every call.
 internal sealed record AgentRunResult(
     string FinishReason,
     int Iterations,
     string FinalText,
     string FullText,
     IReadOnlyList<CitationDto> Citations,
-    AgentRunError? Error);
+    AgentRunError? Error)
+{
+    public IReadOnlyList<AgentStep> Steps { get; init; } = [];
+}
+
+internal sealed record AgentStep(int Number, string Text, bool Interim);

@@ -25,7 +25,20 @@ public sealed record KnowledgeSearchHit(
     public double? RerankScore { get; init; }
 }
 
+// Degraded lists the parts that failed and were skipped, so callers can tell a weaker search from an empty one.
+public sealed record KnowledgeSearchResult(IReadOnlyList<KnowledgeSearchHit> Hits, IReadOnlyList<string> Degraded)
+{
+    public bool IsDegraded => Degraded.Count > 0;
+}
+
+public static class SearchDegradations
+{
+    public const string KeywordFailed = "keyword_failed";
+    public const string RerankFailed = "rerank_failed";
+    public const string SourceLookupFailed = "source_lookup_failed";
+}
+
 public interface IKnowledgeSearch
 {
-    Task<IReadOnlyList<KnowledgeSearchHit>> SearchAsync(KnowledgeSearchRequest request, CancellationToken cancellationToken = default);
+    Task<KnowledgeSearchResult> SearchAsync(KnowledgeSearchRequest request, CancellationToken cancellationToken = default);
 }

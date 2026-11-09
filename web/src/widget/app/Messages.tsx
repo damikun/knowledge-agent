@@ -89,7 +89,7 @@ export function StaffRow({ name, text }: { name: string | null; text: string }) 
         <p className="mb-1 pl-1 text-xs font-medium text-muted">{shown}</p>
         <div className="w-fit max-w-full rounded-[20px] rounded-tl-md bg-bot px-3.5 py-2 text-[14.5px] leading-snug text-bot-ink">
           <span className="sr-only">{shown}: </span>
-          <Markdown text={text} citationMode={null} />
+          <Markdown text={text} citationMode={null} anyLink />
         </div>
       </div>
     </div>
@@ -122,11 +122,19 @@ function SourceList({ sources, linked }: { sources: NumberedSource[]; linked: bo
       <ol aria-labelledby={headingId} className="mt-1.5 space-y-1 text-[12.5px] leading-snug">
         {sources.map((source) => (
           <li key={source.number} className="flex items-baseline gap-2">
-            <span aria-hidden="true" className="grid size-4 shrink-0 place-items-center rounded-full bg-accent-soft text-[10px] font-semibold text-accent-text tabular-nums">
+            <span
+              aria-hidden="true"
+              className="grid size-4 shrink-0 place-items-center rounded-full bg-accent-soft text-[10px] font-semibold text-accent-text tabular-nums"
+            >
               {source.number}
             </span>
             {linked && source.url ? (
-              <a href={source.url} target="_blank" rel="noopener noreferrer" className="break-words text-accent-text underline decoration-1 underline-offset-2">
+              <a
+                href={source.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-words text-accent-text underline decoration-1 underline-offset-2"
+              >
                 {source.title}
                 <span className="sr-only"> ({t('newTab')})</span>
               </a>
@@ -161,13 +169,19 @@ export function StreamingAnswerView({ answer }: { answer: StreamingAnswer }) {
   return (
     <AssistantRow editable>
       {hasText ? <AnswerContent text={answer.text} citations={answer.citations} streaming={!answer.done} /> : null}
-      {answer.activity === 'searching' ? (
+      {answer.status && !hasText ? (
+        // Announced by the chat's own live region, so it is not a live region itself.
+        <p data-testid="answer-status" className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
+          <LoaderCircle className="size-3.5 shrink-0 motion-safe:animate-spin" aria-hidden="true" />
+          <span className="truncate">{answer.status}</span>
+        </p>
+      ) : answer.activity === 'searching' ? (
         <p className={`flex items-center gap-1.5 text-xs text-muted ${hasText ? 'mt-2' : ''}`}>
           <LoaderCircle className="size-3.5 motion-safe:animate-spin" aria-hidden="true" />
           {t('searching')}
         </p>
       ) : null}
-      {answer.activity === 'thinking' && !hasText ? <ThinkingDots /> : null}
+      {answer.activity === 'thinking' && !hasText && !answer.status ? <ThinkingDots /> : null}
       {answer.error ? <p className={`text-sm text-danger ${hasText ? 'mt-2' : ''}`}>{answer.error}</p> : null}
     </AssistantRow>
   );

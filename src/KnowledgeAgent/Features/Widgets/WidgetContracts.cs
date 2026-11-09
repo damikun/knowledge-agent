@@ -60,6 +60,9 @@ public sealed record WidgetPublicConfigDto(
     int MaxMessageLength)
 {
     public bool RequireIdentity { get; init; }
+
+    // Answers link only to these hosts; see LinkHosts.
+    public IReadOnlyList<string> LinkHosts { get; init; } = [];
 }
 
 // Page comes from the loader because the frame cannot read the host page's address.

@@ -12,7 +12,7 @@ export function ActivityAnnouncer({ session }: { session: ChatSession }) {
 
   const announce = useEffectEvent((activity: ChatActivity) => {
     let text: string;
-    if (activity.kind === 'error') {
+    if (activity.kind !== 'message') {
       text = activity.text;
     } else {
       const { message } = activity;

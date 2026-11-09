@@ -6,6 +6,7 @@ When a visitor needs a person, the request reaches your team in the [Inbox](/inb
 
 - The widget decides whether a person can be offered at all: Talk to a person in the widget's settings ([Widgets](/widgets)).
 - The agent decides when it offers one: never, only when the visitor asks, or also when it cannot answer. Set it on the agent's Handover tab ([Agents](/agents)).
+- The agent only offers: the visitor sees a Talk to a person button and nobody is asked until they press it. Text in your sources can't call your team this way. The team gets the agent's summary, marked as an unverified AI summary, with any links in it shown as plain text.
 
 While the request waits, the visitor can keep chatting with the assistant. When nobody joins in time (15 minutes by default), the request expires and the Inbox marks it as a missed request; you can still reply later.
 

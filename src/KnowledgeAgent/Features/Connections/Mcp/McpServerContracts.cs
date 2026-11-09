@@ -19,7 +19,10 @@ public sealed record McpServerDto(
     IReadOnlyList<McpToolDto> Tools,
     IReadOnlyList<McpServerUseDto> UsedBy,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt)
+{
+    public bool SendIdentity { get; init; }
+}
 
 public sealed record McpCheckDto(DateTimeOffset CheckedAt, bool Ok, string? Error);
 
@@ -33,7 +36,11 @@ public sealed record McpToolDto(
     bool? Destructive,
     bool? Idempotent,
     bool? OpenWorld,
-    McpToolPolicy DefaultPolicy);
+    McpToolPolicy DefaultPolicy)
+{
+    // Agents keep the fingerprint they approved; a different one here means the tool changed since.
+    public string Fingerprint { get; init; } = string.Empty;
+}
 
 public sealed record McpServerUseDto(Guid AgentId, string AgentName, int ToolCount, McpAppMode Mode = McpAppMode.All);
 
@@ -44,7 +51,8 @@ public sealed record SaveMcpServerRequest(
     McpAuthType? AuthType = null,
     string? HeaderName = null,
     string? Secret = null,
-    bool? Enabled = null);
+    bool? Enabled = null,
+    bool? SendIdentity = null);
 
 public sealed record McpTestResultDto(
     bool Ok,
@@ -67,7 +75,10 @@ internal static class McpServerMappings
         tool.DestructiveHint,
         tool.IdempotentHint,
         tool.OpenWorldHint,
-        DefaultPolicy(tool));
+        DefaultPolicy(tool))
+    {
+        Fingerprint = McpToolFingerprint.Compute(tool),
+    };
 
     public static McpToolPolicy DefaultPolicy(McpToolInfo tool) => tool.MayChangeThings ? McpToolPolicy.Confirm : McpToolPolicy.Auto;
 
@@ -87,5 +98,8 @@ internal static class McpServerMappings
         server.Tools.Select(tool => tool.ToDto(server.Key)).ToList(),
         usedBy,
         server.CreatedAt,
-        server.UpdatedAt);
+        server.UpdatedAt)
+    {
+        SendIdentity = server.SendIdentity,
+    };
 }

@@ -7,6 +7,7 @@ export const EvalMetrics = {
   RetrievalRecallAt10: 'retrieval_recall_at_10',
   RetrievalMrrAt10: 'retrieval_mrr_at_10',
   AgentSourceRecall: 'agent_source_recall',
+  AnsweredWithCitation: 'answered_with_citation',
   CitationValidity: 'citation_validity',
   CitationSourceRecall: 'citation_source_recall',
   CitationPrecision: 'citation_precision',
@@ -149,7 +150,7 @@ export interface EvalMetricValueDto {
 }
 
 /** minimum and regression: actual ≥ expected; maximum: actual ≤ expected. */
-export type EvalGateCheckKind = 'minimum' | 'maximum' | 'regression';
+export type EvalGateCheckKind = 'minimum' | 'maximum' | 'regression' | 'required';
 
 export interface EvalGateCheckDto {
   /** A 0..1 metric, or `failed_items` (a count) for the maximum check. */

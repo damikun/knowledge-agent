@@ -56,6 +56,74 @@ public sealed class QualityGateTests
     }
 
     [Fact]
+    public void A_missing_required_metric_fails_and_judge_metrics_are_required_only_with_the_judge()
+    {
+        var required = new EvalGateConfig(Config.Minimums, Config.MaxRegression, null)
+        {
+            Required = [EvalMetrics.AnsweredWithCitation, EvalMetrics.CitationValidity],
+            RequiredWithJudge = [EvalMetrics.JudgeFaithfulness],
+        };
+        var measured = Metrics((EvalMetrics.CitationValidity, 1));
+
+        var withoutJudge = QualityGate.Evaluate(required, measured, 0, null);
+        var withJudge = QualityGate.Evaluate(required, measured, 0, null, judged: true);
+        var complete = QualityGate.Evaluate(required, Metrics((EvalMetrics.CitationValidity, 1), (EvalMetrics.AnsweredWithCitation, 1)), 0, null);
+
+        withoutJudge.Passed.ShouldBeFalse();
+        var missing = withoutJudge.Checks.Single(check => check.Kind == QualityGate.KindRequired);
+        (missing.Metric, missing.Passed, missing.Actual).ShouldBe((EvalMetrics.AnsweredWithCitation, false, (double?)null));
+        missing.Message.ShouldBe("answered_with_citation was not measured, but the gate requires it.");
+        withJudge.Checks.Where(check => check.Kind == QualityGate.KindRequired).Select(check => check.Metric)
+            .ShouldBe([EvalMetrics.AnsweredWithCitation, EvalMetrics.JudgeFaithfulness]);
+        complete.Passed.ShouldBeTrue();
+        complete.Checks.ShouldNotContain(check => check.Kind == QualityGate.KindRequired);
+    }
+
+    [Fact]
+    public void A_subset_run_only_notes_a_required_metric_it_did_not_measure()
+    {
+        var required = new EvalGateConfig(Config.Minimums, Config.MaxRegression, null) { Required = [EvalMetrics.AnswerAbstained] };
+
+        var gate = QualityGate.Evaluate(required, Metrics((EvalMetrics.CitationValidity, 1)), 0, null, evaluatedItems: 3, datasetItems: 30);
+
+        gate.Passed.ShouldBeTrue();
+        gate.Checks.Single(check => check.Kind == QualityGate.KindRequired).Message.ShouldContain("3 of 30 items");
+    }
+
+    [Fact]
+    public void An_agent_that_never_cites_fails_the_gate_of_the_shipped_set()
+    {
+        var gate = EvalDatasetLoader.LoadEmbedded().Single(dataset => dataset.Name == "orbitwell-golden").Gate;
+
+        // What such an agent scores: no tag means no citation_validity at all.
+        var result = QualityGate.Evaluate(gate, Metrics((EvalMetrics.AnsweredWithCitation, 0), (EvalMetrics.AnswerFactRecall, 0.9), (EvalMetrics.AnswerAbstained, 1)), 0, null);
+
+        result.Passed.ShouldBeFalse();
+        result.Checks.ShouldContain(check => check.Metric == EvalMetrics.AnsweredWithCitation && check.Kind == QualityGate.KindMinimum && !check.Passed);
+        result.Checks.ShouldContain(check => check.Metric == EvalMetrics.CitationValidity && check.Kind == QualityGate.KindRequired && !check.Passed);
+    }
+
+    [Fact]
+    public void Per_metric_tolerances_replace_the_default_allowed_drop()
+    {
+        var tolerant = new EvalGateConfig(Config.Minimums, 0.05, null)
+        {
+            Tolerances = new Dictionary<string, double> { [EvalMetrics.AnswerAbstained] = 0.15 },
+        };
+        var baseline = Baseline((EvalMetrics.AnswerAbstained, 1), (EvalMetrics.AnswerFactRecall, 0.9));
+
+        var gate = QualityGate.Evaluate(tolerant, Metrics((EvalMetrics.AnswerAbstained, 0.88), (EvalMetrics.AnswerFactRecall, 0.84)), 0, baseline);
+
+        var abstained = gate.Checks.Single(check => check.Metric == EvalMetrics.AnswerAbstained);
+        abstained.Passed.ShouldBeTrue();
+        abstained.Expected.ShouldBe(0.85, 1e-9);
+        abstained.Message.ShouldContain("allowed drop −15.0 pts");
+        var facts = gate.Checks.Single(check => check.Metric == EvalMetrics.AnswerFactRecall);
+        facts.Passed.ShouldBeFalse();
+        facts.Expected.ShouldBe(0.85, 1e-9);
+    }
+
+    [Fact]
     public void A_metric_the_baseline_has_but_the_run_lacks_fails()
     {
         var gate = QualityGate.Evaluate(Config, Metrics(), 0, Baseline((EvalMetrics.AnswerFactRecall, 0.7)));

@@ -48,7 +48,7 @@ function toFeedback(value: unknown): FeedbackDto {
     rating: count(dto.rating),
     comment: text(dto.comment),
     reasons: asStrings(dto.reasons),
-    author: dto.author === 'staff' ? 'staff' : 'visitor',
+    author: dto.author === 'staff' || dto.author === 'agent' ? dto.author : 'visitor',
     widgetId: text(dto.widgetId),
     agentId: text(dto.agentId),
     traceId: text(dto.traceId),
@@ -78,9 +78,17 @@ const feedbackApi = {
 };
 
 export function useFeedbackSummary(days: FeedbackDays) {
-  return useQuery({ queryKey: feedbackKeys.summary(days), queryFn: ({ signal }) => feedbackApi.summary(days, signal), placeholderData: keepPreviousData });
+  return useQuery({
+    queryKey: feedbackKeys.summary(days),
+    queryFn: ({ signal }) => feedbackApi.summary(days, signal),
+    placeholderData: keepPreviousData,
+  });
 }
 
 export function useFeedback(filters: FeedbackFilters) {
-  return useQuery({ queryKey: feedbackKeys.list(filters), queryFn: ({ signal }) => feedbackApi.list(filters, signal), placeholderData: keepPreviousData });
+  return useQuery({
+    queryKey: feedbackKeys.list(filters),
+    queryFn: ({ signal }) => feedbackApi.list(filters, signal),
+    placeholderData: keepPreviousData,
+  });
 }

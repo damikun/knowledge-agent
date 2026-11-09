@@ -67,6 +67,10 @@ internal static partial class AgentLog
         Message = "Agent {Agent} received a refusal (content filter) on model call {Iteration}")]
     public static partial void Refused(ILogger logger, string agent, int iteration);
 
+    [LoggerMessage(EventId = 1103, Level = LogLevel.Information,
+        Message = "Turn {TurnId} in conversation {ConversationId} ended without a final text; the last step's text is stored as the answer")]
+    public static partial void AnswerFromInterim(ILogger logger, Guid turnId, Guid conversationId);
+
     [LoggerMessage(EventId = 1200, Level = LogLevel.Warning, Message = "Tool {ToolName} (call {CallId}) failed")]
     public static partial void ToolFailed(ILogger logger, Exception exception, string toolName, string callId);
 

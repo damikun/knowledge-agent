@@ -24,6 +24,10 @@ Folders only organize the list. Drag sources onto a folder, or select them and u
 
 The Internal folder, with the lock, is for documents only your team should get answers from, such as your own procedures. Only the help assistant searches it; no agent does, so its sources never reach a widget, an agent's MCP server or its HTTP API, even for an agent that answers from all sources. Add sources and subfolders inside it like anywhere else; the folder itself cannot be renamed, moved or deleted.
 
+## Suspicious content
+
+A source gets the Suspicious content label when some of its passages look written to the assistant rather than to readers, such as text that names the agent's tools or says "ignore previous instructions". This often comes from comments or reviews on crawled pages. Open the source and read those passages; remove the source, or exclude those pages from the crawl, if they are not yours. The agent treats every passage as information, never as instructions, either way.
+
 ## Keep web pages current
 
 Re-ingest a source to read it again. Re-ingesting a website reads it again too: new pages are added, pages that are gone are removed, and unchanged pages are kept as they are. A schedule on the System page can refresh every web source at night; it is off by default. See [Schedules](/system?tab=schedules).

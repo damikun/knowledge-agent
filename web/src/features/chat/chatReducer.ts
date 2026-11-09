@@ -7,6 +7,7 @@ import {
   type CitationDto,
   type ConversationTurnDto,
   type ErrorEvent,
+  type StepFinishedEvent,
   type ToolCallDto,
   type ToolConfirmation,
   type ToolCallEvent,
@@ -59,6 +60,8 @@ export interface ToolCallView {
   subAgent: AgentActivity | null;
   confirmation?: ToolConfirmation | null;
   result?: string | null;
+  /** What the agent wrote before this call; it is not part of the answer. */
+  preamble?: string | null;
 }
 
 /** pending: the question is stored, but no answer has reached this view yet. cancelled: stopped before it was complete. */
@@ -88,6 +91,8 @@ export interface TurnView {
   startedAt: number | null;
   /** For turns sent from this tab: the last timeline sequence it knew then. Its question is stored after it. */
   sentAfterSequence: number | null;
+  /** A note the agent wrote before tool calls, until the call it introduced arrives. */
+  pendingPreamble: string | null;
   textBreakPending: boolean;
   reasoningBreakPending: boolean;
   traceId?: string | null;
@@ -145,6 +150,7 @@ export function createTurn(id: string, userMessage: string, startedAt: number | 
     durationMs: null,
     startedAt,
     sentAfterSequence: null,
+    pendingPreamble: null,
     textBreakPending: false,
     reasoningBreakPending: false,
   };
@@ -206,9 +212,8 @@ function addUsage(current: UsageTotals | null, event: Pick<UsageEvent, 'inputTok
   const base = current ?? { inputTokens: null, outputTokens: null, totalTokens: null };
   const inputTokens = addNullable(base.inputTokens, event.inputTokens);
   const outputTokens = addNullable(base.outputTokens, event.outputTokens);
-  const eventTotal = event.totalTokens ?? (event.inputTokens != null || event.outputTokens != null
-    ? (event.inputTokens ?? 0) + (event.outputTokens ?? 0)
-    : null);
+  const eventTotal =
+    event.totalTokens ?? (event.inputTokens != null || event.outputTokens != null ? (event.inputTokens ?? 0) + (event.outputTokens ?? 0) : null);
   return { inputTokens, outputTokens, totalTokens: addNullable(base.totalTokens, eventTotal) };
 }
 
@@ -249,11 +254,7 @@ function findTool(tools: readonly ToolCallView[], callId: string): ToolCallView 
 }
 
 /** Returns the same array when no tool has `callId`. */
-function updateTool(
-  tools: ToolCallView[],
-  callId: string,
-  update: (tool: ToolCallView) => ToolCallView,
-): ToolCallView[] {
+function updateTool(tools: ToolCallView[], callId: string, update: (tool: ToolCallView) => ToolCallView): ToolCallView[] {
   let changed = false;
   const next = tools.map((tool) => {
     if (changed) {
@@ -345,7 +346,24 @@ function applyToolCall(turn: TurnView, data: ToolCallEvent): TurnView {
       subAgent: { ...parent.subAgent!, textBreakPending: true, reasoningBreakPending: true },
     }));
   }
-  return { ...turn, tools: [...turn.tools, tool], textBreakPending: true, reasoningBreakPending: true };
+  const preamble = turn.pendingPreamble ? { preamble: turn.pendingPreamble } : {};
+  return { ...turn, tools: [...turn.tools, { ...tool, ...preamble }], pendingPreamble: null, textBreakPending: true, reasoningBreakPending: true };
+}
+
+/** The text of an interim step moves from the answer to the tool call it introduced. A sub-agent's text stays its report. */
+function applyStepFinished(turn: TurnView, data: StepFinishedEvent): TurnView {
+  if (data.parentCallId || data.kind !== 'interim') {
+    return turn;
+  }
+  return { ...turn, text: '', pendingPreamble: turn.text.trim() || turn.pendingPreamble, textBreakPending: false };
+}
+
+/** The server stores the last note when the last step wrote nothing, so the live view shows the same. */
+function answerOrLastNote(turn: TurnView): string {
+  if (turn.text.trim() !== '') {
+    return turn.text;
+  }
+  return turn.pendingPreamble ?? turn.tools.findLast((tool) => tool.preamble)?.preamble ?? turn.text;
 }
 
 function applyToolResult(turn: TurnView, data: ToolResultEvent): TurnView {
@@ -454,6 +472,8 @@ function applyEventToTurn(turn: TurnView, event: ChatEvent, at: number): TurnVie
       const hasErrors = turn.errors.some((e) => e.code !== 'cancelled');
       const stopped = isStoppedFinish(event.data.finishReason) || turn.errors.some((e) => e.code === 'cancelled');
       return finalize(turn, hasErrors ? 'error' : stopped ? 'cancelled' : 'complete', at, {
+        ...(hasErrors || stopped ? {} : { text: answerOrLastNote(turn) }),
+        pendingPreamble: null,
         id: event.data.turnId || turn.id,
         persisted: Boolean(event.data.turnId),
         finishReason: event.data.finishReason ?? turn.finishReason,
@@ -461,9 +481,17 @@ function applyEventToTurn(turn: TurnView, event: ChatEvent, at: number): TurnVie
     }
     case 'confirmation-required': {
       const data = event.data;
-      const confirmation: ToolConfirmation = { status: 'pending', title: data.title, connection: data.connection ?? null, expiresAt: data.expiresAt };
+      const confirmation: ToolConfirmation = {
+        status: 'pending',
+        title: data.title,
+        connection: data.connection ?? null,
+        expiresAt: data.expiresAt,
+        details: data.details ?? [],
+      };
       return { ...turn, tools: updateTool(turn.tools, data.callId, (tool) => ({ ...tool, confirmation })) };
     }
+    case 'step-finished':
+      return applyStepFinished(turn, event.data);
     case 'conversation':
       return turn;
   }
@@ -563,6 +591,7 @@ export function buildToolTree(calls: readonly ToolCallDto[]): ToolCallView[] {
       durationMs: call.durationMs ?? null,
       confirmation: call.confirmation ?? null,
       result: call.result ?? null,
+      preamble: call.preamble ?? null,
     });
   }
   const roots: ToolCallView[] = [];

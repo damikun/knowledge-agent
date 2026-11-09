@@ -44,10 +44,10 @@ internal static partial class HandoverEmails
             .AppendLine("A visitor asked for a person. Reply to this email to answer them in the chat.")
             .AppendLine()
             .AppendLine($"Visitor: {VisitorLine(visitor)}")
-            .AppendLine($"Reason: {handover.Reason ?? "Asked for a person"}");
+            .AppendLine($"Reason: {LinkDefang.ForEmail(handover.Reason ?? "Asked for a person")}");
         if (handover.Summary is { } summary)
         {
-            text.AppendLine($"Summary: {summary}");
+            text.AppendLine($"{SlackMessages.AiSummaryLabel}: {LinkDefang.ForEmail(summary)}");
         }
 
         if (link is not null)
@@ -58,7 +58,7 @@ internal static partial class HandoverEmails
         text.AppendLine().AppendLine("Conversation so far:").AppendLine();
         foreach (var item in messages)
         {
-            text.AppendLine($"{Label(item)}: {item.Text}").AppendLine();
+            text.AppendLine($"{Label(item)}: {(item.Author == MessageAuthor.Assistant ? LinkDefang.ForEmail(item.Text) : item.Text)}").AppendLine();
         }
 
         message.Body = new TextPart("plain") { Text = text.ToString() };

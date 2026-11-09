@@ -94,7 +94,7 @@ internal sealed class ReadSourceTool(IOptions<AgentOptions> options) : IAgentToo
             $"Source: {TextUtil.CollapseWhitespace(source.Title)} (id: {source.Id:D}, type: {source.Type.ToString().ToLowerInvariant()})\n"
             + $"Characters {offset}-{end} of {text.Length}. {paging}\n\n{slice}");
         var summary = string.Create(CultureInfo.InvariantCulture, $"Read characters {offset}-{end} of {text.Length} from \"{source.Title}\"");
-        return new ToolResult(output, summary);
+        return new ToolResult(output, summary) { Untrusted = true };
     }
 
     private static int MaxChars(AgentOptions options) =>

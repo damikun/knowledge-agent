@@ -53,7 +53,15 @@ export function sceneState(scene: ChatScene): ChatState {
           id: 1,
           question: QUESTION.text,
           questionSequence: QUESTION.sequence,
-          answer: { text: 'Yes. Unused items can go back within 30 days [S1]. Start the return from your', citations: ANSWER.citations, activity: null, error: null, done: false },
+          answer: {
+            text: 'Yes. Unused items can go back within 30 days [S1]. Start the return from your',
+            status: null,
+            step: null,
+            citations: ANSWER.citations,
+            activity: null,
+            error: null,
+            done: false,
+          },
         },
       };
     case 'contact':

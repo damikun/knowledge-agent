@@ -156,7 +156,7 @@ public static class WidgetChoices
 
     public static readonly IReadOnlyList<string> TextKeys =
     [
-        "launcherLabel", "close", "send", "newChat", "endChat", "talkToPerson", "waitingForPerson", "keepChatting", "personJoined",
+        "launcherLabel", "close", "send", "newChat", "endChat", "talkToPerson", "handoverOffer", "waitingForPerson", "keepChatting", "personJoined",
         "feedbackPrompt", "feedbackThanks", "feedbackComment", "ratingPrompt", "contactTitle", "contactName", "contactEmail",
         "contactSubmit", "sources", "offline", "rateLimited", "dailyCap", "error", "poweredBy", "message", "messages",
         "placeholder", "menu", "thinking", "searching", "helpful", "notHelpful", "skip", "cancel", "dismiss", "ended", "busy",

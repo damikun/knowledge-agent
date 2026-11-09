@@ -112,7 +112,7 @@ internal sealed class AgentAskService(
             return new AgentSearchResultDto([]);
         }
 
-        var hits = await search.SearchAsync(new KnowledgeSearchRequest(query, topK, scope), cancellationToken);
+        var hits = (await search.SearchAsync(new KnowledgeSearchRequest(query, topK, scope), cancellationToken)).Hits;
         return new AgentSearchResultDto(hits
             .Select(hit => new AgentPassageDto(hit.SourceTitle, WebUrl(hit.SourceUrl), hit.Page, hit.Content, Math.Round(hit.Score, 4)))
             .ToList());

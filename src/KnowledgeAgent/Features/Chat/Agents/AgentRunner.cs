@@ -39,21 +39,38 @@ internal sealed class AgentRunner(
         var sink = new AgentEventSink(request.Turn.Events, agent.Name, request.ParentCallId);
         var maxToolRounds = Math.Max(1, agent.MaxIterations);
 
-        var texts = new List<string>();
+        var steps = new List<AgentStep>();
         var citations = new List<CitationDto>();
-        var lastText = string.Empty;
+        var finalText = string.Empty;
         var iterations = 0;
         var toolRounds = 0;
 
         AgentRunResult Result(string finishReason, AgentRunError? error = null) => new(
             finishReason,
             iterations,
-            lastText,
-            string.Join("\n\n", texts),
+            finalText,
+            string.Join("\n\n", steps.Where(step => step.Text.Length > 0).Select(step => step.Text)),
             citations.DistinctBy(citation => citation.Ref).ToList(),
-            error);
+            error)
+        {
+            Steps = steps.ToList(),
+        };
 
         void Append(ChatMessage message) => request.Messages.Add(message);
+
+        void FinishStep(int step, string text, bool interim)
+        {
+            steps.Add(new AgentStep(step, text, interim));
+            if (!interim)
+            {
+                finalText = text;
+            }
+
+            if (_options.AnswerIsFinalStep)
+            {
+                sink.Emit(new StepFinishedEvent(step, interim ? StepFinishedEvent.Interim : StepFinishedEvent.Final));
+            }
+        }
 
         while (true)
         {
@@ -65,10 +82,11 @@ internal sealed class AgentRunner(
             }
 
             iterations++;
+            var step = request.Turn.NextStep();
             ChatResponse response;
             try
             {
-                response = await StreamResponseAsync(request, CreateOptions(request, declarations, forceFinal), sink, cancellationToken);
+                response = await StreamResponseAsync(request, CreateOptions(request, declarations, forceFinal), sink, step, cancellationToken);
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
@@ -82,14 +100,10 @@ internal sealed class AgentRunner(
                 Append(message);
             }
 
-            lastText = string.Concat(response.Messages.Select(message => message.Text));
-            if (lastText.Length > 0)
-            {
-                texts.Add(lastText);
-            }
-
+            var text = string.Concat(response.Messages.Select(message => message.Text));
             if (response.FinishReason == ChatFinishReason.ContentFilter)
             {
+                FinishStep(step, text, interim: false);
                 AgentLog.Refused(logger, agent.Name, iterations);
                 return Result(ChatFinishReasons.Refusal, new AgentRunError(ChatErrorCodes.Refusal, RefusalMessage));
             }
@@ -100,6 +114,8 @@ internal sealed class AgentRunner(
                 .Where(call => !call.InformationalOnly)
                 .ToList();
 
+            // Sent before the tools run, so a client can turn the text into a status line while it waits.
+            FinishStep(step, text, interim: calls.Count > 0 && !forceFinal);
             if (calls.Count == 0)
             {
                 return Result(
@@ -123,7 +139,10 @@ internal sealed class AgentRunner(
             }
 
             toolRounds++;
-            var outcomes = await Task.WhenAll(calls.Select(call => ExecuteToolCallAsync(call, toolsByName, request.Turn, sink, confirmed: false, cancellationToken)));
+            var untrusted = UntrustedText.CountIn(request.Messages);
+            var preamble = text.Trim() is { Length: > 0 } said ? said : null;
+            var outcomes = await Task.WhenAll(calls.Select((call, index) =>
+                ExecuteToolCallAsync(call, toolsByName, request.Turn, sink, confirmed: false, untrusted, index == 0 ? preamble : null, cancellationToken)));
             Append(new ChatMessage(ChatRole.Tool, outcomes.Select(outcome => (AIContent)outcome.Result).ToList()));
             citations.AddRange(outcomes.SelectMany(outcome => outcome.Citations));
             if (outcomes.Any(outcome => outcome.Tool.EndsRun))
@@ -163,6 +182,7 @@ internal sealed class AgentRunner(
         AgentRunRequest request,
         ChatOptions chatOptions,
         AgentEventSink sink,
+        int step,
         CancellationToken cancellationToken)
     {
         var updates = new List<ChatResponseUpdate>();
@@ -176,7 +196,7 @@ internal sealed class AgentRunner(
                 switch (content)
                 {
                     case TextContent { Text: { Length: > 0 } text }:
-                        sink.Emit(new TextDeltaEvent(text));
+                        sink.Emit(new TextDeltaEvent(text) { Step = step });
                         break;
                     case TextReasoningContent { Text: { Length: > 0 } reasoning }:
                         sink.Emit(new ReasoningDeltaEvent(reasoning));
@@ -201,7 +221,7 @@ internal sealed class AgentRunner(
             : new Dictionary<string, object?>(StringComparer.Ordinal);
         var call = new FunctionCallContent(callId, tool.Name, values);
         var sink = new AgentEventSink(turn.Events, agent, parentCallId: null);
-        var outcome = await ExecuteToolCallAsync(call, new Dictionary<string, IAgentTool>(StringComparer.Ordinal) { [tool.Name] = tool }, turn, sink, confirmed: true, cancellationToken);
+        var outcome = await ExecuteToolCallAsync(call, new Dictionary<string, IAgentTool>(StringComparer.Ordinal) { [tool.Name] = tool }, turn, sink, confirmed: true, untrustedResults: 0, preamble: null, cancellationToken);
         return outcome.Tool;
     }
 
@@ -211,18 +231,24 @@ internal sealed class AgentRunner(
         AgentTurnContext turn,
         AgentEventSink sink,
         bool confirmed,
+        int untrustedResults,
+        string? preamble,
         CancellationToken cancellationToken)
     {
         // Runs synchronously up to the first await, so tool-call events are emitted in call order.
         var startedAt = timeProvider.GetTimestamp();
         var arguments = ToolArguments.ToJson(call.Arguments);
         sink.Emit(new ToolCallEvent(call.CallId, call.Name, arguments));
-        var logEntry = turn.ToolCalls.Start(call.CallId, call.Name, sink.Agent, sink.ParentCallId, arguments);
+        var logEntry = turn.ToolCalls.Start(call.CallId, call.Name, sink.Agent, sink.ParentCallId, arguments, preamble);
         using var activity = AgentTelemetry.StartTool(call.Name, call.CallId, sink.Agent, arguments);
+        GuardTelemetry.SetContext(activity, untrustedResults);
 
         var result = await InvokeToolAsync(call, toolsByName, turn, sink, confirmed, cancellationToken);
 
-        var text = TextUtil.TruncateToolOutput(result.Text, Math.Max(1_000, _options.MaxToolResultChars));
+        var limit = Math.Max(1_000, _options.MaxToolResultChars);
+        var text = TextUtil.TruncateToolOutput(result.Text, result.Untrusted ? limit - UntrustedText.Overhead : limit);
+        var forModel = result.Untrusted ? UntrustedText.Wrap(text, turn.UntrustedKey) : text;
+
         var durationMs = (long)timeProvider.GetElapsedTime(startedAt).TotalMilliseconds;
         var citations = result.Citations ?? [];
         sink.Emit(new ToolResultEvent(call.CallId, call.Name, result.IsError, result.Summary, durationMs, citations));
@@ -230,8 +256,8 @@ internal sealed class AgentRunner(
         if (result.Confirmation is { } prompt)
         {
             var expiresAt = timeProvider.GetUtcNow() + ConfirmationLifetime;
-            confirmation = new ToolCallConfirmationDto(ToolCallConfirmationDto.Pending, prompt.Title, prompt.Connection, expiresAt);
-            sink.Emit(new ConfirmationRequiredEvent(call.CallId, call.Name, prompt.Title, prompt.Connection, arguments, expiresAt));
+            confirmation = new ToolCallConfirmationDto(ToolCallConfirmationDto.Pending, prompt.Title, prompt.Connection, expiresAt) { Details = prompt.Details };
+            sink.Emit(new ConfirmationRequiredEvent(call.CallId, call.Name, prompt.Title, prompt.Connection, arguments, expiresAt) { Details = prompt.Details });
         }
         else if (confirmed)
         {
@@ -240,7 +266,7 @@ internal sealed class AgentRunner(
 
         logEntry.Complete(result.Summary, result.IsError, durationMs, result.LogText, confirmation);
         AgentTelemetry.CompleteTool(activity, text, result.IsError, durationMs);
-        return new ToolCallOutcome(new FunctionResultContent(call.CallId, text), citations, result with { Text = text });
+        return new ToolCallOutcome(new FunctionResultContent(call.CallId, forModel), citations, result with { Text = forModel });
     }
 
     private async Task<ToolResult> InvokeToolAsync(

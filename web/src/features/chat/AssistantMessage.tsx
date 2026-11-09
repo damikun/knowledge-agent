@@ -16,6 +16,7 @@ import type { ToolCallView, TurnError, TurnView } from './chatReducer';
 import { sourceIcon, sourceOrigin, sourcesPageLink } from './CitationChip';
 import { CitationContext, createCitationLookup } from './citationContext';
 import { extractCitationRefs } from './citations';
+import { useLinkHosts } from './api';
 import { Markdown } from './Markdown';
 import { ThinkingBlock, TypingDots } from './ThinkingBlock';
 import { activityPassages, ToolActivity } from './ToolCard';
@@ -85,7 +86,11 @@ function TurnErrorView({ error }: { error: TurnError }) {
 
 function AnswerAction({ icon: Icon, children, ...props }: ComponentProps<'button'> & { icon: LucideIcon }) {
   return (
-    <button type="button" className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs text-fg-muted hover:bg-fill-hover hover:text-fg" {...props}>
+    <button
+      type="button"
+      className="inline-flex h-7 items-center gap-1 rounded-md px-1.5 text-xs text-fg-muted hover:bg-fill-hover hover:text-fg"
+      {...props}
+    >
       <Icon className="size-3.5" aria-hidden />
       {children}
     </button>
@@ -176,7 +181,12 @@ function AnswerDetails({ turn }: { turn: TurnView }) {
       ) : null}
       {turn.persisted ? <div className="font-mono break-all text-fg-muted">Turn {turn.id}</div> : null}
       {trace ? (
-        <a href={trace} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-medium text-accent-text hover:underline">
+        <a
+          href={trace}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1 font-medium text-accent-text hover:underline"
+        >
           Open in Langfuse
           <ArrowUpRight className="size-3.5" aria-hidden />
           <span className="sr-only"> (new tab)</span>
@@ -330,9 +340,13 @@ const EMPTY_INDEX: ReadonlyMap<string, CitationDto> = new Map();
 export const AssistantMessage = memo(function AssistantMessage({ turn, conversationCitations = EMPTY_INDEX }: AssistantMessageProps) {
   const lookup = useMemo(() => createCitationLookup(turn.citations, conversationCitations), [turn.citations, conversationCitations]);
   const refs = useMemo(() => extractCitationRefs(turn.text), [turn.text]);
-  const sources = useMemo(() => numberSources(refs, lookup, [...activityPassages(turn.tools), ...turn.citations]), [refs, lookup, turn.tools, turn.citations]);
+  const sources = useMemo(
+    () => numberSources(refs, lookup, [...activityPassages(turn.tools), ...turn.citations]),
+    [refs, lookup, turn.tools, turn.citations],
+  );
   const streaming = turn.status === 'streaming';
   const toolsRunning = turn.tools.some((tool) => tool.status === 'running');
+  const linkHosts = useLinkHosts();
 
   return (
     <CitationContext.Provider value={lookup}>
@@ -341,7 +355,7 @@ export const AssistantMessage = memo(function AssistantMessage({ turn, conversat
           {turn.reasoning ? <ThinkingBlock text={turn.reasoning} active={streaming && !turn.text && !toolsRunning} /> : null}
           {turn.tools.length > 0 ? <ToolActivity tools={turn.tools} /> : null}
           {turn.text ? (
-            <Markdown text={turn.text} />
+            <Markdown text={turn.text} linkHosts={linkHosts} />
           ) : streaming && !toolsRunning ? (
             <div className="flex items-center gap-2 py-1 text-xs text-fg-muted" role="status">
               <TypingDots />

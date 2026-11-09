@@ -123,6 +123,7 @@ internal static class PublicWidgetEndpoints
         string key,
         HttpResponse response,
         VisitorService visitors,
+        LinkHosts links,
         CancellationToken cancellationToken)
     {
         if (await visitors.FindWidgetAsync(key, cancellationToken) is not { } widget)
@@ -131,7 +132,7 @@ internal static class PublicWidgetEndpoints
         }
 
         response.Headers.CacheControl = "public, max-age=60";
-        return TypedResults.Ok(VisitorService.ToConfig(widget));
+        return TypedResults.Ok(VisitorService.ToConfig(widget) with { LinkHosts = await links.ForWidgetAsync(widget, cancellationToken) });
     }
 
     private static async Task<IResult> StartSessionAsync(

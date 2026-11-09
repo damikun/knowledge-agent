@@ -223,7 +223,7 @@ internal static class EvalCli
 
         var signature = EvalSignature.Create(result.Settings, arguments.Judge);
         var baseline = dataset.Baselines.TryGetValue(signature, out var accepted) ? accepted : null;
-        var gate = QualityGate.Evaluate(dataset.Gate, result.Metrics, result.FailedItems, baseline, result.Items.Count, dataset.Items.Count);
+        var gate = QualityGate.Evaluate(dataset.Gate, result.Metrics, result.FailedItems, baseline, result.Items.Count, dataset.Items.Count, arguments.Judge);
         var langfuseUrl = experiment is null || links is null ? null : await links.ExperimentAsync(experiment.DatasetId, experiment.Id, cancellationToken);
         var run = EvalRunMapper.ToDto(
             result,

@@ -640,6 +640,10 @@ namespace KnowledgeAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(16)")
                         .HasColumnName("secret_hint");
 
+                    b.Property<bool>("SendIdentity")
+                        .HasColumnType("boolean")
+                        .HasColumnName("send_identity");
+
                     b.Property<string>("ServerName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")

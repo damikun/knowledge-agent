@@ -60,6 +60,23 @@ public sealed record EvalGateConfig(
         new Dictionary<string, double>(StringComparer.Ordinal) { [EvalMetrics.CitationValidity] = 0.99 },
         DefaultMaxRegression,
         null);
+
+    // Metrics a run must produce: a missing one fails the gate instead of skipping its minimum.
+    public IReadOnlyList<string> Required { get; init; } = [];
+
+    // Required only when the judge runs.
+    public IReadOnlyList<string> RequiredWithJudge { get; init; } = [];
+
+    // Allowed drop from the baseline per metric; the others use MaxRegression.
+    public IReadOnlyDictionary<string, double> Tolerances { get; init; } = new Dictionary<string, double>(StringComparer.Ordinal);
+
+    // Minimums for the deterministic run in the tests (test embeddings and a rule-based agent), not for real models.
+    public IReadOnlyDictionary<string, double> OfflineMinimums { get; init; } = new Dictionary<string, double>(StringComparer.Ordinal);
+
+    public double ToleranceFor(string metric) => Tolerances.TryGetValue(metric, out var tolerance) ? tolerance : MaxRegression;
+
+    public IEnumerable<string> RequiredFor(bool judged) =>
+        (judged ? Required.Concat(RequiredWithJudge) : Required).Distinct(StringComparer.Ordinal);
 }
 
 public sealed record EvalBaseline(string Signature, IReadOnlyDictionary<string, double> Metrics, int Items, DateTimeOffset? CreatedAt);

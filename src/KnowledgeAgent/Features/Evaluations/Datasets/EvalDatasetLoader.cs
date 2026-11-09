@@ -270,22 +270,7 @@ public static partial class EvalDatasetLoader
             return EvalGateConfig.Default;
         }
 
-        var minimums = new Dictionary<string, double>(StringComparer.Ordinal);
-        foreach (var (metric, value) in gate.Minimums ?? [])
-        {
-            if (!EvalMetrics.All.Contains(metric, StringComparer.Ordinal))
-            {
-                problems.Add($"gate.minimums: unknown metric '{metric}'.");
-            }
-            else if (value is < 0 or > 1)
-            {
-                problems.Add($"gate.minimums.{metric} must be between 0 and 1.");
-            }
-            else
-            {
-                minimums[metric] = value;
-            }
-        }
+        var minimums = ParseShares(gate.Minimums, "gate.minimums", problems);
 
         var maxRegression = gate.MaxRegression ?? EvalGateConfig.DefaultMaxRegression;
         if (maxRegression is < 0 or > 1)
@@ -299,7 +284,46 @@ public static partial class EvalDatasetLoader
             problems.Add($"gate.regressionMetrics: unknown metric '{metric}'.");
         }
 
-        return new EvalGateConfig(minimums, maxRegression, regressionMetrics);
+        return new EvalGateConfig(minimums, maxRegression, regressionMetrics)
+        {
+            Required = ParseMetrics(gate.Required, "gate.required", problems),
+            RequiredWithJudge = ParseMetrics(gate.RequiredWithJudge, "gate.requiredWithJudge", problems),
+            Tolerances = ParseShares(gate.Tolerances, "gate.tolerances", problems),
+            OfflineMinimums = ParseShares(gate.Offline?.Minimums, "gate.offline.minimums", problems),
+        };
+    }
+
+    private static Dictionary<string, double> ParseShares(Dictionary<string, double>? values, string path, List<string> problems)
+    {
+        var parsed = new Dictionary<string, double>(StringComparer.Ordinal);
+        foreach (var (metric, value) in values ?? [])
+        {
+            if (!EvalMetrics.All.Contains(metric, StringComparer.Ordinal))
+            {
+                problems.Add($"{path}: unknown metric '{metric}'.");
+            }
+            else if (value is < 0 or > 1)
+            {
+                problems.Add($"{path}.{metric} must be between 0 and 1.");
+            }
+            else
+            {
+                parsed[metric] = value;
+            }
+        }
+
+        return parsed;
+    }
+
+    private static List<string> ParseMetrics(List<string>? values, string path, List<string> problems)
+    {
+        var parsed = (values ?? []).Select(metric => metric.Trim()).Where(metric => metric.Length > 0).Distinct(StringComparer.Ordinal).ToList();
+        foreach (var metric in parsed.Where(metric => !EvalMetrics.All.Contains(metric, StringComparer.Ordinal)))
+        {
+            problems.Add($"{path}: unknown metric '{metric}'.");
+        }
+
+        return parsed.Where(metric => EvalMetrics.All.Contains(metric, StringComparer.Ordinal)).ToList();
     }
 
     internal static bool IsSlug(string value) => value.Length is > 0 and <= MaxIdLength && SlugPattern().IsMatch(value);
@@ -350,9 +374,18 @@ public static partial class EvalDatasetLoader
 
     private sealed class GateFile
     {
+        public List<string>? Required { get; set; }
+        public List<string>? RequiredWithJudge { get; set; }
         public Dictionary<string, double>? Minimums { get; set; }
         public double? MaxRegression { get; set; }
+        public Dictionary<string, double>? Tolerances { get; set; }
         public List<string>? RegressionMetrics { get; set; }
+        public OfflineGateFile? Offline { get; set; }
+    }
+
+    private sealed class OfflineGateFile
+    {
+        public Dictionary<string, double>? Minimums { get; set; }
     }
 
     internal sealed class BaselineFile

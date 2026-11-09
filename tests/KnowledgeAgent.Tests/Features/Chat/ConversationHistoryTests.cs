@@ -16,9 +16,9 @@ public sealed class ConversationHistoryTests
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
 
     [Fact]
-    public async Task Second_turn_replays_the_first_turn_verbatim_and_never_re_renders_the_system_prompt()
+    public async Task In_verbatim_mode_the_second_turn_replays_the_first_turn_unchanged_and_never_re_renders_the_system_prompt()
     {
-        using var host = new AgentTestHost();
+        using var host = new AgentTestHost(new Dictionary<string, string?> { ["Agents:History:Mode"] = "Verbatim" });
         host.Search.AddHit("Handbook", "Employees get 25 vacation days.");
         var orchestrator = host.ChatClients.Script("orchestrator")
             .Then((_, _) => new ChatResponse(new ChatMessage(ChatRole.Assistant,
@@ -61,7 +61,8 @@ public sealed class ConversationHistoryTests
         call.Arguments!["query"]!.ToString().ShouldBe("vacation days");
         var result = secondTurn[3].ToolResults().Single();
         result.CallId.ShouldBe("call_1");
-        result.ResultText().ShouldStartWith("Found 1 passage(s) for \"vacation days\".");
+        result.ResultText().ShouldBe(firstTurnFinal[3].ToolResults().Single().ResultText());
+        result.ResultText().ShouldContain("Found 1 passage(s) for \"vacation days\".");
         var finalAnswer = secondTurn[4];
         finalAnswer.Text.ShouldBe("Employees get 25 vacation days [S1].");
         finalAnswer.Contents.OfType<TextReasoningContent>().Single().ProtectedData.ShouldStartWith("sig-");
@@ -72,6 +73,46 @@ public sealed class ConversationHistoryTests
         conversation.Turns.Select(t => t.Sequence).ShouldBe([1, 2]);
         conversation.Turns[1].ModelMessages().Select(m => m.Role).ShouldBe([ChatRole.User, ChatRole.Assistant]);
         conversation.Title.ShouldBe("How many vacation days?", "the second turn does not regenerate the title");
+    }
+
+    [Fact]
+    public async Task By_default_the_second_turn_replays_the_first_without_thinking_and_with_a_stub_for_the_long_result()
+    {
+        using var host = new AgentTestHost();
+        var hit = host.Search.AddHit("Handbook", "Employees get 25 vacation days. " + new string('x', 2_000));
+        var orchestrator = host.ChatClients.Script("orchestrator")
+            .Then((_, _) => new ChatResponse(new ChatMessage(ChatRole.Assistant,
+            [
+                new TextReasoningContent("I should search the handbook.") { ProtectedData = "signature-1" },
+                new FunctionCallContent("call_1", ToolNames.SearchKnowledgeBase, new Dictionary<string, object?> { ["query"] = "vacation days", ["top_k"] = 3 }),
+            ])) { FinishReason = ChatFinishReason.ToolCalls })
+            .ThenText("Employees get 25 vacation days [S1].", reasoning: "The passage answers it.")
+            .ThenText("You are welcome.");
+
+        var first = await host.ChatAsync("How many vacation days?", cancellationToken: Ct);
+        var second = await host.ChatAsync("Thanks!", first.ConversationId(), Ct);
+
+        second.OfType<ErrorEvent>().ShouldBeEmpty();
+        var withinFirstTurn = orchestrator.Requests[1].Messages;
+        withinFirstTurn[2].Contents.OfType<TextReasoningContent>().ShouldHaveSingleItem().ProtectedData.ShouldBe("signature-1", "the turn in progress is never changed");
+        withinFirstTurn[3].ToolResults().Single().ResultText().ShouldContain(new string('x', 1_000));
+
+        var replay = orchestrator.Requests[2].Messages;
+        replay.Select(message => message.Role).ShouldBe([ChatRole.System, ChatRole.User, ChatRole.Assistant, ChatRole.Tool, ChatRole.Assistant, ChatRole.User]);
+        replay[0].Text.ShouldBe(withinFirstTurn[0].Text);
+        replay.SelectMany(message => message.Contents).OfType<TextReasoningContent>().ShouldBeEmpty();
+        var call = replay[2].Contents.ShouldHaveSingleItem().ShouldBeOfType<FunctionCallContent>();
+        call.CallId.ShouldBe("call_1");
+        call.Arguments!["query"]!.ToString().ShouldBe("vacation days");
+        var stub = replay[3].ToolResults().ShouldHaveSingleItem();
+        stub.CallId.ShouldBe("call_1");
+        stub.ResultText().ShouldStartWith("(Earlier result, shortened from");
+        stub.ResultText().ShouldContain($"\n[S1] Handbook | source_id={hit.SourceId}");
+        stub.ResultText().ShouldNotContain("xxxxxxxx");
+        replay[4].Text.ShouldBe("Employees get 25 vacation days [S1].");
+
+        var stored = host.Conversations.Get(first.ConversationId()).Turns[0].ModelMessages();
+        stored.SelectMany(message => message.Contents).OfType<TextReasoningContent>().Count().ShouldBe(2, "the stored turn keeps everything");
     }
 
     [Fact]
@@ -104,7 +145,7 @@ public sealed class ConversationHistoryTests
         var citations = second.OfType<ToolResultEvent>().Single().Citations;
         citations.Select(c => c.Ref).ShouldBe(["S2", "S3"]);
         citations[0].ChunkId.ShouldBe(chunkB.ChunkId);
-        orchestrator.Requests[3].Messages[^1].ToolResults().Single().ResultText().ShouldBe(
+        orchestrator.Requests[3].Messages[^1].ToolResults().Single().ResultText().Unwrapped().ShouldBe(
             "Found 2 passage(s) for \"second\".\n\n"
             + $"[S2] Doc B | score 0.90 | source_id={chunkB.SourceId}\nBeta passage.\n\n"
             + $"[S3] Doc C (page 7) | score 0.42 | source_id={citations[1].SourceId}\nGamma passage.");

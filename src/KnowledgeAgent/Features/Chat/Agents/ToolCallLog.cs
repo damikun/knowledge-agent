@@ -7,9 +7,9 @@ internal sealed class ToolCallLog
     private readonly Lock _gate = new();
     private readonly List<Entry> _entries = [];
 
-    public Entry Start(string callId, string toolName, string agent, string? parentCallId, JsonElement? arguments)
+    public Entry Start(string callId, string toolName, string agent, string? parentCallId, JsonElement? arguments, string? preamble = null)
     {
-        var entry = new Entry(callId, toolName, agent, parentCallId, arguments);
+        var entry = new Entry(callId, toolName, agent, parentCallId, arguments, preamble);
         lock (_gate)
         {
             _entries.Add(entry);
@@ -26,7 +26,7 @@ internal sealed class ToolCallLog
         }
     }
 
-    internal sealed class Entry(string callId, string toolName, string agent, string? parentCallId, JsonElement? arguments)
+    internal sealed class Entry(string callId, string toolName, string agent, string? parentCallId, JsonElement? arguments, string? preamble)
     {
         private readonly Lock _gate = new();
         private string _summary = string.Empty;
@@ -55,6 +55,7 @@ internal sealed class ToolCallLog
                 {
                     Result = _result,
                     Confirmation = _confirmation,
+                    Preamble = preamble,
                 };
             }
         }

@@ -53,6 +53,12 @@ public static class ItemScorer
             metrics[EvalMetrics.CitationValidity] = citations.Count(citation => citation.Valid) / (double)cited.Count;
         }
 
+        // Without this, an agent that never cites passes every citation metric: they only count answers with tags.
+        if (item.Answerable && !turn.Failed)
+        {
+            metrics[EvalMetrics.AnsweredWithCitation] = citations.Any(citation => citation.Valid) ? 1 : 0;
+        }
+
         if (measuresSources)
         {
             var seen = turn.Available.Values.Select(citation => citation.SourceId).ToHashSet();
@@ -75,13 +81,24 @@ public static class ItemScorer
             metrics[EvalMetrics.AnswerFactRecall] = (item.ExpectedFacts.Count - missingFacts.Count) / (double)item.ExpectedFacts.Count;
         }
 
-        // A failed turn produced no answer, which is not the same as declining.
+        // Declining has to be said: an answer that just lacks citations may be a guess. A failed turn is neither.
         if (!item.Answerable && !turn.Failed)
         {
-            metrics[EvalMetrics.AnswerAbstained] = cited.Count == 0 ? 1 : 0;
+            metrics[EvalMetrics.AnswerAbstained] = AnswerText.Declines(turn.Answer) ? 1 : 0;
         }
 
         return new ItemScore(metrics, retrieved, citations, missingFacts);
+    }
+
+    // With the judge, a decline also has to be correct: saying so plainly instead of hedging around an answer.
+    public static void ApplyJudge(IDictionary<string, double> metrics)
+    {
+        ArgumentNullException.ThrowIfNull(metrics);
+        if (metrics.TryGetValue(EvalMetrics.AnswerAbstained, out var abstained) && abstained > 0
+            && metrics.TryGetValue(EvalMetrics.JudgeCorrectness, out var correctness) && correctness < 0.5)
+        {
+            metrics[EvalMetrics.AnswerAbstained] = 0;
+        }
     }
 
     internal static double Recall(IReadOnlyList<KnowledgeSearchHit> hits, IReadOnlyList<IReadOnlySet<Guid>> expected, int k)

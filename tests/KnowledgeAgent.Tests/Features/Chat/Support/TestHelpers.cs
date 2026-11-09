@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 using KnowledgeAgent.Features.Chat;
+using KnowledgeAgent.Features.Chat.Tools;
 using Microsoft.Extensions.AI;
 
 namespace KnowledgeAgent.Tests.Features.Chat.Support;
@@ -51,6 +52,19 @@ internal static class MessageExtensions
         message.Contents.OfType<FunctionResultContent>().ToList();
 
     public static string ResultText(this FunctionResultContent result) => result.Result?.ToString() ?? string.Empty;
+
+    // The tool's own text inside the untrusted-content wrapper.
+    public static string Unwrapped(this string text)
+    {
+        if (!text.StartsWith(UntrustedText.Notice, StringComparison.Ordinal))
+        {
+            return text;
+        }
+
+        var start = text.IndexOf('\n', UntrustedText.Notice.Length + 1) + 1;
+        var end = text.LastIndexOf("\n</" + UntrustedText.TagPrefix, StringComparison.Ordinal);
+        return text[start..end];
+    }
 }
 
 internal sealed class ActivityCollector : IDisposable

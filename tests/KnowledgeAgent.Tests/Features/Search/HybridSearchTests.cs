@@ -85,10 +85,38 @@ public sealed class HybridSearchTests
         var source = await SeedAsync(context, "Doc", "fallback content for the vector search");
         context.VectorStore.KeywordFailure = new InvalidOperationException("keyword index down");
 
-        var hit = (await context.SearchAsync(new KnowledgeSearchRequest("fallback content"))).ShouldHaveSingleItem();
+        var result = await context.SearchResultAsync(new KnowledgeSearchRequest("fallback content"));
 
+        var hit = result.Hits.ShouldHaveSingleItem();
         hit.SourceId.ShouldBe(source.Id);
         hit.KeywordRank.ShouldBeNull();
+        hit.Score.ShouldBe(1, 1e-12, "a failed keyword search counts as not run, so the vector ranking alone scales to 1");
+        result.Degraded.ShouldBe([SearchDegradations.KeywordFailed]);
+    }
+
+    [Fact]
+    public async Task A_keyword_search_that_finds_nothing_is_not_degraded_and_keeps_the_vector_scale()
+    {
+        await using var context = new KnowledgeTestContext();
+        await SeedAsync(context, "Doc", "alpha beta gamma");
+
+        var result = await context.SearchResultAsync(new KnowledgeSearchRequest("zzzz qqqq"));
+
+        context.VectorStore.KeywordCalls.ShouldHaveSingleItem();
+        result.IsDegraded.ShouldBeFalse();
+        result.Hits.ShouldHaveSingleItem().Score.ShouldBe(1, 1e-12);
+    }
+
+    [Fact]
+    public async Task A_healthy_search_is_not_degraded()
+    {
+        await using var context = new KnowledgeTestContext();
+        await SeedAsync(context, "Doc", "healthy search content");
+
+        var result = await context.SearchResultAsync(new KnowledgeSearchRequest("healthy search content"));
+
+        result.Degraded.ShouldBeEmpty();
+        result.Hits.ShouldHaveSingleItem().KeywordRank.ShouldBe(1);
     }
 
     [Fact]
@@ -118,12 +146,14 @@ public sealed class HybridSearchTests
         await SeedAsync(context, "One", "resilient ranking content one");
         await SeedAsync(context, "Two", "resilient ranking content two");
 
-        var failed = await context.SearchAsync(new KnowledgeSearchRequest("resilient ranking content"));
-        var skipped = await context.SearchAsync(new KnowledgeSearchRequest("resilient ranking content", Rerank: false));
+        var failed = await context.SearchResultAsync(new KnowledgeSearchRequest("resilient ranking content"));
+        var skipped = await context.SearchResultAsync(new KnowledgeSearchRequest("resilient ranking content", Rerank: false));
 
-        failed.Count.ShouldBe(2);
-        failed.ShouldAllBe(hit => hit.RerankScore == null);
-        skipped.Count.ShouldBe(2);
+        failed.Hits.Count.ShouldBe(2);
+        failed.Hits.ShouldAllBe(hit => hit.RerankScore == null);
+        failed.Degraded.ShouldBe([SearchDegradations.RerankFailed]);
+        skipped.Hits.Count.ShouldBe(2);
+        skipped.IsDegraded.ShouldBeFalse();
         reranker.Calls.Count.ShouldBe(1);
     }
 

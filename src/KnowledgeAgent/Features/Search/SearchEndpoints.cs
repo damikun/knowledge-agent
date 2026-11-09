@@ -12,6 +12,9 @@ internal static class SearchEndpoints
     public const int MaxTopK = 50;
     public const int MaxQueryLength = 4000;
 
+    // Comma-separated reasons when part of the search failed and was skipped, for example "keyword_failed".
+    public const string DegradedHeader = "X-Search-Degraded";
+
     public static RouteHandlerBuilder MapSearchEndpoints(this IEndpointRouteBuilder routes) =>
         routes.MapPost("/search", SearchAsync)
             .WithTags("Search")
@@ -19,11 +22,13 @@ internal static class SearchEndpoints
             .WithSummary("Hybrid search: vector + keyword retrieval fused by rank, then reranked when a reranker is configured.")
             .WithDescription(
                 "mode: hybrid (default from Search:Mode), vector or keyword. rerank: true/false overrides Search:Rerank. "
-                + "minScore filters vector candidates by cosine similarity. Each hit reports its vector, keyword and rerank scores.");
+                + "minScore filters vector candidates by cosine similarity. Each hit reports its vector, keyword and rerank scores. "
+                + "When a part of the search failed and was skipped, the " + DegradedHeader + " response header names it.");
 
     private static async Task<Results<Ok<SearchHitDto[]>, ValidationProblem>> SearchAsync(
         SearchRequest request,
         IKnowledgeSearch search,
+        HttpResponse response,
         CancellationToken cancellationToken)
     {
         var errors = new ValidationErrors();
@@ -58,9 +63,14 @@ internal static class SearchEndpoints
         }
 
         var sourceIds = request.SourceIds is { Count: > 0 } ids ? ids.Distinct().ToArray() : null;
-        var hits = await search.SearchAsync(
+        var result = await search.SearchAsync(
             new KnowledgeSearchRequest(request.Query.Trim(), request.TopK ?? DefaultTopK, sourceIds, request.MinScore, mode, request.Rerank),
             cancellationToken);
-        return TypedResults.Ok(hits.Select(h => h.ToDto()).ToArray());
+        if (result.IsDegraded)
+        {
+            response.Headers[DegradedHeader] = string.Join(',', result.Degraded);
+        }
+
+        return TypedResults.Ok(result.Hits.Select(h => h.ToDto()).ToArray());
     }
 }

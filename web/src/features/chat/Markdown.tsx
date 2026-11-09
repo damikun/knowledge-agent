@@ -3,15 +3,21 @@ import { Fragment, memo, useMemo, type ReactNode } from 'react';
 import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ScrollBox } from '../../components/ui/ScrollBox';
-import { safeExternalUrl } from '../../lib/format';
+import { allowedLinkUrl, blockedLinkSuffix, nodeText } from '../../lib/linkHosts';
 import { CitationGroup } from './CitationChip';
 import { refsFromHref, remarkCitations } from './citations';
 
 const remarkPlugins = [remarkGfm, remarkCitations];
 
-function createComponents(renderCitation?: (ref: string) => ReactNode, renderLink?: RenderLink): Components {
+const NO_HOSTS: readonly string[] = [];
+
+function ownHost(): string | undefined {
+  return typeof window === 'undefined' ? undefined : window.location.hostname;
+}
+
+function createComponents(renderCitation?: (ref: string) => ReactNode, renderLink?: RenderLink, linkHosts: readonly string[] = NO_HOSTS): Components {
   return {
-    a: ({ href, children, node: _node, ...rest }) => {
+    a: ({ href, children, node, ...rest }) => {
       const refs = refsFromHref(href);
       if (refs.length > 0) {
         return renderCitation ? refs.map((ref) => <Fragment key={ref}>{renderCitation(ref)}</Fragment>) : <CitationGroup refs={refs} />;
@@ -20,9 +26,14 @@ function createComponents(renderCitation?: (ref: string) => ReactNode, renderLin
       if (custom) {
         return custom;
       }
-      const url = safeExternalUrl(href);
+      const url = allowedLinkUrl(href, linkHosts, ownHost());
       if (!url) {
-        return <span>{children}</span>;
+        return (
+          <span>
+            {children}
+            {blockedLinkSuffix(href, nodeText(node))}
+          </span>
+        );
       }
       return (
         <a {...rest} href={url} target="_blank" rel="noopener noreferrer">
@@ -52,12 +63,14 @@ export interface MarkdownProps {
   renderCitation?: (ref: string) => ReactNode;
   /** Pass a memoized function, like renderCitation. */
   renderLink?: RenderLink;
+  /** Hosts links may go to besides the portal itself; others show as text with their address. Pass a stable array. */
+  linkHosts?: readonly string[];
 }
 
-export const Markdown = memo(function Markdown({ text, variant = 'default', renderCitation, renderLink }: MarkdownProps) {
+export const Markdown = memo(function Markdown({ text, variant = 'default', renderCitation, renderLink, linkHosts }: MarkdownProps) {
   const components = useMemo(
-    () => (renderCitation || renderLink ? createComponents(renderCitation, renderLink) : defaultComponents),
-    [renderCitation, renderLink],
+    () => (renderCitation || renderLink || linkHosts ? createComponents(renderCitation, renderLink, linkHosts) : defaultComponents),
+    [renderCitation, renderLink, linkHosts],
   );
   return (
     <div

@@ -34,6 +34,8 @@ export interface WidgetConfig {
   contactCapture: ContactCapture;
   texts: Record<string, string>;
   maxMessageLength: number;
+  // Hosts answers may link to: "example.com" also allows www., "*.example.com" its subdomains.
+  linkHosts: string[];
 }
 
 export interface VisitorSession {
@@ -53,9 +55,7 @@ export interface AttributeRejection {
 }
 
 export function readRejections(value: unknown): AttributeRejection[] {
-  return Array.isArray(value)
-    ? value.filter(isRecord).map((item) => ({ key: String(item.key ?? ''), reason: String(item.reason ?? '') }))
-    : [];
+  return Array.isArray(value) ? value.filter(isRecord).map((item) => ({ key: String(item.key ?? ''), reason: String(item.reason ?? '') })) : [];
 }
 
 export interface Citation {
@@ -87,16 +87,29 @@ export type TurnEvent =
   | { type: 'conversation'; conversationId: string }
   | { type: 'tool-call'; toolName: string }
   | { type: 'tool-result'; citations: Citation[] }
-  | { type: 'text-delta'; text: string }
+  // step numbers the model calls of a turn; older servers send none.
+  | { type: 'text-delta'; text: string; step: number | null }
+  // interim: tools run next, so the text so far was a note on the way, not the answer.
+  | { type: 'step-finished'; step: number; kind: 'interim' | 'final' }
   | { type: 'error'; message: string; code: string | null }
   | { type: 'done'; conversationId: string }
   // An action the agent asked about, which runs only after the visitor presses Confirm.
-  | { type: 'confirmation-required'; callId: string; title: string };
+  | { type: 'confirmation-required'; callId: string; title: string; details: ConfirmationDetail[] }
+  // The agent offered a person; the widget shows its own button.
+  | { type: 'handover-offered'; callId: string };
+
+// One argument of an action, as the server put it.
+export interface ConfirmationDetail {
+  label: string;
+  value: string;
+}
+
+function readDetails(value: unknown): ConfirmationDetail[] {
+  return Array.isArray(value) ? value.filter(isRecord).map((item) => ({ label: String(item.label ?? ''), value: String(item.value ?? '') })) : [];
+}
 
 export type LiveEvent =
-  | { type: 'message'; message: VisitorMessage }
-  | { type: 'turn'; event: TurnEvent }
-  | { type: 'status'; status: ConversationStatus };
+  { type: 'message'; message: VisitorMessage } | { type: 'turn'; event: TurnEvent } | { type: 'status'; status: ConversationStatus };
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -148,6 +161,9 @@ export function normalizeConfig(value: unknown): WidgetConfig | null {
     contactCapture: choice(value.contactCapture, ['never', 'before_handover', 'before_chat'], 'never'),
     texts,
     maxMessageLength: maxLength,
+    linkHosts: Array.isArray(value.linkHosts)
+      ? value.linkHosts.filter((host): host is string => typeof host === 'string' && host.trim() !== '').map((host) => host.trim().toLowerCase())
+      : [],
   };
 }
 
@@ -209,9 +225,7 @@ export function normalizeMessage(value: unknown): VisitorMessage | null {
 
 export function normalizeConversation(value: unknown, id: string): VisitorConversation {
   const record = isRecord(value) ? value : {};
-  const messages = Array.isArray(record.messages)
-    ? record.messages.map(normalizeMessage).filter((m): m is VisitorMessage => m !== null)
-    : [];
+  const messages = Array.isArray(record.messages) ? record.messages.map(normalizeMessage).filter((m): m is VisitorMessage => m !== null) : [];
   return {
     id: typeof record.id === 'string' ? record.id : id,
     status: normalizeStatus(record.status) ?? 'ai',
@@ -247,13 +261,21 @@ export function parseTurnEvent(type: string, data: unknown): TurnEvent | null {
     case 'tool-result':
       return { type, citations: normalizeCitations(data.citations) };
     case 'text-delta':
-      return typeof data.text === 'string' ? { type, text: data.text } : null;
+      return typeof data.text === 'string'
+        ? { type, text: data.text, step: typeof data.step === 'number' && data.step > 0 ? data.step : null }
+        : null;
+    case 'step-finished':
+      return typeof data.step === 'number' && (data.kind === 'interim' || data.kind === 'final') ? { type, step: data.step, kind: data.kind } : null;
     case 'error':
       return { type, message: text(data.message) ?? '', code: text(data.code) };
     case 'done':
       return { type, conversationId: typeof data.conversationId === 'string' ? data.conversationId : '' };
     case 'confirmation-required':
-      return typeof data.callId === 'string' ? { type, callId: data.callId, title: text(data.title) ?? '' } : null;
+      return typeof data.callId === 'string'
+        ? { type, callId: data.callId, title: text(data.title) ?? '', details: readDetails(data.details) }
+        : null;
+    case 'handover-offered':
+      return typeof data.callId === 'string' ? { type, callId: data.callId } : null;
     default:
       return null;
   }

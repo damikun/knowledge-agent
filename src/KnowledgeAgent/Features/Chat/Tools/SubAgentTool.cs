@@ -91,7 +91,7 @@ internal sealed class SubAgentTool(AgentDefinition agent, SubAgentToolSpec spec,
         var summary = string.Create(
             CultureInfo.InvariantCulture,
             $"{DisplayName(agent.Name)} finished after {result.Iterations} step(s) with {result.Citations.Count} citation(s)");
-        return new ToolResult(answer, summary, Citations: result.Citations);
+        return new ToolResult(answer, summary, Citations: result.Citations) { Untrusted = true };
     }
 
     private static string DisplayName(string name) =>

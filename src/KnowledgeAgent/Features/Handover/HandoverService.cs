@@ -95,8 +95,43 @@ internal sealed partial class HandoverService(
     public const string BackToAgentNotice = "You're chatting with the assistant again.";
     public const string IdleClosedNotice = "This conversation was closed after a quiet while. Write any time to start a new one.";
 
-    public async Task<HandoverOutcome> RequestFromAgentAsync(Guid conversationId, string reason, string summary, CancellationToken cancellationToken = default) =>
-        (await RequestAsync(conversationId, HandoverSource.Agent, reason, summary, cancellationToken)).Outcome;
+    internal const string AlreadyAskedInstruction = "A person was already asked to join. Tell the visitor a colleague will reply in this chat soon.";
+
+    internal const string OfferInstruction =
+        "Nobody has been asked yet: the visitor now sees a button to talk to a person from the team. In one short sentence, "
+        + "tell them to press it if they want a colleague to take over. Keep helping them meanwhile.";
+
+    // How far back a visitor's request picks up the summary of the agent's offer.
+    internal const int OfferLookbackTurns = 3;
+
+    public async Task<HandoverOutcome> OfferAsync(Guid conversationId, CancellationToken cancellationToken = default)
+    {
+        var conversation = await conversations.GetAsync(conversationId, includeTurns: false, cancellationToken);
+        if (conversation is { Channel: ConversationChannel.Portal, WidgetId: { } testedWidgetId, VisitorId: null })
+        {
+            return await SimulateAsync(conversationId, testedWidgetId, cancellationToken);
+        }
+
+        var preview = conversation is not null && IsPreview(conversation);
+        if (conversation is null || (!preview && conversation is not { Channel: ConversationChannel.Widget, WidgetId: not null }))
+        {
+            return new HandoverOutcome(false, "A person can only join conversations from a website widget. Say that you cannot connect them here.");
+        }
+
+        if (conversation.Status == ConversationStatus.Closed)
+        {
+            throw new ConversationClosedException(conversationId);
+        }
+
+        if (conversation.Status is ConversationStatus.HandoverPending or ConversationStatus.Human
+            || (!preview && await handovers.FindOpenAsync(conversationId, cancellationToken) is not null))
+        {
+            return new HandoverOutcome(true, AlreadyAskedInstruction, Simulated: preview);
+        }
+
+        LogOffered(logger, conversationId);
+        return new HandoverOutcome(false, OfferInstruction, Simulated: preview, Offered: true);
+    }
 
     public async Task<(HandoverOutcome Outcome, Handover? Handover)> RequestAsync(
         Guid conversationId,
@@ -128,7 +163,12 @@ internal sealed partial class HandoverService(
 
         if (await handovers.FindOpenAsync(conversationId, cancellationToken) is { } open)
         {
-            return (new HandoverOutcome(true, "A person was already asked to join. Tell the visitor a colleague will reply in this chat soon."), open);
+            return (new HandoverOutcome(true, AlreadyAskedInstruction), open);
+        }
+
+        if (source == HandoverSource.Visitor && summary is null)
+        {
+            summary = await OfferedSummaryAsync(conversationId, cancellationToken);
         }
 
         var widget = await widgets.GetAsync(widgetId, cancellationToken);
@@ -399,6 +439,24 @@ internal sealed partial class HandoverService(
         return new HandoverOutcome(true, instruction, Simulated: true);
     }
 
+    // The summary the agent wrote when it offered a person, so the team gets context with the visitor's request.
+    private async Task<string?> OfferedSummaryAsync(Guid conversationId, CancellationToken cancellationToken)
+    {
+        var conversation = await conversations.GetAsync(conversationId, includeTurns: true, cancellationToken);
+        foreach (var turn in conversation?.Turns.OrderByDescending(turn => turn.Sequence).Take(OfferLookbackTurns) ?? [])
+        {
+            var offer = ChatJson.DeserializeDtos<ToolCallDto>(turn.ToolCallsJson)
+                .LastOrDefault(call => call is { ToolName: Chat.Tools.ToolNames.RequestHumanHandover, ParentCallId: null, IsError: false });
+            if (offer?.Arguments is { ValueKind: System.Text.Json.JsonValueKind.Object } arguments
+                && arguments.TryGetProperty("summary", out var text) && text.ValueKind == System.Text.Json.JsonValueKind.String)
+            {
+                return text.GetString();
+            }
+        }
+
+        return null;
+    }
+
     internal static string PreviewNotice(string channel) => $"Preview: nobody is asked. {TestNotice(channel)}.";
 
     private static bool IsPreview(Conversation conversation) =>
@@ -512,6 +570,9 @@ internal sealed partial class HandoverService(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Handover {HandoverId} requested for conversation {ConversationId} by {Source}, via {Channel}")]
     private static partial void LogRequested(ILogger logger, Guid handoverId, Guid conversationId, string channel, HandoverSource source);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "The agent offered a person in conversation {ConversationId}")]
+    private static partial void LogOffered(ILogger logger, Guid conversationId);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Handover {HandoverId} of conversation {ConversationId} was taken")]
     private static partial void LogJoined(ILogger logger, Guid handoverId, Guid conversationId);

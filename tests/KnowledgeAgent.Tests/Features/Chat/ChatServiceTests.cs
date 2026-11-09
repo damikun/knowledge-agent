@@ -258,6 +258,7 @@ public sealed class ChatServiceTests
             ChatEventTypes.Conversation,
             ChatEventTypes.AgentStarted,
             ChatEventTypes.TextDelta,
+            ChatEventTypes.StepFinished,
             ChatEventTypes.Usage,
             ChatEventTypes.AgentCompleted,
             ChatEventTypes.Done,

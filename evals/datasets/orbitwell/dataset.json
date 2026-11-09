@@ -52,7 +52,7 @@
         "employee-handbook.md"
       ],
       "expectedFacts": [
-        "27 days"
+        "27 days|27 paid vacation days|27 vacation days"
       ],
       "referenceAnswer": "From the first day of your fifth year of service you get 27 days of paid vacation per year (2.25 days accrued per month), up from 22 days in years 1 to 4.",
       "tags": [
@@ -537,9 +537,37 @@
     }
   ],
   "gate": {
+    "required": [
+      "citation_validity",
+      "answered_with_citation",
+      "answer_fact_recall",
+      "answer_abstained",
+      "citation_coverage"
+    ],
+    "requiredWithJudge": [
+      "judge_faithfulness",
+      "judge_correctness"
+    ],
     "minimums": {
-      "citation_validity": 0.99
+      "citation_validity": 0.99,
+      "answered_with_citation": 0.9,
+      "answer_abstained": 0.75,
+      "judge_faithfulness": 0.9
     },
-    "maxRegression": 0.05
+    "maxRegression": 0.05,
+    "tolerances": {
+      "answer_abstained": 0.15,
+      "judge_correctness": 0.08
+    },
+    "offline": {
+      "minimums": {
+        "retrieval_recall_at_5": 0.85,
+        "retrieval_recall_at_10": 0.93,
+        "retrieval_mrr_at_10": 0.78,
+        "agent_source_recall": 0.87,
+        "answered_with_citation": 1.0,
+        "citation_validity": 1.0
+      }
+    }
   }
 }

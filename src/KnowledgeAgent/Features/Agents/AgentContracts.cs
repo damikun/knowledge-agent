@@ -36,7 +36,9 @@ public sealed record AgentMcpAppDto(
     McpToolPolicy ChangesPolicy = McpToolPolicy.Confirm,
     IReadOnlyList<AgentMcpToolDto>? Tools = null);
 
-public sealed record AgentMcpToolDto(string Name, McpToolPolicy? Policy = null);
+// Fingerprint: the definition the admin approved. Sent back unchanged it keeps that approval; the tool's current
+// fingerprint from the connection approves the definition the app lists now.
+public sealed record AgentMcpToolDto(string Name, McpToolPolicy? Policy = null, string? Fingerprint = null);
 
 public sealed record SaveAgentRequest(
     string Name,
@@ -76,7 +78,7 @@ internal static class AgentMappings
         agent.UpdatedAt)
     {
         McpApps = agent.McpTools
-            .Select(app => new AgentMcpAppDto(app.ServerId, app.Enabled, app.Mode, app.ChangesPolicy, app.Tools.Select(tool => new AgentMcpToolDto(tool.Name, tool.Policy)).ToList()))
+            .Select(app => new AgentMcpAppDto(app.ServerId, app.Enabled, app.Mode, app.ChangesPolicy, app.Tools.Select(tool => new AgentMcpToolDto(tool.Name, tool.Policy, tool.Approved is null ? null : tool.Fingerprint)).ToList()))
             .ToList(),
         McpServerEnabled = agent.McpServerEnabled,
         HttpApiEnabled = agent.HttpApiEnabled,

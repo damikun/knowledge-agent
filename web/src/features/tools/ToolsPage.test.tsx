@@ -39,7 +39,13 @@ describe('ToolsPage', () => {
             { agentId: 'a2', agentName: 'Orders', toolCount: 1, mode: 'chosen' },
           ],
         }),
-        mcpServer({ id: 's2', key: 'crm', name: 'CRM', lastCheck: { checkedAt: '2026-11-05T08:00:00Z', ok: false, error: 'The server could not be reached.' }, tools: [] }),
+        mcpServer({
+          id: 's2',
+          key: 'crm',
+          name: 'CRM',
+          lastCheck: { checkedAt: '2026-11-05T08:00:00Z', ok: false, error: 'The server could not be reached.' },
+          tools: [],
+        }),
       ],
     });
     renderPage();
@@ -90,6 +96,7 @@ describe('ToolsPage', () => {
     expect(await within(sheet).findByText('Enter the token.')).toBeInTheDocument();
 
     await user.type(within(sheet).getByLabelText('Token'), 'tok-123456789');
+    await user.click(within(sheet).getByRole('switch', { name: "Send the visitor's verified user ID" }));
     await user.click(within(sheet).getByRole('button', { name: 'Test' }));
     expect(await within(sheet).findByText('Test passed')).toBeInTheDocument();
     expect(within(sheet).getByRole('list', { name: 'Tools of Shop' })).toBeInTheDocument();
@@ -104,6 +111,7 @@ describe('ToolsPage', () => {
       headerName: null,
       secret: 'tok-123456789',
       enabled: true,
+      sendIdentity: true,
     });
     expect(await screen.findByRole('region', { name: 'Shop' })).toBeInTheDocument();
   });
@@ -134,7 +142,9 @@ describe('ToolsPage', () => {
     await user.clear(name);
     await user.type(name, 'Our shop');
     await user.click(within(sheet).getByRole('button', { name: 'Save' }));
-    await waitFor(() => expect(lastBody(fetchMock, `PATCH /api/connections/mcp/${mcpServer().id}`)).toMatchObject({ name: 'Our shop', secret: null }));
+    await waitFor(() =>
+      expect(lastBody(fetchMock, `PATCH /api/connections/mcp/${mcpServer().id}`)).toMatchObject({ name: 'Our shop', secret: null }),
+    );
   });
 
   it('says what went wrong when the servers cannot load', async () => {
@@ -145,7 +155,15 @@ describe('ToolsPage', () => {
 });
 
 describe('validateMcpServer', () => {
-  const values = { name: 'Shop', url: 'https://mcp.example.com/mcp', authType: 'header' as const, headerName: '', secret: { value: '', remove: false }, enabled: true };
+  const values = {
+    name: 'Shop',
+    url: 'https://mcp.example.com/mcp',
+    authType: 'header' as const,
+    headerName: '',
+    secret: { value: '', remove: false },
+    enabled: true,
+    sendIdentity: false,
+  };
 
   it('asks for the header name and the token of a custom header', () => {
     expect(validateMcpServer(values, null).errors).toEqual({ headerName: 'Enter the header name, such as X-Api-Key.', secret: 'Enter the token.' });
@@ -153,7 +171,9 @@ describe('validateMcpServer', () => {
 
   it('sends no token without sign-in, and keeps a saved one when left empty', () => {
     expect(validateMcpServer({ ...values, authType: 'none' }, null).request?.secret).toBeNull();
-    expect(validateMcpServer({ ...values, headerName: 'X-Api-Key' }, mcpServer({ authType: 'header', headerName: 'X-Api-Key' })).request).toMatchObject({
+    expect(
+      validateMcpServer({ ...values, headerName: 'X-Api-Key' }, mcpServer({ authType: 'header', headerName: 'X-Api-Key' })).request,
+    ).toMatchObject({
       headerName: 'X-Api-Key',
       secret: null,
     });

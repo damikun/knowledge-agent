@@ -51,6 +51,24 @@ public sealed class JudgeTests
     }
 
     [Fact]
+    public void The_judge_sees_whole_passages_within_a_total_budget()
+    {
+        var chunk = string.Join(' ', Enumerable.Repeat("Leave rules apply to every employee.", 100)) + " The last sentence says 27 days.";
+        var passages = Enumerable.Range(1, EvalJudge.MaxPassages)
+            .Select(index => new JudgePassage($"S{index}", "Handbook", index == 1 ? chunk : new string('x', EvalJudge.MaxPassageChars)))
+            .ToList();
+
+        var variables = (List<object?>)EvalJudge.BuildVariables(Item.Value, "Answer [S1].", passages)["passages"]!;
+        var texts = variables.Cast<Dictionary<string, object?>>().Select(passage => (string)passage["text"]!).ToList();
+
+        chunk.Length.ShouldBeGreaterThan(1_500);
+        texts[0].ShouldBe(chunk.Trim(), "a typical chunk reaches the judge whole");
+        texts.Count.ShouldBe(EvalJudge.MaxPassages);
+        texts.Where(text => !text.StartsWith("(not shown", StringComparison.Ordinal)).Sum(text => text.Length).ShouldBeLessThanOrEqualTo(EvalJudge.MaxPassagesChars + 1);
+        texts[^1].ShouldStartWith("(not shown");
+    }
+
+    [Fact]
     public async Task Asks_again_once_when_the_reply_is_not_the_json_object()
     {
         var judgeModel = new ScriptedChatClient().ThenText("I think it is fine.").ThenText(Verdicts);

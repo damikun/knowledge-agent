@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Globalization;
 using System.Security.Cryptography;
+using System.Text.Json.Nodes;
 using KnowledgeAgent.Features.Sources.Ingestion;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.Extensions.Logging;
@@ -43,7 +44,20 @@ internal sealed class McpSecretProtector(IDataProtectionProvider dataProtection)
 internal sealed record McpProbe(bool Ok, string? Error, string? ServerName, string? ServerVersion, IReadOnlyList<McpToolInfo> Tools, long DurationMs);
 
 // A failure talking to an MCP server, in words that are safe to show: never a header, token or stack trace.
-internal sealed class McpConnectionException(string message, Exception? inner = null) : Exception(message, inner);
+internal sealed class McpConnectionException(string message, Exception? inner = null) : Exception(message, inner)
+{
+    // The request may have reached the server before the failure, so the tool may have run.
+    public bool MayHaveRun { get; init; }
+}
+
+internal enum McpCallSafety
+{
+    // Sent again only when the first attempt surely never ran.
+    SideEffects,
+
+    // Approved as read-only or idempotent, so running it twice changes nothing.
+    RetrySafe,
+}
 
 internal sealed partial class McpClientPool(
     McpSecretProtector secrets,
@@ -56,14 +70,28 @@ internal sealed partial class McpClientPool(
     private readonly ConcurrentDictionary<Guid, DateTimeOffset> _lastRefresh = new();
     private readonly ILogger _logger = loggerFactory.CreateLogger<McpClientPool>();
 
-    public async Task<CallToolResult> CallAsync(McpServer server, string toolName, IReadOnlyDictionary<string, object?> arguments, CancellationToken cancellationToken)
+    // Sent in _meta with every attempt of one call, so a server that deduplicates can drop a repeat.
+    public const string IdempotencyMetaKey = "knowledge-agent/idempotency-key";
+
+    public Task<CallToolResult> CallAsync(McpServer server, string toolName, IReadOnlyDictionary<string, object?> arguments, CancellationToken cancellationToken) =>
+        CallAsync(server, toolName, arguments, caller: null, McpCallSafety.SideEffects, idempotencyKey: null, cancellationToken);
+
+    public async Task<CallToolResult> CallAsync(
+        McpServer server,
+        string toolName,
+        IReadOnlyDictionary<string, object?> arguments,
+        JsonObject? caller,
+        McpCallSafety safety,
+        string? idempotencyKey,
+        CancellationToken cancellationToken)
     {
+        var request = Request(caller, idempotencyKey);
         for (var attempt = 1; ; attempt++)
         {
             var entry = await GetAsync(server, cancellationToken);
             try
             {
-                return await entry.Client.CallToolAsync(toolName, arguments, cancellationToken: cancellationToken);
+                return await entry.Client.CallToolAsync(toolName, arguments, options: request, cancellationToken: cancellationToken);
             }
             catch (McpProtocolException)
             {
@@ -73,13 +101,55 @@ internal sealed partial class McpClientPool(
             catch (Exception ex) when (IsConnectionFailure(ex) && !cancellationToken.IsCancellationRequested)
             {
                 await EvictAsync(server.Id, entry);
-                if (attempt >= 2)
+
+                // A timeout or a dropped connection after sending can mean the tool already ran: running an action
+                // twice is worse than one error.
+                var notRun = NeverRan(ex);
+                if (attempt >= 2 || (safety != McpCallSafety.RetrySafe && !notRun))
                 {
                     LogCallFailed(_logger, ex, server.Key, toolName);
-                    throw new McpConnectionException(Describe(ex), ex);
+                    throw new McpConnectionException(Describe(ex), ex) { MayHaveRun = !notRun };
                 }
             }
         }
+    }
+
+    private static RequestOptions? Request(JsonObject? caller, string? idempotencyKey)
+    {
+        if (caller is null && string.IsNullOrEmpty(idempotencyKey))
+        {
+            return null;
+        }
+
+        var meta = new JsonObject();
+        if (caller is not null)
+        {
+            meta[McpCallerIdentity.MetaKey] = caller.DeepClone();
+        }
+
+        if (!string.IsNullOrEmpty(idempotencyKey))
+        {
+            meta[IdempotencyMetaKey] = idempotencyKey;
+        }
+
+        return new RequestOptions { Meta = meta };
+    }
+
+    // True only when the server surely did not run the request: the connection was never made, or the server
+    // turned the request away with a client error (404 is how an expired MCP session is answered).
+    internal static bool NeverRan(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is HttpRequestException http)
+            {
+                return http.HttpRequestError is HttpRequestError.ConnectionError or HttpRequestError.NameResolutionError
+                        or HttpRequestError.SecureConnectionError or HttpRequestError.ProxyTunnelError
+                    || http.StatusCode is { } status && (int)status is >= 400 and < 500 && (int)status != 408;
+            }
+        }
+
+        return false;
     }
 
     public async Task<McpProbe> ProbeAsync(McpServer server, CancellationToken cancellationToken)

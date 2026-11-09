@@ -49,7 +49,7 @@ public sealed class HandoverJobResilienceTests : IAsyncLifetime
                 services.AddSingleton<IEmailTransport, FailingEmail>();
                 services.AddSingleton<ISlackGateway, UnusedSlack>();
                 services.AddSingleton<ConversationEventHub>();
-                services.AddSingleton<IConversationNotifier, NullConversationNotifier>();
+                services.AddSingleton<ILiveBus, InProcessLiveBus>();
                 services.AddScoped<ConversationTimeline>();
                 services.AddScoped<IWidgetRepository, WidgetRepository>();
                 services.AddScoped<HandoverContextLoader>();

@@ -71,7 +71,7 @@ public static class EvalReportWriter
 
         if (run.ByTag.Count > 0)
         {
-            string[] columns = [EvalMetrics.RetrievalRecallAt5, EvalMetrics.CitationSourceRecall, EvalMetrics.AnswerFactRecall, EvalMetrics.AnswerAbstained, EvalMetrics.JudgeCorrectness];
+            string[] columns = [EvalMetrics.RetrievalRecallAt5, EvalMetrics.AnsweredWithCitation, EvalMetrics.CitationSourceRecall, EvalMetrics.AnswerFactRecall, EvalMetrics.AnswerAbstained, EvalMetrics.JudgeCorrectness];
             var shown = columns.Where(metric => run.ByTag.Any(tag => tag.Metrics.ContainsKey(metric))).ToList();
             builder.Append("\n## By tag\n\n| Tag | Items | ").Append(string.Join(" | ", shown.Select(EvalMetricLabels.Of))).Append(" |\n|---|---:|");
             builder.Append(string.Concat(shown.Select(_ => "---:|"))).Append('\n');
@@ -122,7 +122,11 @@ public static class EvalReportWriter
             return -1;
         }
 
-        string[] keys = [EvalMetrics.AnswerFactRecall, EvalMetrics.CitationSourceRecall, EvalMetrics.CitationValidity, EvalMetrics.AnswerAbstained, EvalMetrics.JudgeCorrectness, EvalMetrics.JudgeFaithfulness];
+        string[] keys =
+        [
+            EvalMetrics.AnswerFactRecall, EvalMetrics.AnsweredWithCitation, EvalMetrics.CitationSourceRecall, EvalMetrics.CitationValidity,
+            EvalMetrics.AnswerAbstained, EvalMetrics.JudgeCorrectness, EvalMetrics.JudgeFaithfulness,
+        ];
         var values = keys.Where(item.Metrics.ContainsKey).Select(key => item.Metrics[key]).ToList();
         return values.Count == 0 ? 1 : values.Min();
     }
@@ -140,6 +144,11 @@ public static class EvalReportWriter
             problems.Add("missing facts: " + string.Join(", ", item.MissingFacts.Select(fact => fact.Split('|')[0])));
         }
 
+        if (item.Metrics.TryGetValue(EvalMetrics.AnsweredWithCitation, out var answered) && answered < 1)
+        {
+            problems.Add("answered without a valid citation");
+        }
+
         if (item.Metrics.TryGetValue(EvalMetrics.CitationSourceRecall, out var cited) && cited < 1)
         {
             problems.Add(string.Create(CultureInfo.InvariantCulture, $"expected sources cited {cited:0%}"));
@@ -152,7 +161,7 @@ public static class EvalReportWriter
 
         if (item.Metrics.TryGetValue(EvalMetrics.AnswerAbstained, out var abstained) && abstained < 1)
         {
-            problems.Add("answered an unanswerable question with citations");
+            problems.Add("did not decline an unanswerable question");
         }
 
         foreach (var criterion in item.Judgement?.Criteria.Where(criterion => criterion.Score < 1) ?? [])

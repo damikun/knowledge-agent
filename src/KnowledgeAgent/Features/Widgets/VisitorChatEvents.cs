@@ -2,7 +2,7 @@ using KnowledgeAgent.Features.Chat;
 
 namespace KnowledgeAgent.Features.Widgets;
 
-// Models, token counts, reasoning, tool arguments and the researcher's work stay internal.
+// Models, token counts, reasoning, raw tool arguments and the researcher's work stay internal.
 internal static class VisitorChatEvents
 {
     public static ChatStreamEvent? ToVisitor(ChatStreamEvent streamEvent, string citationMode)
@@ -14,12 +14,13 @@ internal static class VisitorChatEvents
 
         return streamEvent switch
         {
-            ConversationEvent or TextDeltaEvent or DoneEvent => streamEvent,
+            ConversationEvent or TextDeltaEvent or StepFinishedEvent or DoneEvent or HandoverOfferedEvent => streamEvent,
 
             ToolCallEvent { ToolName: Chat.Tools.ToolNames.TransferToAgent or Chat.Tools.ToolNames.TransferBack } => null,
             ToolResultEvent { ToolName: Chat.Tools.ToolNames.TransferToAgent or Chat.Tools.ToolNames.TransferBack } => null,
             ToolCallEvent call => call with { Arguments = null },
 
+            // The details are built by the server from the arguments, so the visitor sees what they confirm.
             ConfirmationRequiredEvent confirmation => confirmation with { Arguments = null, ToolName = string.Empty },
             ToolResultEvent result => result with
             {

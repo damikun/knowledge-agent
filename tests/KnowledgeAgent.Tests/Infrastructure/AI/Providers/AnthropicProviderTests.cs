@@ -1,10 +1,13 @@
 using System.Text.Json.Nodes;
+using KnowledgeAgent.Features.Chat.Agents;
 using KnowledgeAgent.Features.Chat.Tools;
 using KnowledgeAgent.Infrastructure.AI;
+using KnowledgeAgent.Infrastructure.AI.Chat;
 using KnowledgeAgent.Infrastructure.AI.Profiles;
 using KnowledgeAgent.Infrastructure.AI.Providers.Anthropic;
 using KnowledgeAgent.Tests.Infrastructure.AI.Support;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KnowledgeAgent.Tests.Infrastructure.AI.Providers;
@@ -147,9 +150,11 @@ public sealed class AnthropicProviderTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Disabling_the_refusal_fallback_uses_the_GA_endpoint_and_keeps_caching()
+    public async Task Disabling_the_refusal_fallback_and_block_binding_uses_the_GA_endpoint_and_keeps_caching()
     {
-        using var host = AiTestHost.Create(Config(("AI:Providers:anthropic:Settings:RefusalFallback", "none")));
+        using var host = AiTestHost.Create(Config(
+            ("AI:Providers:anthropic:Settings:RefusalFallback", "none"),
+            ("AI:Providers:anthropic:Settings:ThinkingMismatch", "off")));
         var handle = await host.ChatClients.CreateAsync("orchestrator", cancellationToken: Ct);
 
         await handle.Client.GetResponseAsync([new ChatMessage(ChatRole.User, "hi")], handle.CreateOptions(), Ct);
@@ -269,6 +274,131 @@ public sealed class AnthropicProviderTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Block_binding_drops_mismatched_thinking_and_needs_its_beta_header_when_streaming()
+    {
+        using var host = AiTestHost.Create(Config(("AI:Providers:anthropic:Settings:RefusalFallback", "none")));
+        var handle = await host.ChatClients.CreateAsync("orchestrator", cancellationToken: Ct);
+
+        await foreach (var _ in handle.Client.GetStreamingResponseAsync([new ChatMessage(ChatRole.User, "Refunds?")], handle.CreateOptions(), Ct))
+        {
+        }
+
+        var request = _server.LastRequest;
+        request.PathAndQuery.ShouldBe("/v1/messages?beta=true");
+        request.Header("anthropic-beta").ShouldBe("thinking-binding-controls-2026-08-01");
+        var body = request.Json;
+        body["stream"]!.GetValue<bool>().ShouldBeTrue();
+        JsonNode.DeepEquals(body["thinking"], JsonNode.Parse("""{"type":"adaptive","display":"summarized","block_binding":{"prefix_mismatch_behavior":"drop_block"}}""")).ShouldBeTrue(body["thinking"]!.ToJsonString());
+        body["output_config"]!["effort"]!.GetValue<string>().ShouldBe("high");
+        body["max_tokens"]!.GetValue<int>().ShouldBe(4096);
+        body.ContainsKey("fallbacks").ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task Block_binding_can_ask_for_an_error_instead()
+    {
+        using var host = AiTestHost.Create(Config(("AI:Providers:anthropic:Settings:ThinkingMismatch", "error")));
+        var handle = await host.ChatClients.CreateAsync("orchestrator", cancellationToken: Ct);
+
+        await handle.Client.GetResponseAsync([new ChatMessage(ChatRole.User, "hi")], handle.CreateOptions(), Ct);
+
+        var request = _server.LastRequest;
+        request.Header("anthropic-beta").ShouldNotBeNull().ShouldContain("server-side-fallback-2026-07-01");
+        request.Header("anthropic-beta")!.ShouldContain("thinking-binding-controls-2026-08-01");
+        request.Json["thinking"]!["block_binding"]!["prefix_mismatch_behavior"]!.GetValue<string>().ShouldBe("error");
+    }
+
+    // Setting the thinking field stops the adapter from filling in thinking and effort, so the request must
+    // otherwise be exactly what the adapter sends without block binding.
+    [Theory]
+    [InlineData("adaptive")]
+    [InlineData("extended")]
+    public async Task Block_binding_changes_nothing_else_in_the_request(string thinkingMode)
+    {
+        using var plain = AiTestHost.Create(Config(
+            ("AI:Providers:anthropic:Settings:ThinkingMode", thinkingMode),
+            ("AI:Providers:anthropic:Settings:ThinkingMismatch", "off")));
+        using var bound = AiTestHost.Create(Config(("AI:Providers:anthropic:Settings:ThinkingMode", thinkingMode)));
+        var plainHandle = await plain.ChatClients.CreateAsync("orchestrator", cancellationToken: Ct);
+        var boundHandle = await bound.ChatClients.CreateAsync("orchestrator", cancellationToken: Ct);
+
+        var compared = 0;
+        foreach (ReasoningEffort? effort in new ReasoningEffort?[] { null, ReasoningEffort.None, ReasoningEffort.Low, ReasoningEffort.Medium, ReasoningEffort.High, ReasoningEffort.ExtraHigh })
+        {
+            foreach (ReasoningOutput? output in new ReasoningOutput?[] { null, ReasoningOutput.None, ReasoningOutput.Summary, ReasoningOutput.Full })
+            {
+                foreach (int? maxOutputTokens in new int?[] { null, 4096, 16384 })
+                {
+                    var expected = await SendAsync(plainHandle, effort, output, maxOutputTokens);
+                    var actual = await SendAsync(boundHandle, effort, output, maxOutputTokens);
+                    var binding = actual["thinking"] is JsonObject thinking ? thinking["block_binding"] : null;
+                    if (binding is not null)
+                    {
+                        binding["prefix_mismatch_behavior"]!.GetValue<string>().ShouldBe("drop_block");
+                        actual["thinking"]!.AsObject().Remove("block_binding");
+                        _server.LastRequest.Header("anthropic-beta")!.ShouldContain("thinking-binding-controls-2026-08-01");
+                        compared++;
+                    }
+
+                    JsonNode.DeepEquals(actual, expected).ShouldBeTrue($"effort {effort}, output {output}, max tokens {maxOutputTokens}: {actual.ToJsonString()} vs {expected.ToJsonString()}");
+                }
+            }
+        }
+
+        // Adaptive thinking cannot be turned off, so effort "none" is sent as "low" and gets block binding too.
+        compared.ShouldBe((thinkingMode == "adaptive" ? 5 : 4) * 4 * 3);
+    }
+
+    [Fact]
+    public async Task Cache_reads_and_writes_reach_the_usage_totals()
+    {
+        _server.Responder = request => request.Body.Contains("\"stream\":true", StringComparison.Ordinal)
+            ? CannedResponse.EventStream(StreamingResponse
+                .Replace("\"usage\":{\"input_tokens\":42,\"output_tokens\":1}", "\"usage\":{\"input_tokens\":42,\"output_tokens\":1,\"cache_creation_input_tokens\":300,\"cache_read_input_tokens\":2000}", StringComparison.Ordinal)
+                .Replace("\r\n", "\n", StringComparison.Ordinal))
+            : CannedResponse.Json(TextResponse.Replace("\"cache_creation_input_tokens\":0,\"cache_read_input_tokens\":0", "\"cache_creation_input_tokens\":300,\"cache_read_input_tokens\":2000", StringComparison.Ordinal));
+        using var host = AiTestHost.Create(Config());
+        var handle = await host.ChatClients.CreateAsync("orchestrator", cancellationToken: Ct);
+
+        var response = await handle.Client.GetResponseAsync([new ChatMessage(ChatRole.User, "hi")], handle.CreateOptions(), Ct);
+        var streamed = await handle.Client.GetStreamingResponseAsync([new ChatMessage(ChatRole.User, "hi")], handle.CreateOptions(), Ct).ToChatResponseAsync(Ct);
+
+        var usage = new UsageAccumulator();
+        usage.Add(response.Usage);
+        usage.Add(streamed.Usage);
+        var totals = usage.Snapshot();
+        totals.InputTokens.ShouldBe(2 * (42 + 2000 + 300), "input tokens include cache reads and writes");
+        totals.CacheReadInputTokens.ShouldBe(4000);
+        totals.CacheCreationInputTokens.ShouldBe(600);
+    }
+
+    [Fact]
+    public async Task Thinking_blocks_the_api_dropped_are_logged()
+    {
+        _server.Responder = _ => CannedResponse.Json(TextResponse.Replace(
+            "\"stop_reason\":\"end_turn\"",
+            "\"input_transformations\":[{\"type\":\"thinking_dropped\",\"path\":\"messages[1].content[0]\",\"reason\":\"prefix_binding_mismatch\"}],\"stop_reason\":\"end_turn\"",
+            StringComparison.Ordinal));
+        var logger = new ListLogger<AnthropicAiProvider>();
+        var provider = new AnthropicAiProvider(logger);
+        using var client = provider.CreateChatClient(new AiProviderOptions { Type = "anthropic", ApiKey = ApiKey, Endpoint = _server.BaseAddress.ToString() }, Profile());
+
+        await client.GetResponseAsync([new ChatMessage(ChatRole.User, "hi")], new ChatOptions { Reasoning = new ReasoningOptions { Effort = ReasoningEffort.Low } }, Ct);
+
+        logger.Messages.ShouldHaveSingleItem().ShouldBe(
+            "Claude did not accept 1 replayed thinking block(s) as sent: messages[1].content[0]: dropped (prefix_binding_mismatch)");
+    }
+
+    private async Task<JsonObject> SendAsync(ChatModelHandle handle, ReasoningEffort? effort, ReasoningOutput? output, int? maxOutputTokens)
+    {
+        var options = handle.CreateOptions();
+        options.Reasoning = effort is null && output is null ? null : new ReasoningOptions { Effort = effort, Output = output };
+        options.MaxOutputTokens = maxOutputTokens;
+        await handle.Client.GetResponseAsync([new ChatMessage(ChatRole.User, "hi")], options, Ct);
+        return _server.LastRequest.Json;
+    }
+
+    [Fact]
     public void Base_url_is_always_explicit_so_ambient_settings_cannot_redirect_the_app()
     {
         var settings = AnthropicSettings.From(new AiProviderOptions());
@@ -287,19 +417,27 @@ public sealed class AnthropicProviderTests : IAsyncLifetime
         defaults.PromptCaching.ShouldBeTrue();
         defaults.OneHourCache.ShouldBeFalse();
         defaults.ThinkingMode.ShouldBe(AnthropicThinkingMode.Adaptive);
+        defaults.ThinkingMismatch.ShouldBe(ThinkingMismatchMode.DropBlock);
 
         var custom = AnthropicSettings.From(Options(
             ("refusalfallback", "NONE"),
             ("PromptCaching", "off"),
             ("ThinkingMode", "extended"),
             ("MaxRetries", "0"),
-            ("TimeoutSeconds", "30")));
+            ("TimeoutSeconds", "30"),
+            ("ThinkingMismatch", "off")));
         custom.RefusalFallback.ShouldBe(RefusalFallbackMode.None);
+        custom.ThinkingMismatch.ShouldBe(ThinkingMismatchMode.Off);
         custom.UsesBetaEndpoint.ShouldBeFalse();
         custom.PromptCaching.ShouldBeFalse();
         custom.ThinkingMode.ShouldBe(AnthropicThinkingMode.Extended);
         custom.MaxRetries.ShouldBe(0);
         custom.Timeout.ShouldBe(TimeSpan.FromSeconds(30));
+
+        AnthropicSettings.From(Options(("ThinkingMismatch", "Error"))).ThinkingMismatch.ShouldBe(ThinkingMismatchMode.Error);
+        AnthropicSettings.From(Options(("ThinkingMismatch", "drop_block"))).ThinkingMismatch.ShouldBe(ThinkingMismatchMode.DropBlock);
+        var bindingOnly = AnthropicSettings.From(Options(("RefusalFallback", "none")));
+        bindingOnly.UsesBetaEndpoint.ShouldBeTrue("block binding is a beta field");
 
         var models = AnthropicSettings.From(Options(("RefusalFallback", "claude-opus-4-8;claude-opus-5 claude-opus-4-8, a, b")));
         models.RefusalFallback.ShouldBe(RefusalFallbackMode.Models);
@@ -374,4 +512,32 @@ public sealed class AnthropicProviderTests : IAsyncLifetime
         Model = "claude-opus-5-5",
         Source = ModelProfileSource.Configuration,
     };
+}
+
+internal sealed class ListLogger<T> : ILogger<T>
+{
+    private readonly List<string> _messages = [];
+
+    public IReadOnlyList<string> Messages
+    {
+        get
+        {
+            lock (_messages)
+            {
+                return _messages.ToList();
+            }
+        }
+    }
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+    public bool IsEnabled(LogLevel logLevel) => true;
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+        lock (_messages)
+        {
+            _messages.Add(formatter(state, exception));
+        }
+    }
 }

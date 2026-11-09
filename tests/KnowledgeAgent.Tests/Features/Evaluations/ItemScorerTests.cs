@@ -84,6 +84,61 @@ public sealed class ItemScorerTests
     }
 
     [Fact]
+    public void Answerable_items_count_an_answer_with_a_citation_only_when_the_tag_is_valid()
+    {
+        var item = Item("q", "How many days?", sources: ["handbook.md"], facts: ["27 days"]);
+
+        var cited = ItemScorer.Score(item, Hits(Handbook), Turn("You get 27 days [S1].", Cite("S1", Handbook)), Sources);
+        var uncited = ItemScorer.Score(item, Hits(Handbook), Turn("You get 27 days.", Cite("S1", Handbook)), Sources);
+        var invented = ItemScorer.Score(item, Hits(Handbook), Turn("You get 27 days [S7].", Cite("S1", Handbook)), Sources);
+        var failed = ItemScorer.Score(item, Hits(Handbook), Turn(string.Empty) with { Error = "provider error" }, Sources);
+
+        cited.Metrics[EvalMetrics.AnsweredWithCitation].ShouldBe(1);
+        uncited.Metrics[EvalMetrics.AnsweredWithCitation].ShouldBe(0);
+        uncited.Metrics.ShouldNotContainKey(EvalMetrics.CitationValidity, "validity only counts answers that cite");
+        invented.Metrics[EvalMetrics.AnsweredWithCitation].ShouldBe(0);
+        failed.Metrics.ShouldNotContainKey(EvalMetrics.AnsweredWithCitation);
+        ItemScorer.Score(Item("u", "Who is the CEO?", answerable: false), Hits(), Turn("I don't know."), Sources)
+            .Metrics.ShouldNotContainKey(EvalMetrics.AnsweredWithCitation);
+    }
+
+    [Fact]
+    public void An_agent_that_never_cites_is_not_rewarded_on_either_kind_of_question()
+    {
+        var answerable = Item("a", "How many days?", sources: ["handbook.md"], facts: ["27 days"]);
+        var unanswerable = Item("u", "Who is the CEO?", answerable: false);
+
+        var answered = ItemScorer.Score(answerable, Hits(Handbook), Turn("You get 27 days of leave.", Cite("S1", Handbook)), Sources);
+        var guessed = ItemScorer.Score(unanswerable, Hits(Handbook), Turn("The CEO is Jane Doe."), Sources);
+
+        answered.Metrics[EvalMetrics.AnsweredWithCitation].ShouldBe(0);
+        guessed.Metrics[EvalMetrics.AnswerAbstained].ShouldBe(0, "no citation is not the same as declining");
+    }
+
+    [Fact]
+    public void A_decline_that_cites_related_passages_still_counts_as_declining()
+    {
+        var item = Item("u", "What is the payload of the OW-X9?", answerable: false);
+
+        var score = ItemScorer.Score(item, Hits(Manual), Turn("The knowledge base has no information on an OW-X9; it documents the OW-X7 [S1].", Cite("S1", Manual)), Sources);
+
+        score.Metrics[EvalMetrics.AnswerAbstained].ShouldBe(1);
+    }
+
+    [Theory]
+    [InlineData(1.0, 1.0)]
+    [InlineData(0.5, 1.0)]
+    [InlineData(0.0, 0.0)]
+    public void With_the_judge_a_decline_also_has_to_be_judged_correct(double correctness, double abstained)
+    {
+        var metrics = new Dictionary<string, double> { [EvalMetrics.AnswerAbstained] = 1, [EvalMetrics.JudgeCorrectness] = correctness };
+
+        ItemScorer.ApplyJudge(metrics);
+
+        metrics[EvalMetrics.AnswerAbstained].ShouldBe(abstained);
+    }
+
+    [Fact]
     public void A_failed_turn_scores_its_empty_answer_but_never_counts_as_declining()
     {
         var unanswerable = Item("u", "Who is the CEO?", answerable: false);

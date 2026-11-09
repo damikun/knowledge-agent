@@ -18,7 +18,7 @@ Open an agent on [Agents](/agents) to see its Overview and its tabs:
 - General: name, purpose and language.
 - Behavior: tone and instructions.
 - Knowledge: all sources or chosen folders, and whether it may fill gaps from general knowledge. Sources filed in those folders later count too.
-- Tools: its built-in abilities, and the connected apps (MCP servers connected on [Tools](/tools)) it may use. Turn an app on and it uses all of the app's tools, also ones the app adds later; under Choose tools you can limit it to the tools you pick.
+- Tools: its built-in abilities, and the connected apps (MCP servers connected on [Tools](/tools)) it may use. Turn an app on and it uses all of the app's tools; under Choose tools you can limit it to the tools you pick. Tools the app adds or changes later need your approval before they run on their own.
 - Handover: when to offer a person (never, only when asked, or also when it cannot answer).
 - Specialists and Use elsewhere: other agents it hands off to, and its MCP server and HTTP API.
 - Advanced: its model.

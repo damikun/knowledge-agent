@@ -70,13 +70,13 @@ public abstract class McpScenarios(AppFixture fixture)
 
         using (var chosen = await app.Client.PutJsonAsync(
             $"/api/agents/{agent.Id}",
-            new SaveAgentRequest("Shop helper", Tools: [ToolNames.SearchKnowledgeBase], McpApps: [new AgentMcpAppDto(server.Id, Mode: McpAppMode.Chosen, ChangesPolicy: McpToolPolicy.VerifiedOnly, Tools: [new AgentMcpToolDto("lookup_order"), new AgentMcpToolDto("cancel_order")])])))
+            new SaveAgentRequest("Shop helper", Tools: [ToolNames.SearchKnowledgeBase], McpApps: [new AgentMcpAppDto(server.Id, Mode: McpAppMode.Chosen, ChangesPolicy: McpToolPolicy.VerifiedOnly, Tools: [new AgentMcpToolDto("lookup_order", McpToolPolicy.Auto), new AgentMcpToolDto("cancel_order")])])))
         {
             agent = await chosen.ReadJsonAsync<AgentDto>();
         }
 
         agent.McpApps.ShouldHaveSingleItem().Tools.ShouldNotBeNull().Select(tool => (tool.Name, tool.Policy)).ShouldBe(
-            [("lookup_order", McpToolPolicy.Auto), ("cancel_order", McpToolPolicy.VerifiedOnly)], "a policy left out follows the hints and the app's choice for changes");
+            [("lookup_order", McpToolPolicy.Auto), ("cancel_order", McpToolPolicy.VerifiedOnly)], "Auto is chosen; a policy left out never runs on its own");
         using (var unknown = await app.Client.PutJsonAsync($"/api/agents/{agent.Id}", new SaveAgentRequest("Shop helper", McpApps: [new AgentMcpAppDto(server.Id, Mode: McpAppMode.Chosen, Tools: [new AgentMcpToolDto("drop_tables")])])))
         {
             (await unknown.ReadProblemAsync(HttpStatusCode.BadRequest)).FieldErrors.ShouldContainKey("mcpApps");

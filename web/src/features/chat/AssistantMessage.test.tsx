@@ -1,12 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { citationS1, citationS2, citationS3, turnDto } from '../../test/fixtures';
-import { renderWithProviders } from '../../test/utils';
+import { citationS1, citationS2, citationS3, ev, turnDto } from '../../test/fixtures';
+import { mockFetch, renderWithProviders } from '../../test/utils';
 import { numberSources } from './answerSources';
 import { AssistantMessage } from './AssistantMessage';
 import { ChatDisplayContext } from './chatDisplay';
-import { citationIndex, createTurn, turnFromDto } from './chatReducer';
+import { chatReducer, citationIndex, createChatState, createTurn, turnFromDto } from './chatReducer';
 import { createCitationLookup } from './citationContext';
 import type { CitationDto } from './types';
 
@@ -38,6 +38,18 @@ describe('numberSources', () => {
 });
 
 describe('AssistantMessage', () => {
+  it('links only to the hosts the API allows and shows other addresses as text', async () => {
+    mockFetch({ 'GET /api/link-hosts': { hosts: ['docs.example.com'] } });
+    const turn = turnFromDto(
+      turnDto({ assistantMessage: 'Read [the guide](https://docs.example.com/guide) or [log in here](https://phish.test/login).', citations: [] }),
+    );
+    renderWithProviders(<AssistantMessage turn={turn} />);
+
+    expect(await screen.findByRole('link', { name: 'the guide' })).toHaveAttribute('href', 'https://docs.example.com/guide');
+    expect(screen.queryByRole('link', { name: /log in here/ })).not.toBeInTheDocument();
+    expect(screen.getByText('log in here (https://phish.test/login)')).toBeInTheDocument();
+  });
+
   it('renders markdown and turns [S#] tags into numbered markers that share a number per source', () => {
     const turn = turnFromDto(
       turnDto({
@@ -128,7 +140,9 @@ describe('AssistantMessage', () => {
     unmount();
 
     renderWithProviders(
-      <ChatDisplayContext.Provider value={{ developer: true, prompt: 'orchestrator-system v3 (langfuse)', traceUrl: (id) => `https://langfuse.example.com/trace/${id}` }}>
+      <ChatDisplayContext.Provider
+        value={{ developer: true, prompt: 'orchestrator-system v3 (langfuse)', traceUrl: (id) => `https://langfuse.example.com/trace/${id}` }}
+      >
         <AssistantMessage turn={turn} />
       </ChatDisplayContext.Provider>,
     );
@@ -148,7 +162,11 @@ describe('AssistantMessage', () => {
 
     rerender(
       <AssistantMessage
-        turn={{ ...createTurn('l1', 'Hi', 0), status: 'error', errors: [{ message: 'No chat model is configured.', code: 'model_not_configured', agent: 'orchestrator' }] }}
+        turn={{
+          ...createTurn('l1', 'Hi', 0),
+          status: 'error',
+          errors: [{ message: 'No chat model is configured.', code: 'model_not_configured', agent: 'orchestrator' }],
+        }}
       />,
     );
     const alert = screen.getByRole('alert');
@@ -156,8 +174,26 @@ describe('AssistantMessage', () => {
     expect(within(alert).getByRole('link', { name: 'Open AI models' })).toHaveAttribute('href', '/models');
   });
 
+  it("shows the agent's note with the tool activity, not in the answer", () => {
+    let state = chatReducer(createChatState(), { type: 'send', id: 'l1', message: 'Hi', at: 0 });
+    for (const event of [
+      ev('text-delta', { text: "I'll check the handbook.", step: 1 }),
+      ev('step-finished', { step: 1, kind: 'interim' }),
+      ev('tool-call', { callId: 'c1', toolName: 'search_knowledge_base', arguments: { query: 'vacation' } }),
+    ]) {
+      state = chatReducer(state, { type: 'event', event, at: 1 });
+    }
+    renderWithProviders(<AssistantMessage turn={state.turns[0]!} />);
+
+    const activity = screen.getByRole('group', { name: 'Agent activity' });
+    expect(within(activity).getByRole('button')).toHaveTextContent("I'll check the handbook.");
+    expect(screen.getAllByText("I'll check the handbook.")).toHaveLength(1);
+  });
+
   it('shows a stopped answer with its text and a quiet note instead of an error', () => {
-    renderWithProviders(<AssistantMessage turn={{ ...createTurn('t1', 'Hi', 0), status: 'cancelled', text: 'New employees get', finishReason: 'stopped' }} />);
+    renderWithProviders(
+      <AssistantMessage turn={{ ...createTurn('t1', 'Hi', 0), status: 'cancelled', text: 'New employees get', finishReason: 'stopped' }} />,
+    );
     const answer = screen.getByRole('article');
     expect(answer).toHaveTextContent('New employees get');
     expect(within(answer).getByText('Stopped')).toBeInTheDocument();

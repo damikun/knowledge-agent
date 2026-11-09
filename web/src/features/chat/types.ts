@@ -44,6 +44,7 @@ export const ChatEventTypes = {
   Error: 'error',
   Done: 'done',
   ConfirmationRequired: 'confirmation-required',
+  StepFinished: 'step-finished',
 } as const;
 export type ChatEventType = (typeof ChatEventTypes)[keyof typeof ChatEventTypes];
 
@@ -67,6 +68,14 @@ export interface AgentStartedEvent extends ChatStreamEvent {
 
 interface TextDeltaEvent extends ChatStreamEvent {
   text: string;
+  /** The model call that wrote it, numbered per turn. */
+  step?: number;
+}
+
+/** interim: tools run next, so the text of that step was a note on the way, not the answer. */
+export interface StepFinishedEvent extends ChatStreamEvent {
+  step: number;
+  kind: 'interim' | 'final';
 }
 
 interface ReasoningDeltaEvent extends ChatStreamEvent {
@@ -121,6 +130,13 @@ interface ConfirmationRequiredEvent extends ChatStreamEvent {
   connection: string | null;
   arguments: JsonValue | null;
   expiresAt: IsoDateTime;
+  details?: ConfirmationDetail[];
+}
+
+/** One argument of an action that waits for Confirm, as the server put it. */
+export interface ConfirmationDetail {
+  label: string;
+  value: string;
 }
 
 export interface ChatEventPayloads {
@@ -135,6 +151,7 @@ export interface ChatEventPayloads {
   error: ErrorEvent;
   done: DoneEvent;
   'confirmation-required': ConfirmationRequiredEvent;
+  'step-finished': StepFinishedEvent;
 }
 
 export type ChatEvent = {
@@ -164,6 +181,8 @@ export interface ToolCallDto {
   durationMs: number;
   result?: string | null;
   confirmation?: ToolConfirmation | null;
+  /** What the agent wrote before this call, on the first call of a step. */
+  preamble?: string | null;
 }
 
 export interface ToolConfirmation {
@@ -171,6 +190,7 @@ export interface ToolConfirmation {
   title: string;
   connection: string | null;
   expiresAt: IsoDateTime;
+  details?: ConfirmationDetail[] | null;
 }
 
 /** api and mcp: the agent's HTTP API and MCP server, used by other software with an API key. */

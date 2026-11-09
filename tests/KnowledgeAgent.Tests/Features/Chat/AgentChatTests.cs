@@ -292,8 +292,9 @@ public sealed class AgentChatTests
         renders[1].Variables["handoverEnabled"].ShouldBe(true);
         renders[1].Variables["offerHandoverWhenUnsure"].ShouldBe(true);
         renders[1].Variables["isVisitor"].ShouldBe(true);
-        handover.Requests.ShouldHaveSingleItem().Summary.ShouldBe("Wants a refund.");
-        events.OfType<ToolResultEvent>().ShouldHaveSingleItem().Summary.ShouldBe("A person was asked to join");
+        handover.Offers.ShouldHaveSingleItem().ShouldBe(events.ConversationId());
+        events.OfType<HandoverOfferedEvent>().ShouldHaveSingleItem();
+        events.OfType<ToolResultEvent>().ShouldHaveSingleItem().Summary.ShouldBe("Offered a person");
         events.Text().ShouldBe("A colleague will reply here.");
     }
 
@@ -358,6 +359,83 @@ public sealed class AgentChatTests
         events.OfType<ToolResultEvent>().ShouldHaveSingleItem().Summary.ShouldBe("Feedback recorded");
     }
 
+    [Fact]
+    public async Task A_turn_offers_a_person_once_and_notes_feedback_once_however_often_the_model_asks()
+    {
+        var handover = new RecordingHandover();
+        var recorder = new RecordingFeedback();
+        using var host = new AgentTestHost(configureServices: services =>
+        {
+            services.AddScoped<IHandoverRequester>(_ => handover);
+            services.AddScoped<IFeedbackRecorder>(_ => recorder);
+        });
+        host.Agents.Add(new AgentConfig { Key = "site", Name = "Site", ProfileName = "orchestrator", Tools = [ToolNames.RecordFeedback], HandoverPolicy = HandoverPolicy.OnRequest });
+        var handoverArguments = new { reason = "r", summary = "s" };
+        var feedbackArguments = new { sentiment = "negative", comment = "Bad." };
+        host.ChatClients.Script("orchestrator")
+            .ThenToolCalls(
+                (ToolNames.RequestHumanHandover, handoverArguments),
+                (ToolNames.RequestHumanHandover, handoverArguments),
+                (ToolNames.RecordFeedback, feedbackArguments),
+                (ToolNames.RecordFeedback, feedbackArguments))
+            .ThenText("Done.");
+
+        var events = await host.WithChatServiceAsync(async chat => await Drain(chat.StreamAsync(
+            new ChatRequestDto(null, "Hi", Agent: "site"),
+            new ChatCaller(ConversationChannel.Widget, WidgetId: Guid.NewGuid(), VisitorId: Guid.NewGuid(), HandoverAvailable: true),
+            Ct)));
+
+        handover.Offers.ShouldHaveSingleItem();
+        recorder.Saved.ShouldHaveSingleItem();
+        events.OfType<HandoverOfferedEvent>().ShouldHaveSingleItem();
+        var results = events.OfType<ToolResultEvent>().ToList();
+        results.Count(result => result.IsError).ShouldBe(2, "the second call of each is refused");
+        host.SingleTurn(events.ConversationId()).ToolCalls().Where(call => call.IsError)
+            .ShouldAllBe(call => call.Summary.Contains("limit for this turn"));
+    }
+
+    [Fact]
+    public async Task The_assistant_notes_at_most_three_feedback_items_per_conversation()
+    {
+        var recorder = new RecordingFeedback();
+        using var host = new AgentTestHost(configureServices: services => services.AddScoped<IFeedbackRecorder>(_ => recorder));
+        var script = host.ChatClients.Script("orchestrator");
+        for (var i = 0; i < 4; i++)
+        {
+            script.ThenToolCall(ToolNames.RecordFeedback, new { sentiment = "negative", comment = $"Note {i}" }).ThenText("Thanks.");
+        }
+
+        var conversationId = (await host.ChatAsync("One", cancellationToken: Ct)).ConversationId();
+        for (var i = 0; i < 2; i++)
+        {
+            await host.ChatAsync("More", conversationId, Ct);
+        }
+
+        var last = await host.ChatAsync("Again", conversationId, Ct);
+
+        recorder.Saved.Count.ShouldBe(3);
+        last.OfType<ToolResultEvent>().ShouldHaveSingleItem().Summary.ShouldBe("Feedback not saved: limit reached");
+    }
+
+    [Fact]
+    public async Task A_widget_without_feedback_gives_the_agent_no_feedback_tool()
+    {
+        using var host = new AgentTestHost();
+        host.Agents.Add(new AgentConfig { Key = "site", Name = "Site", ProfileName = "orchestrator", Tools = [ToolNames.SearchKnowledgeBase, ToolNames.RecordFeedback] });
+        var scripted = host.ChatClients.Script("orchestrator").ThenText("Hi.").ThenText("Hi.");
+
+        foreach (var feedback in new[] { true, false })
+        {
+            await host.WithChatServiceAsync(async chat => await Drain(chat.StreamAsync(
+                new ChatRequestDto(null, "Hi", Agent: "site"),
+                new ChatCaller(ConversationChannel.Widget, WidgetId: Guid.NewGuid(), VisitorId: Guid.NewGuid(), FeedbackAvailable: feedback),
+                Ct)));
+        }
+
+        scripted.Requests[0].Options!.Tools!.Select(tool => tool.Name).ShouldContain(ToolNames.RecordFeedback);
+        scripted.Requests[1].Options!.Tools!.Select(tool => tool.Name).ShouldNotContain(ToolNames.RecordFeedback);
+    }
+
     private static async Task<List<ChatStreamEvent>> Drain(IAsyncEnumerable<ChatStreamEvent> stream)
     {
         var events = new List<ChatStreamEvent>();
@@ -376,12 +454,16 @@ public sealed class AgentChatTests
 
     private sealed class RecordingHandover : IHandoverRequester
     {
-        public List<(Guid ConversationId, string Reason, string Summary)> Requests { get; } = [];
+        public List<Guid> Offers { get; } = [];
 
-        public Task<HandoverOutcome> RequestFromAgentAsync(Guid conversationId, string reason, string summary, CancellationToken cancellationToken = default)
+        public Task<HandoverOutcome> OfferAsync(Guid conversationId, CancellationToken cancellationToken = default)
         {
-            Requests.Add((conversationId, reason, summary));
-            return Task.FromResult(new HandoverOutcome(true, "A person was asked. Say so."));
+            lock (Offers)
+            {
+                Offers.Add(conversationId);
+            }
+
+            return Task.FromResult(new HandoverOutcome(false, "The visitor sees a button. Say so.", Offered: true));
         }
     }
 
@@ -389,10 +471,25 @@ public sealed class AgentChatTests
     {
         public List<(Guid ConversationId, int Sentiment, string Comment)> Saved { get; } = [];
 
-        public Task<KnowledgeAgent.Features.Feedback.Feedback> RecordFromAgentAsync(Guid conversationId, int sentiment, string comment, CancellationToken cancellationToken = default)
+        public Task<KnowledgeAgent.Features.Feedback.Feedback?> RecordFromAgentAsync(
+            Guid conversationId,
+            int sentiment,
+            string comment,
+            int maxPerConversation,
+            CancellationToken cancellationToken = default)
         {
-            Saved.Add((conversationId, sentiment, comment));
-            return Task.FromResult(new KnowledgeAgent.Features.Feedback.Feedback { ConversationId = conversationId, Rating = sentiment, Comment = comment });
+            lock (Saved)
+            {
+                if (Saved.Count(item => item.ConversationId == conversationId) >= maxPerConversation)
+                {
+                    return Task.FromResult<KnowledgeAgent.Features.Feedback.Feedback?>(null);
+                }
+
+                Saved.Add((conversationId, sentiment, comment));
+            }
+
+            return Task.FromResult<KnowledgeAgent.Features.Feedback.Feedback?>(
+                new KnowledgeAgent.Features.Feedback.Feedback { ConversationId = conversationId, Rating = sentiment, Comment = comment, Author = FeedbackAuthor.Agent });
         }
     }
 

@@ -29,11 +29,35 @@ public sealed class AnswerTextTests
     [InlineData("You can carry over 16 days.", "6 days", false)]
     [InlineData("The limit is 1,200 requests per minute.", "200", false)]
     [InlineData("A page holds at most **200** items.", "200", true)]
+    [InlineData("You get **27 paid vacation days** a year.", "27 days|27 paid vacation days", true)]
+    [InlineData("You get **27** days of leave.", "27 days", true)]
+    [InlineData("You get 27 paid vacation days a year.", "27 days", false)]
     [InlineData("Uptime was 99.98% in Q2.", "99.9%", false)]
     [InlineData("Revenue grew 21% (121% of plan).", "21%", true)]
     [InlineData("", "27 days", false)]
     public void Facts_match_case_insensitively_after_normalization(string answer, string fact, bool expected) =>
         AnswerText.ContainsFact(answer, fact).ShouldBe(expected);
+
+    [Theory]
+    [InlineData("I couldn't find the CEO's name in your knowledge base.")]
+    [InlineData("The knowledge base doesn't give Orbitwell's stock ticker symbol.")]
+    [InlineData("I couldn't find a salary band for senior engineers in the knowledge base.")]
+    [InlineData("The knowledge base has no information on an OW-X9 robot arm.")]
+    [InlineData("I could not find that in the documents.")]
+    [InlineData("The handbook does not mention salary bands [S1].")]
+    [InlineData("That isn't covered in the knowledge base.")]
+    [InlineData("No source mentions an OW-X9.")]
+    [InlineData("There is no information about a stock ticker in the sources.")]
+    [InlineData("I don’t know; the documents don’t say.")]
+    public void Declines_recognise_how_models_say_the_knowledge_base_has_no_answer(string answer) =>
+        AnswerText.Declines(answer).ShouldBeTrue();
+
+    [Theory]
+    [InlineData("The CEO is Jane Doe.")]
+    [InlineData("The maximum payload of the OW-X9 is 12 kg [S1].")]
+    [InlineData("Orbitwell trades as ORBW on the Nasdaq.")]
+    [InlineData("")]
+    public void Declines_are_not_seen_in_answers_that_answer(string answer) => AnswerText.Declines(answer).ShouldBeFalse();
 
     [Fact]
     public void Substantive_segments_are_paragraphs_list_items_and_table_rows_without_headings_code_or_notices()

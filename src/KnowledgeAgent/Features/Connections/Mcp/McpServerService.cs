@@ -215,6 +215,7 @@ internal sealed partial class McpServerService(
         server.AuthType = authType;
         server.HeaderName = headerName;
         server.Enabled = request.Enabled ?? server.Enabled;
+        server.SendIdentity = request.SendIdentity ?? server.SendIdentity;
         if (authType == McpAuthType.None || secret == string.Empty)
         {
             server.ProtectedSecret = null;

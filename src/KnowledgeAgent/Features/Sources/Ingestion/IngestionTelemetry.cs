@@ -16,6 +16,9 @@ internal static class IngestionTelemetry
     public static readonly Counter<long> ChunksStored = Meter.CreateCounter<long>(
         "knowledge.ingestion.chunks", unit: "{chunk}", description: "Chunks embedded and stored.");
 
+    public static readonly Counter<long> SuspiciousChunks = Meter.CreateCounter<long>(
+        "knowledge.ingestion.suspicious_chunks", unit: "{chunk}", description: "Chunks that look written to the assistant, such as text naming its tools.");
+
     public static readonly Histogram<double> Duration = Meter.CreateHistogram<double>(
         "knowledge.ingestion.duration", unit: "s", description: "Duration of one ingestion attempt.");
 

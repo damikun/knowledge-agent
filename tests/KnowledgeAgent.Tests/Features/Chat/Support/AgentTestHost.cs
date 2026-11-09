@@ -1,5 +1,6 @@
 using KnowledgeAgent.Features.Agents;
 using KnowledgeAgent.Features.Chat;
+using KnowledgeAgent.Features.Feedback;
 using KnowledgeAgent.Features.Prompts;
 using KnowledgeAgent.Features.Search;
 using KnowledgeAgent.Features.Sources;
@@ -42,6 +43,8 @@ internal sealed class AgentTestHost : IDisposable
         builder.Services.Replace(ServiceDescriptor.Scoped<IConversationRepository>(_ => Conversations));
         builder.Services.Replace(ServiceDescriptor.Scoped<IAgentRepository>(_ => Agents));
         builder.Services.AddScoped<ISourceFolderRepository>(_ => Folders);
+        // The app always has the feedback feature; tests that check what was saved register their own recorder.
+        builder.Services.AddScoped<IFeedbackRecorder, DiscardingFeedbackRecorder>();
         configureServices?.Invoke(builder.Services);
 
         _host = builder.Build();
@@ -86,4 +89,14 @@ internal sealed class AgentTestHost : IDisposable
     public ConversationTurn SingleTurn(Guid conversationId) => Conversations.Get(conversationId).Turns.ShouldHaveSingleItem();
 
     public void Dispose() => _host.Dispose();
+
+    private sealed class DiscardingFeedbackRecorder : IFeedbackRecorder
+    {
+        public Task<KnowledgeAgent.Features.Feedback.Feedback?> RecordFromAgentAsync(
+            Guid conversationId,
+            int sentiment,
+            string comment,
+            int maxPerConversation,
+            CancellationToken cancellationToken = default) => Task.FromResult<KnowledgeAgent.Features.Feedback.Feedback?>(null);
+    }
 }

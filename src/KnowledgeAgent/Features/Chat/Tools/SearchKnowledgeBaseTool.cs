@@ -40,25 +40,32 @@ internal sealed class SearchKnowledgeBaseTool(IOptions<AgentOptions> options) : 
         }
 
         var search = invocation.Services.GetRequiredService<IKnowledgeSearch>();
-        var hits = await search.SearchAsync(new KnowledgeSearchRequest(query!, count, sourceIds), cancellationToken);
+        var result = await search.SearchAsync(new KnowledgeSearchRequest(query!, count, sourceIds), cancellationToken);
+        var hits = result.Hits;
 
         if (hits.Count == 0)
         {
-            return new ToolResult(FormatNoResults(query!), $"No passages for \"{query}\"");
+            return new ToolResult(FormatNoResults(query!, result.Degraded), $"No passages for \"{query}\"");
         }
 
         var citations = invocation.Turn.Citations.Register(hits);
-        var text = Format(query!, hits, citations, _options.MaxToolResultChars);
+        var text = Format(query!, hits, citations, _options.MaxToolResultChars, result.Degraded);
         var summary = hits.Count == 1 ? $"1 passage for \"{query}\"" : $"{hits.Count} passages for \"{query}\"";
-        return new ToolResult(text, summary, Citations: citations.DistinctBy(citation => citation.Ref).ToList());
+        return new ToolResult(text, summary, Citations: citations.DistinctBy(citation => citation.Ref).ToList()) { Untrusted = true };
     }
 
     // Test chat clients parse the output of FormatNoResults and Format, so both formats are a contract.
-    public static string FormatNoResults(string query) => $"No passages found for \"{query}\".";
+    public static string FormatNoResults(string query, IReadOnlyList<string>? degraded = null) =>
+        $"No passages found for \"{query}\"." + DegradedNote(degraded);
 
-    public static string Format(string query, IReadOnlyList<KnowledgeSearchHit> hits, IReadOnlyList<CitationDto> citations, int maxChars)
+    public static string Format(
+        string query,
+        IReadOnlyList<KnowledgeSearchHit> hits,
+        IReadOnlyList<CitationDto> citations,
+        int maxChars,
+        IReadOnlyList<string>? degraded = null)
     {
-        var header = string.Create(CultureInfo.InvariantCulture, $"Found {hits.Count} passage(s) for \"{query}\".");
+        var header = string.Create(CultureInfo.InvariantCulture, $"Found {hits.Count} passage(s) for \"{query}\".") + DegradedNote(degraded);
         var passageBudget = Math.Max(MinPassageChars, (maxChars - header.Length) / Math.Max(1, hits.Count) - HitHeaderBudget);
 
         var builder = new StringBuilder(header);
@@ -81,6 +88,20 @@ internal sealed class SearchKnowledgeBaseTool(IOptions<AgentOptions> options) : 
     }
 
     public const string NoSourcesMessage = "No sources are available to this agent yet.";
+
+    public const string KeywordUnavailableNote =
+        "(Keyword search was unavailable for this query, so exact codes or names may be missing. "
+        + "For an exact identifier, use " + ToolNames.GrepSources + " if you have it, or search again.)";
+
+    public const string DegradedSearchNote = "(Part of the search was unavailable for this query, so the results may be less complete than usual.)";
+
+    // On its own line after the first one, which test chat clients and history stubs read.
+    private static string DegradedNote(IReadOnlyList<string>? degraded) => degraded switch
+    {
+        null or { Count: 0 } => string.Empty,
+        _ when degraded.Contains(SearchDegradations.KeywordFailed, StringComparer.Ordinal) => "\n" + KeywordUnavailableNote,
+        _ => "\n" + DegradedSearchNote,
+    };
 
     // Null searches every source. The requested sources can narrow the scope but never widen it.
     public static IReadOnlyCollection<Guid>? ResolveSourceFilter(IReadOnlyList<Guid>? scope, IReadOnlyList<Guid> requested)

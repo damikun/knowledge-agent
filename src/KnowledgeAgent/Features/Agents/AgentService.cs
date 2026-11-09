@@ -262,7 +262,8 @@ internal sealed partial class AgentService(
                 continue;
             }
 
-            var before = agent.McpTools.FirstOrDefault(saved => saved.ServerId == server.Id)?.Tools ?? [];
+            var previous = agent.McpTools.FirstOrDefault(saved => saved.ServerId == server.Id);
+            var before = previous?.Tools ?? [];
             var entry = new AgentMcpApp { ServerId = server.Id, Enabled = app.Enabled, Mode = app.Mode, ChangesPolicy = app.ChangesPolicy };
             foreach (var choice in picks)
             {
@@ -273,24 +274,64 @@ internal sealed partial class AgentService(
                     continue;
                 }
 
-                if (server.Tools.FirstOrDefault(tool => tool.Name == choice.Name) is { } info)
-                {
-                    entry.Tools.Add(new AgentMcpTool { Name = info.Name, Policy = policy ?? entry.PolicyFor(info) });
-                }
-                else if (before.FirstOrDefault(saved => saved.Name == choice.Name) is { } kept)
-                {
-                    entry.Tools.Add(new AgentMcpTool { Name = kept.Name, Policy = policy ?? kept.Policy });
-                }
-                else
+                var info = server.Tools.FirstOrDefault(tool => tool.Name == choice.Name);
+                var kept = before.FirstOrDefault(saved => saved.Name == choice.Name);
+                if (info is null && kept is null)
                 {
                     errors.Add("mcpApps", $"{server.Name} has no tool '{choice.Name}'. Test the connection to refresh its tools.");
+                    continue;
                 }
+
+                if (Approval(info, kept, choice.Fingerprint) is not { } approved)
+                {
+                    errors.Add("mcpApps", $"The tool '{choice.Name}' of {server.Name} changed while you edited. Reload the page and approve it again.");
+                    continue;
+                }
+
+                // All mode takes the policy from the approved definition. A pick without a policy keeps its earlier one, and
+                // otherwise never runs on its own: Auto is always an explicit choice.
+                var definition = approved.Approved ?? info ?? new McpToolInfo { Name = choice.Name };
+                var chosen = app.Mode == McpAppMode.All ? entry.PolicyFor(definition)
+                    : policy ?? (previous is { Mode: McpAppMode.Chosen } ? kept?.Policy : null) ?? (definition.MayChangeThings ? app.ChangesPolicy : McpToolPolicy.Confirm);
+                entry.Tools.Add(new AgentMcpTool { Name = choice.Name, Policy = chosen, Fingerprint = approved.Fingerprint, Approved = approved.Approved });
+            }
+
+            // Switching to all tools approves the ones the app lists now; tools it adds later wait for approval.
+            if (app.Mode == McpAppMode.All && previous is not { Mode: McpAppMode.All })
+            {
+                foreach (var info in server.Tools.Where(tool => entry.Tools.All(saved => saved.Name != tool.Name)))
+                {
+                    entry.Tools.Add(AgentMcpTool.Approve(info, entry.PolicyFor(info)));
+                }
+            }
+            else if (app.Mode == McpAppMode.All)
+            {
+                entry.Tools.AddRange(before.Where(saved => entry.Tools.All(tool => tool.Name != saved.Name)));
             }
 
             result.Add(entry);
         }
 
         return result;
+    }
+
+    // Null when the fingerprint matches neither the current definition nor the approved one.
+    private static (string? Fingerprint, McpToolInfo? Approved)? Approval(McpToolInfo? current, AgentMcpTool? kept, string? fingerprint)
+    {
+        if (fingerprint is null)
+        {
+            // A new pick approves what the app lists now; an earlier pick keeps its approval.
+            return kept is not null ? (kept.Fingerprint, kept.Approved)
+                : current is not null ? (McpToolFingerprint.Compute(current), current)
+                : null;
+        }
+
+        if (current is not null && McpToolFingerprint.Matches(current, fingerprint))
+        {
+            return (fingerprint, current);
+        }
+
+        return kept is { Approved: not null } && kept.Fingerprint == fingerprint ? (kept.Fingerprint, kept.Approved) : null;
     }
 
     // Never the built-in agent (it may search every source), and no cycles.

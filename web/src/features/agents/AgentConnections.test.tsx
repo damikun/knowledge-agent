@@ -19,7 +19,16 @@ afterEach(() => {
 });
 
 const overview = { days: 7, widgets: [] };
-const analytics = { days: 7, from: '2026-10-29T00:00:00Z', to: '2026-11-05T00:00:00Z', totals: {}, daily: [], widgets: [], unanswered: [], labels: [] };
+const analytics = {
+  days: 7,
+  from: '2026-10-29T00:00:00Z',
+  to: '2026-11-05T00:00:00Z',
+  totals: {},
+  daily: [],
+  widgets: [],
+  unanswered: [],
+  labels: [],
+};
 
 function routes(getAgents: () => readonly AgentDto[], extra: Record<string, unknown> = {}) {
   return {
@@ -85,8 +94,89 @@ describe('connected apps on an agent', () => {
     await user.click(screen.getByRole('button', { name: 'Save changes' }));
     expect(await screen.findByText('Agent saved')).toBeInTheDocument();
     expect(lastBody(fetchMock, `PUT /api/agents/${helper.id}`)).toMatchObject({
-      mcpApps: [{ serverId: mcpServer().id, enabled: true, mode: 'all', changesPolicy: 'verifiedOnly', tools: [] }],
+      mcpApps: [
+        {
+          serverId: mcpServer().id,
+          enabled: true,
+          mode: 'all',
+          changesPolicy: 'verifiedOnly',
+          tools: [
+            { name: 'lookup_order', fingerprint: 'fp-lookup-order' },
+            { name: 'cancel_order', fingerprint: 'fp-cancel-order' },
+          ],
+        },
+      ],
     });
+  });
+
+  it('lists tools that are new or changed since approval, which need Confirm until approved', async () => {
+    const user = userEvent.setup();
+    let agents: AgentDto[] = [
+      builtInAgent,
+      agentDto({
+        mcpApps: [
+          {
+            serverId: mcpServer().id,
+            enabled: true,
+            mode: 'all',
+            changesPolicy: 'confirm',
+            tools: [{ name: 'lookup_order', policy: 'auto', fingerprint: 'fp-lookup-order-old' }],
+          },
+        ],
+      }),
+    ];
+    const helper = agents[1]!;
+    const fetchMock = mockFetch(routes(() => agents, { 'GET /api/connections/mcp': [mcpServer()], ...saving(helper, (next) => (agents = next)) }));
+    renderAt(`/agents/${helper.id}?tab=tools`);
+
+    const shop = await screen.findByRole('region', { name: 'Shop' });
+    expect(within(shop).getByText('2 tools new or changed')).toBeInTheDocument();
+    expect(within(shop).getByText(/run only after the person confirms/)).toBeInTheDocument();
+    const pending = within(shop).getByRole('list', { name: 'Tools of Shop to approve' });
+    const [lookup, cancel] = within(pending).getAllByRole('listitem');
+    expect(lookup).toHaveTextContent('Changed since approval');
+    expect(cancel).toHaveTextContent('Needs approval');
+
+    await user.click(within(shop).getByRole('button', { name: 'Approve all: Shop' }));
+    expect(within(shop).queryByRole('list', { name: 'Tools of Shop to approve' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Save changes' }));
+    expect(await screen.findByText('Agent saved')).toBeInTheDocument();
+    expect(lastBody(fetchMock, `PUT /api/agents/${helper.id}`)).toMatchObject({
+      mcpApps: [
+        {
+          mode: 'all',
+          tools: [
+            { name: 'lookup_order', policy: 'auto', fingerprint: 'fp-lookup-order' },
+            { name: 'cancel_order', policy: 'confirm', fingerprint: 'fp-cancel-order' },
+          ],
+        },
+      ],
+    });
+  });
+
+  it('approves a picked tool again after the app changed it', async () => {
+    const user = userEvent.setup();
+    const helper = agentDto({
+      mcpApps: [
+        {
+          serverId: mcpServer().id,
+          enabled: true,
+          mode: 'chosen',
+          changesPolicy: 'confirm',
+          tools: [{ name: 'lookup_order', policy: 'auto', fingerprint: 'fp-lookup-order-old' }],
+        },
+      ],
+    });
+    mockFetch(routes(() => [builtInAgent, helper], { 'GET /api/connections/mcp': [mcpServer()] }));
+    renderAt(`/agents/${helper.id}?tab=tools`);
+
+    const shop = await screen.findByRole('region', { name: 'Shop' });
+    const tools = within(shop).getByRole('list', { name: 'Tools of Shop' });
+    expect(within(tools).getByText('Changed since approval')).toBeInTheDocument();
+
+    await user.click(within(tools).getByRole('button', { name: 'Approve Look up an order' }));
+    expect(within(tools).queryByText('Changed since approval')).not.toBeInTheDocument();
   });
 
   it('picks only some tools, shows a pick the app no longer offers and lets it go', async () => {
@@ -195,7 +285,13 @@ describe('Use elsewhere', () => {
   it('turns the MCP server on, shows a new key once with the snippets, and revokes a key', async () => {
     const user = userEvent.setup();
     const off = agentDto();
-    let access = { mcpServerEnabled: false, httpApiEnabled: false, mcpPath: '/mcp/agents/website-helper', apiPath: '/api/public/agents/website-helper', activeKeys: 1 };
+    let access = {
+      mcpServerEnabled: false,
+      httpApiEnabled: false,
+      mcpPath: '/mcp/agents/website-helper',
+      apiPath: '/api/public/agents/website-helper',
+      activeKeys: 1,
+    };
     const existing = {
       id: 'k1',
       name: 'Old laptop',

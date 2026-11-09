@@ -40,7 +40,7 @@ internal sealed class AnthropicAiProvider(ILogger<AnthropicAiProvider> logger) :
             ? client.Beta.AsIChatClient(profile.Model, DefaultMaxOutputTokens, settings.ThinkingMode)
             : client.AsIChatClient(profile.Model, DefaultMaxOutputTokens, settings.ThinkingMode);
 
-        return new ClaudeChatClient(adapter, settings, profile.Model, DefaultMaxOutputTokens, _warnings, client as IDisposable);
+        return new ClaudeChatClient(adapter, settings, profile.Model, DefaultMaxOutputTokens, _warnings, logger, client as IDisposable);
     }
 
     public IEmbeddingGenerator<string, Embedding<float>> CreateEmbeddingGenerator(AiProviderOptions options, ResolvedModelProfile profile) =>

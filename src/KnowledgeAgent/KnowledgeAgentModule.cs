@@ -86,6 +86,7 @@ public static class KnowledgeAgentModule
         api.MapSourceEndpoints(SourceEndpoints.UploadRequestLimit(configuration)).RequireAdminForChanges();
         api.MapSearchEndpoints();
         api.MapChatEndpoints();
+        api.MapLinkHostEndpoints();
         api.MapConversationEndpoints();
         api.MapConversationSearchEndpoints();
         api.MapConversationCountEndpoints();

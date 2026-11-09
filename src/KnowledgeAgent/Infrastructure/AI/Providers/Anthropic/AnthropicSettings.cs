@@ -10,6 +10,13 @@ internal enum RefusalFallbackMode
     Models,
 }
 
+internal enum ThinkingMismatchMode
+{
+    Off,
+    Error,
+    DropBlock,
+}
+
 internal sealed record AnthropicSettings(
     RefusalFallbackMode RefusalFallback,
     IReadOnlyList<string> FallbackModels,
@@ -17,21 +24,23 @@ internal sealed record AnthropicSettings(
     bool OneHourCache,
     AnthropicThinkingMode ThinkingMode,
     int? MaxRetries,
-    TimeSpan? Timeout)
+    TimeSpan? Timeout,
+    ThinkingMismatchMode ThinkingMismatch = ThinkingMismatchMode.DropBlock)
 {
     public const string RefusalFallbackKey = "RefusalFallback";
     public const string PromptCachingKey = "PromptCaching";
     public const string ThinkingModeKey = "ThinkingMode";
     public const string MaxRetriesKey = "MaxRetries";
     public const string TimeoutSecondsKey = "TimeoutSeconds";
+    public const string ThinkingMismatchKey = "ThinkingMismatch";
 
     // The API accepts at most three fallback entries.
     public const int MaxFallbackModels = 3;
 
     private static readonly string[] Disabled = ["none", "off", "false", "disabled", "no"];
 
-    // Server-side fallbacks are only served by the beta messages endpoint.
-    public bool UsesBetaEndpoint => RefusalFallback != RefusalFallbackMode.None;
+    // Server-side fallbacks and thinking block binding are only served by the beta messages endpoint.
+    public bool UsesBetaEndpoint => RefusalFallback != RefusalFallbackMode.None || ThinkingMismatch != ThinkingMismatchMode.Off;
 
     public static AnthropicSettings From(AiProviderOptions options)
     {
@@ -81,7 +90,15 @@ internal sealed record AnthropicSettings(
                 ? TimeSpan.FromSeconds(s)
                 : null;
 
-        return new AnthropicSettings(fallback, fallbackModels, caching, oneHour, thinkingMode, maxRetries, timeout);
+        var mismatch = Get(settings, ThinkingMismatchKey) switch
+        {
+            null => ThinkingMismatchMode.DropBlock,
+            var value when IsDisabled(value) => ThinkingMismatchMode.Off,
+            var value when value.Equals("error", StringComparison.OrdinalIgnoreCase) => ThinkingMismatchMode.Error,
+            _ => ThinkingMismatchMode.DropBlock,
+        };
+
+        return new AnthropicSettings(fallback, fallbackModels, caching, oneHour, thinkingMode, maxRetries, timeout, mismatch);
     }
 
     private static bool IsDisabled(string value) => Disabled.Contains(value, StringComparer.OrdinalIgnoreCase);

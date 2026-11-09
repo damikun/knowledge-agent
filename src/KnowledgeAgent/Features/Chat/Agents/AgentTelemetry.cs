@@ -29,6 +29,8 @@ internal static class AgentTelemetry
         public const string RequestModel = "gen_ai.request.model";
         public const string InputTokens = "gen_ai.usage.input_tokens";
         public const string OutputTokens = "gen_ai.usage.output_tokens";
+        public const string CacheReadInputTokens = "gen_ai.usage.cache_read.input_tokens";
+        public const string CacheCreationInputTokens = "gen_ai.usage.cache_creation.input_tokens";
         public const string ToolName = "gen_ai.tool.name";
         public const string ToolCallId = "gen_ai.tool.call.id";
         public const string ConversationId = "gen_ai.conversation.id";
@@ -43,6 +45,10 @@ internal static class AgentTelemetry
         public const string ToolDurationMs = "knowledge_agent.tool.duration_ms";
         public const string AgentId = "knowledge_agent.agent.id";
         public const string AgentDisplayName = "knowledge_agent.agent.display_name";
+        public const string HistoryMode = "knowledge_agent.history.mode";
+        public const string HistoryTurns = "knowledge_agent.history.turns";
+        public const string HistoryStubbedResults = "knowledge_agent.history.stubbed_results";
+        public const string HistoryEstimatedTokens = "knowledge_agent.history.estimated_tokens";
     }
 
     // Callers must clear Activity.Current first: StartActivity parents to it even when parentContext is default.
@@ -80,6 +86,19 @@ internal static class AgentTelemetry
         activity.SetTag(Tags.PromptVersion, promptVersion);
     }
 
+    public static void SetHistory(Activity? activity, string mode, int turns, int stubbedResults, long estimatedTokens)
+    {
+        if (activity is null)
+        {
+            return;
+        }
+
+        activity.SetTag(Tags.HistoryMode, mode);
+        activity.SetTag(Tags.HistoryTurns, turns);
+        activity.SetTag(Tags.HistoryStubbedResults, stubbedResults);
+        activity.SetTag(Tags.HistoryEstimatedTokens, estimatedTokens);
+    }
+
     public static void SetModel(Activity? activity, ResolvedModelProfile profile)
     {
         activity?.SetTag(Tags.ProviderName, profile.ProviderType);
@@ -106,6 +125,8 @@ internal static class AgentTelemetry
         activity.SetTag(Tags.Iterations, iterations);
         activity.SetTag(Tags.InputTokens, usage.InputTokens);
         activity.SetTag(Tags.OutputTokens, usage.OutputTokens);
+        activity.SetTag(Tags.CacheReadInputTokens, usage.CacheReadInputTokens);
+        activity.SetTag(Tags.CacheCreationInputTokens, usage.CacheCreationInputTokens);
         if (error is not null)
         {
             RecordError(activity, error.Code, error.Message, error.Exception);

@@ -67,7 +67,7 @@ internal sealed class SearchInternalTool : IAgentTool
         IReadOnlyList<KnowledgeSearchHit> hits;
         try
         {
-            hits = await services.GetRequiredService<IKnowledgeSearch>().SearchAsync(new KnowledgeSearchRequest(query!, limit, sourceIds), cancellationToken);
+            hits = (await services.GetRequiredService<IKnowledgeSearch>().SearchAsync(new KnowledgeSearchRequest(query!, limit, sourceIds), cancellationToken)).Hits;
         }
         catch (ModelNotConfiguredException)
         {
@@ -92,6 +92,6 @@ internal sealed class SearchInternalTool : IAgentTool
         }
 
         var summary = hits.Count == 1 ? $"1 Internal passage for \"{query}\"" : $"{hits.Count} Internal passages for \"{query}\"";
-        return new ToolResult(builder.ToString(), summary, Citations: citations.DistinctBy(citation => citation.Ref).ToList());
+        return new ToolResult(builder.ToString(), summary, Citations: citations.DistinctBy(citation => citation.Ref).ToList()) { Untrusted = true };
     }
 }

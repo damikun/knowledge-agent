@@ -36,6 +36,12 @@ export const EVAL_METRICS: readonly EvalMetricInfo[] = [
     description: 'Share of the expected sources that appeared in any search result the agent received while answering.',
   },
   {
+    name: EvalMetrics.AnsweredWithCitation,
+    label: 'Answers back up what they say',
+    technical: 'Answered with citation',
+    description: 'Share of the answerable questions whose answer cites at least one passage the agent actually received.',
+  },
+  {
     name: EvalMetrics.CitationValidity,
     label: 'Citations point to real passages',
     technical: 'Citation validity',
@@ -69,7 +75,7 @@ export const EVAL_METRICS: readonly EvalMetricInfo[] = [
     name: EvalMetrics.AnswerAbstained,
     label: 'Declines what it cannot answer',
     technical: 'Abstention rate',
-    description: 'Questions the knowledge does not cover only: the answer cites nothing instead of presenting unrelated passages as an answer.',
+    description: 'Questions the knowledge does not cover only: the answer says the knowledge base does not answer it, instead of guessing.',
   },
   {
     name: EvalMetrics.JudgeFaithfulness,
@@ -169,6 +175,7 @@ const CHECK_KINDS: Record<string, { label: string; bound: string }> = {
   minimum: { label: 'Lowest allowed', bound: 'needs at least' },
   regression: { label: 'No drop from baseline', bound: 'needs at least' },
   maximum: { label: 'Highest allowed', bound: 'allows at most' },
+  required: { label: 'Must be measured', bound: 'needs' },
 };
 
 export function gateCheckKindLabel(kind: string): string {

@@ -31,6 +31,13 @@ function ratingLook(feedback: FeedbackDto): { icon: LucideIcon; tone: Tone; labe
   return feedback.rating > 0 ? { icon: ThumbsUp, tone: 'success', label: 'Helpful' } : { icon: ThumbsDown, tone: 'danger', label: 'Not helpful' };
 }
 
+function byLine(feedback: FeedbackDto): string {
+  if (feedback.kind === 'agent' || feedback.author === 'agent') {
+    return 'Noted by the assistant, unverified';
+  }
+  return feedback.author === 'staff' ? 'By staff' : 'By a visitor';
+}
+
 function Stars({ rating }: { rating: number }) {
   return (
     <span className="inline-flex" aria-hidden>
@@ -41,7 +48,15 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-export function FeedbackItem({ feedback, names, onAdd }: { feedback: FeedbackDto; names: Names; onAdd: ((source: DatasetQuestionSource) => void) | null }) {
+export function FeedbackItem({
+  feedback,
+  names,
+  onAdd,
+}: {
+  feedback: FeedbackDto;
+  names: Names;
+  onAdd: ((source: DatasetQuestionSource) => void) | null;
+}) {
   const returnState = useReturnState('Feedback');
   const to = feedback.widgetId ? `/inbox/${feedback.conversationId}` : `/chat/${feedback.conversationId}`;
   const addable = onAdd && feedback.kind === 'answer' && feedback.rating < 0 && feedback.messageId;
@@ -60,7 +75,7 @@ export function FeedbackItem({ feedback, names, onAdd }: { feedback: FeedbackDto
           </span>
           <Badge>{KIND_LABELS[feedback.kind]}</Badge>
           <span className="text-xs text-fg-muted">
-            {feedback.kind === 'agent' ? 'From the conversation' : feedback.author === 'staff' ? 'By staff' : 'By a visitor'},{' '}
+            {byLine(feedback)},{' '}
             <time dateTime={feedback.createdAt} title={formatDateTime(feedback.createdAt)}>
               {formatRelativeTime(feedback.createdAt)}
             </time>
@@ -94,7 +109,9 @@ export function FeedbackItem({ feedback, names, onAdd }: { feedback: FeedbackDto
               variant="ghost"
               icon={ClipboardPlus}
               className="sm:ml-auto"
-              onClick={() => onAdd({ question: '', answer: feedback.messageText, conversationId: feedback.conversationId, messageId: feedback.messageId })}
+              onClick={() =>
+                onAdd({ question: '', answer: feedback.messageText, conversationId: feedback.conversationId, messageId: feedback.messageId })
+              }
             >
               Add to dataset
             </Button>

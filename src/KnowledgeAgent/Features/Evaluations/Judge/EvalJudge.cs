@@ -25,8 +25,10 @@ public sealed class EvalJudge(
     public const string PromptName = "eval-judge";
     public const string DefaultProfile = "judge";
 
+    // A whole chunk fits, so supported claims are never judged against a cut-off passage.
     internal const int MaxPassages = 24;
-    internal const int MaxPassageChars = 1_500;
+    internal const int MaxPassageChars = 8_000;
+    internal const int MaxPassagesChars = 80_000;
     internal const int MaxAnswerChars = 8_000;
 
     private static readonly ActivitySource Source = new(KnowledgeAgentTelemetry.Evaluation);
@@ -135,16 +137,27 @@ public sealed class EvalJudge(
         ["answerable"] = item.Answerable,
         ["referenceAnswer"] = item.ReferenceAnswer,
         ["expectedFacts"] = item.ExpectedFacts.Select(fact => (object?)fact.Split('|')[0].Trim()).ToList(),
-        ["passages"] = passages
-            .Take(MaxPassages)
-            .Select(passage => (object?)new Dictionary<string, object?>(StringComparer.Ordinal)
+        ["passages"] = PassageVariables(passages),
+    };
+
+    private static List<object?> PassageVariables(IReadOnlyList<JudgePassage> passages)
+    {
+        var left = MaxPassagesChars;
+        var variables = new List<object?>();
+        foreach (var passage in passages.Take(MaxPassages))
+        {
+            var text = left > 0 ? Clip(passage.Text.Trim(), Math.Min(MaxPassageChars, left)) : "(not shown: too many passages for the judge)";
+            left -= text.Length;
+            variables.Add(new Dictionary<string, object?>(StringComparer.Ordinal)
             {
                 ["ref"] = passage.Ref,
                 ["title"] = passage.Title,
-                ["text"] = Clip(passage.Text.Trim(), MaxPassageChars),
-            })
-            .ToList(),
-    };
+                ["text"] = text,
+            });
+        }
+
+        return variables;
+    }
 
     internal static List<ChatMessage> ToMessages(RenderedPrompt prompt)
     {

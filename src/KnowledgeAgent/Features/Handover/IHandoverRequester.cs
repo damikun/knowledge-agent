@@ -1,8 +1,10 @@
 namespace KnowledgeAgent.Features.Handover;
 
-public sealed record HandoverOutcome(bool Started, string Instruction, bool Simulated = false);
+// Offered: the visitor sees a button and nobody is asked until they press it.
+public sealed record HandoverOutcome(bool Started, string Instruction, bool Simulated = false, bool Offered = false);
 
 public interface IHandoverRequester
 {
-    Task<HandoverOutcome> RequestFromAgentAsync(Guid conversationId, string reason, string summary, CancellationToken cancellationToken = default);
+    // The agent can only offer a person; the request itself comes from the visitor's button.
+    Task<HandoverOutcome> OfferAsync(Guid conversationId, CancellationToken cancellationToken = default);
 }

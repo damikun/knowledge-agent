@@ -30,3 +30,7 @@ The widget's settings also hold the greeting and suggested questions, whether vi
 ## Test the widget
 
 Choose the widget in the [Playground](/playground) to chat as its visitors would, with its agent and handover settings. Playground tests count nowhere.
+
+## Links in answers
+
+Links in answers are clickable only when they point to this installation, to the sites the widget may run on, or to websites in the agent's sources. Other addresses show as plain text, so a link planted in a source can't send visitors elsewhere with one click.

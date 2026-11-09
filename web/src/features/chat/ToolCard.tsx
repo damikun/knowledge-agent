@@ -177,6 +177,11 @@ export function ToolStep({ tool }: { tool: ToolCallView }) {
 
   return (
     <div data-testid="tool-card" data-status={tool.status} className="space-y-1.5 text-xs">
+      {tool.preamble ? (
+        <p data-testid="tool-preamble" className="break-words text-fg-muted italic">
+          {tool.preamble}
+        </p>
+      ) : null}
       <div className="flex items-start gap-2">
         <span className="mt-0.5">
           <StatusIcon tool={tool} />
@@ -233,6 +238,12 @@ function runningStep(tools: readonly ToolCallView[]): ToolCallView | undefined {
     .pop();
 }
 
+/** While tools run, the agent's latest note before them says best what it is doing. */
+function runningNote(tools: readonly ToolCallView[]): string | null {
+  const index = tools.findLastIndex((tool) => tool.preamble);
+  return index >= 0 && tools.slice(index).some((tool) => tool.status === 'running') ? (tools[index]?.preamble ?? null) : null;
+}
+
 export function ToolActivity({ tools }: { tools: readonly ToolCallView[] }) {
   const [open, setOpen] = useState(false);
   const id = useId();
@@ -240,9 +251,13 @@ export function ToolActivity({ tools }: { tools: readonly ToolCallView[] }) {
   const passages = activityPassages(tools);
   const failures = flatten(tools).filter((tool) => tool.status === 'error').length;
 
+  const note = running ? runningNote(tools) : null;
+
   let text: string;
   let query: string | null = null;
-  if (running) {
+  if (note) {
+    text = note;
+  } else if (running) {
     const meta = toolMeta(running.toolName);
     text = `${running.subAgent ? `${capitalize(running.subAgent.agent)} working` : meta.activeLabel}…`;
     query = summarizeToolArguments(running.toolName, running.arguments).primary;

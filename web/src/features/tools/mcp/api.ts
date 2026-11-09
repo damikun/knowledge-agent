@@ -37,6 +37,7 @@ function toTool(value: unknown): McpToolDto {
     idempotent: hint(tool.idempotent),
     openWorld: hint(tool.openWorld),
     defaultPolicy: toPolicy(tool.defaultPolicy, readOnly ? 'auto' : 'confirm'),
+    fingerprint: text(tool.fingerprint) ?? '',
   };
 }
 
@@ -53,10 +54,13 @@ function toServer(value: unknown): McpServerDto {
     hasSecret: server.hasSecret === true,
     secretHint: text(server.secretHint),
     enabled: server.enabled !== false,
+    sendIdentity: server.sendIdentity === true,
     lastCheck: check ? { checkedAt: text(check.checkedAt) ?? '', ok: check.ok === true, error: text(check.error) } : null,
     serverName: text(server.serverName),
     serverVersion: text(server.serverVersion),
-    tools: asArray<unknown>(server.tools).map(toTool).filter((tool) => tool.name),
+    tools: asArray<unknown>(server.tools)
+      .map(toTool)
+      .filter((tool) => tool.name),
     usedBy: asArray<Record<string, unknown>>(server.usedBy).map((use) => ({
       agentId: text(use.agentId) ?? '',
       agentName: text(use.agentName) ?? '',

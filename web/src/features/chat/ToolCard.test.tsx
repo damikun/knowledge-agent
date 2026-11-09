@@ -32,13 +32,53 @@ describe('ToolActivity', () => {
     expect(screen.queryByTestId('tool-card')).toBeNull();
   });
 
+  it("shows the agent's note before the tools while they run, and above its step when opened", async () => {
+    const user = userEvent.setup();
+    const events = [
+      ev('text-delta', { text: "I'll check the handbook.", step: 1 }),
+      ev('step-finished', { step: 1, kind: 'interim' }),
+      ev('tool-call', { callId: 'c1', toolName: 'search_knowledge_base', arguments: { query: 'vacation days' } }),
+    ];
+    const { rerender } = renderWithProviders(<ToolActivity tools={toolsFrom(events)} />);
+    expect(screen.getByRole('button', { name: /I'll check the handbook\./ })).not.toHaveTextContent('vacation days');
+
+    const done = toolsFrom([
+      ...events,
+      ev('tool-result', {
+        callId: 'c1',
+        toolName: 'search_knowledge_base',
+        isError: false,
+        summary: 'Found 1 passage',
+        durationMs: 5,
+        citations: [citationS1],
+      }),
+    ]);
+    rerender(<ToolActivity tools={done} />);
+    await user.click(screen.getByRole('button', { name: /Searched the knowledge base/ }));
+    expect(within(screen.getByTestId('tool-card')).getByTestId('tool-preamble')).toHaveTextContent("I'll check the handbook.");
+  });
+
   it('sums up finished steps with the passages they found and opens the steps on demand', async () => {
     const user = userEvent.setup();
     const tools = toolsFrom([
       ev('tool-call', { callId: 'c1', toolName: 'search_knowledge_base', arguments: { query: 'vacation days' } }),
-      ev('tool-result', { callId: 'c1', toolName: 'search_knowledge_base', isError: false, summary: 'Found 1 passage in 1 source', durationMs: 412, citations: [citationS1] }),
+      ev('tool-result', {
+        callId: 'c1',
+        toolName: 'search_knowledge_base',
+        isError: false,
+        summary: 'Found 1 passage in 1 source',
+        durationMs: 412,
+        citations: [citationS1],
+      }),
       ev('tool-call', { callId: 'c2', toolName: 'search_knowledge_base', arguments: { query: 'carry over' } }),
-      ev('tool-result', { callId: 'c2', toolName: 'search_knowledge_base', isError: false, summary: 'Found 1 passage', durationMs: 100, citations: [citationS1] }),
+      ev('tool-result', {
+        callId: 'c2',
+        toolName: 'search_knowledge_base',
+        isError: false,
+        summary: 'Found 1 passage',
+        durationMs: 100,
+        citations: [citationS1],
+      }),
     ]);
     renderWithProviders(<ToolActivity tools={tools} />);
 
@@ -59,7 +99,14 @@ describe('ToolActivity', () => {
     const user = userEvent.setup();
     const tools = toolsFrom([
       ev('tool-call', { callId: 'c1', toolName: 'search_knowledge_base', arguments: { query: 'vacation days' } }),
-      ev('tool-result', { callId: 'c1', toolName: 'search_knowledge_base', isError: false, summary: 'Found 1 passage', durationMs: 412, citations: [citationS1] }),
+      ev('tool-result', {
+        callId: 'c1',
+        toolName: 'search_knowledge_base',
+        isError: false,
+        summary: 'Found 1 passage',
+        durationMs: 412,
+        citations: [citationS1],
+      }),
     ]);
     renderWithProviders(
       <ChatDisplayContext.Provider value={{ developer: true }}>
@@ -106,7 +153,13 @@ describe('ToolStep', () => {
     const [tool] = toolsFrom([
       ev('tool-call', { callId: 'd1', toolName: 'delegate_research', arguments: { task: 'Check carry-over rules' } }),
       ev('agent-started', { agent: 'researcher', parentCallId: 'd1', provider: 'anthropic', model: 'claude-opus-5-5' }),
-      ev('tool-call', { agent: 'researcher', parentCallId: 'd1', callId: 'r1', toolName: 'search_knowledge_base', arguments: { query: 'carry over' } }),
+      ev('tool-call', {
+        agent: 'researcher',
+        parentCallId: 'd1',
+        callId: 'r1',
+        toolName: 'search_knowledge_base',
+        arguments: { query: 'carry over' },
+      }),
       ev('text-delta', { agent: 'researcher', parentCallId: 'd1', text: 'Found the carry-over rule.' }),
     ]);
     renderWithProviders(<ToolStep tool={tool!} />);

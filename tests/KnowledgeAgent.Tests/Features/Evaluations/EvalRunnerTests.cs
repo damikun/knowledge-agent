@@ -96,6 +96,28 @@ public sealed class EvalRunnerTests
     }
 
     [Fact]
+    public async Task An_agent_that_never_cites_fails_the_gate()
+    {
+        var model = new ScriptedChatClient()
+            .ThenToolCall(ToolNames.SearchKnowledgeBase, new { query = "vacation days per year" })
+            .ThenText("Every employee receives 27 vacation days per calendar year.")
+            .ThenText("The chief executive officer is Jane Doe.");
+        var dataset = SmallDataset(VacationDays, Ceo);
+        await using var target = await IsolatedEvalTarget.CreateAsync(WithFakeChat(new FakeAiProvider(_ => model)), dataset.Corpus, Ct);
+
+        var result = await Runner().RunAsync(Plan(dataset), target, [], cancellationToken: Ct);
+        var gateConfig = EvalDatasetLoader.LoadEmbedded().Single(golden => golden.Name == GoldenSetGateTests.DatasetName).Gate;
+        var gate = QualityGate.Evaluate(gateConfig, result.Metrics, result.FailedItems, null, result.Items.Count, dataset.Items.Count);
+
+        result.Metrics[EvalMetrics.AnsweredWithCitation].Mean.ShouldBe(0);
+        result.Metrics[EvalMetrics.AnswerAbstained].Mean.ShouldBe(0, "an answer without citations is not a decline");
+        result.Metrics.ShouldNotContainKey(EvalMetrics.CitationValidity);
+        gate.Passed.ShouldBeFalse();
+        gate.Checks.Where(check => !check.Passed).Select(check => check.Metric)
+            .ShouldBe([EvalMetrics.AnsweredWithCitation, EvalMetrics.CitationValidity, EvalMetrics.AnswerAbstained], ignoreOrder: true);
+    }
+
+    [Fact]
     public async Task Runs_record_the_search_mode_and_rerank_through_the_configured_reranker()
     {
         var model = new ScriptedChatClient()

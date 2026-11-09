@@ -12,6 +12,7 @@ export function mcpTool(overrides: Partial<McpToolDto> = {}): McpToolDto {
     idempotent: null,
     openWorld: null,
     defaultPolicy: 'auto',
+    fingerprint: 'fp-lookup-order',
     ...overrides,
   };
 }
@@ -24,6 +25,7 @@ export const cancelTool = mcpTool({
   readOnly: false,
   destructive: true,
   defaultPolicy: 'confirm',
+  fingerprint: 'fp-cancel-order',
 });
 
 export function mcpServer(overrides: Partial<McpServerDto> = {}): McpServerDto {
@@ -37,6 +39,7 @@ export function mcpServer(overrides: Partial<McpServerDto> = {}): McpServerDto {
     hasSecret: true,
     secretHint: '…6789',
     enabled: true,
+    sendIdentity: false,
     lastCheck: { checkedAt: '2026-11-05T08:00:00Z', ok: true, error: null },
     serverName: 'shop',
     serverVersion: '2.0',

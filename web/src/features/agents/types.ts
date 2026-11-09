@@ -16,7 +16,14 @@ export interface AgentMcpAppDto {
   enabled: boolean;
   mode: McpAppMode;
   changesPolicy: McpChangesPolicy;
-  tools: Array<{ name: string; policy: McpToolPolicy | null }>;
+  tools: AgentMcpToolDto[];
+}
+
+/** fingerprint: the definition an admin approved; null when never approved. Only approved tools may run on their own. */
+export interface AgentMcpToolDto {
+  name: string;
+  policy: McpToolPolicy | null;
+  fingerprint?: string | null;
 }
 
 export type HandoverPolicy = 'never' | 'onRequest' | 'whenUnsure';

@@ -1,10 +1,12 @@
 import { isAbortError } from '../../lib/sse';
+import { plainText } from './citations';
 import { CONVERSATION_BUSY, CONVERSATION_CLOSED, DAILY_CAP_REACHED, isApiError, PERSON_JOINED, WidgetApiError, type WidgetApi } from './api';
 import type { HostAttributeValue, HostIdentity } from './host';
 import {
   normalizeStatus,
   type AttributeRejection,
   type Citation,
+  type ConfirmationDetail,
   type ConversationStatus,
   type LiveEvent,
   type TurnEvent,
@@ -15,7 +17,11 @@ import {
 type Activity = 'thinking' | 'searching';
 
 export interface StreamingAnswer {
+  // The text of the step being written, so a note written before a tool call never stays in the answer.
   text: string;
+  // That note, shown as a status line while the tools run; the next step's text replaces it.
+  status: string | null;
+  step: number | null;
   citations: Citation[];
   activity: Activity | null;
   error: string | null;
@@ -53,7 +59,9 @@ export interface ChatState {
   notice: Notice | null;
   offline: boolean;
   // Actions of the latest answer that wait for Confirm or Cancel; a new message drops them.
-  confirmations: Array<{ callId: string; title: string }>;
+  confirmations: Array<{ callId: string; title: string; details: ConfirmationDetail[] }>;
+  // The latest answer offered a person; the visitor asks with the widget's own button.
+  handoverOffered: boolean;
 }
 
 export interface ConfirmationAnswer {
@@ -70,7 +78,7 @@ export interface FieldErrors {
 
 export type FormResult = { ok: true } | { ok: false; errors: FieldErrors };
 
-export type ChatActivity = { kind: 'message'; message: VisitorMessage } | { kind: 'error'; text: string };
+export type ChatActivity = { kind: 'message'; message: VisitorMessage } | { kind: 'error'; text: string } | { kind: 'status'; text: string };
 
 export interface ChatControllerOptions {
   storageKey: string;
@@ -86,7 +94,31 @@ const RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 5_000, 10_000];
 const RETRIEVAL_TOOLS = new Set(['search_knowledge_base', 'grep_sources', 'find_sources', 'read_source', 'delegate_research']);
 
 function emptyAnswer(): StreamingAnswer {
-  return { text: '', citations: [], activity: 'thinking', error: null, done: false };
+  return { text: '', status: null, step: null, citations: [], activity: 'thinking', error: null, done: false };
+}
+
+const STATUS_LENGTH = 160;
+
+// The last sentence of a note, as one plain line.
+export function statusLine(text: string): string | null {
+  const plain = plainText(text);
+  if (plain === '') {
+    return null;
+  }
+  const sentences = plain.match(/[^.!?…]+[.!?…]*/g) ?? [plain];
+  const last =
+    sentences
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence !== '')
+      .pop() ?? plain;
+  return last.length > STATUS_LENGTH ? `${last.slice(0, STATUS_LENGTH - 1).trimEnd()}…` : last;
+}
+
+function appendStep(text: string, delta: string, newStep: boolean): string {
+  if (!newStep || text.trim() === '' || /\n\s*$/.test(text) || /^\s*\n/.test(delta)) {
+    return text + delta;
+  }
+  return `${text.trimEnd()}\n\n${delta.trimStart()}`;
 }
 
 function mergeCitations(existing: Citation[], incoming: Citation[]): Citation[] {
@@ -100,12 +132,19 @@ function reduceAnswer(answer: StreamingAnswer, event: TurnEvent): StreamingAnswe
       return { ...answer, activity: RETRIEVAL_TOOLS.has(event.toolName) ? 'searching' : 'thinking' };
     case 'tool-result':
       return { ...answer, citations: mergeCitations(answer.citations, event.citations), activity: answer.text ? null : 'thinking' };
-    case 'text-delta':
-      return { ...answer, text: answer.text + event.text, activity: null };
+    case 'text-delta': {
+      // Without step-finished, as from an older server, steps would run together; a new step starts a paragraph.
+      const newStep = event.step !== null && answer.step !== null && event.step !== answer.step;
+      return { ...answer, text: appendStep(answer.text, event.text, newStep), step: event.step ?? answer.step, status: null, activity: null };
+    }
+    case 'step-finished':
+      return event.kind === 'interim'
+        ? { ...answer, text: '', step: null, status: statusLine(answer.text) ?? answer.status, activity: 'thinking' }
+        : answer;
     case 'error':
-      return { ...answer, error: event.message || null, activity: null };
+      return { ...answer, error: event.message || null, status: null, activity: null };
     case 'done':
-      return { ...answer, done: true, activity: null };
+      return { ...answer, done: true, status: null, activity: null };
     default:
       return answer;
   }
@@ -176,6 +215,7 @@ const INITIAL_STATE: ChatState = {
   notice: null,
   offline: false,
   confirmations: [],
+  handoverOffered: false,
 };
 
 export function initialChatState(): ChatState {
@@ -322,7 +362,7 @@ export class ChatController implements ChatSession {
     }
     const id = ++this.turnIds;
     this.suppressedTurns += 1;
-    this.set({ pending: { id, question: message, questionSequence: null, answer: null }, notice: null, confirmations: [] });
+    this.set({ pending: { id, question: message, questionSequence: null, answer: null }, notice: null, confirmations: [], handoverOffered: false });
 
     let renewed = false;
     let restarted = false;
@@ -446,6 +486,7 @@ export class ChatController implements ChatSession {
     if (!conversationId) {
       return { ok: false, errors: {} };
     }
+    this.set({ handoverOffered: false });
     try {
       const result = await this.withSession((token) => this.api.requestHandover(token, conversationId, contact ? compactContact(contact) : {}));
       if (contact) {
@@ -548,6 +589,9 @@ export class ChatController implements ChatSession {
       return;
     }
     this.state = { ...this.state, ...patch };
+    if (this.state.handoverOffered && this.state.status !== 'ai') {
+      this.state = { ...this.state, handoverOffered: false };
+    }
     for (const listener of [...this.listeners]) {
       listener();
     }
@@ -556,6 +600,13 @@ export class ChatController implements ChatSession {
   private emit(activity: ChatActivity): void {
     for (const listener of [...this.activityListeners]) {
       listener(activity);
+    }
+  }
+
+  // The status line itself is not a live region, so it is announced once, here.
+  private announceStatus(before: StreamingAnswer | null, after: StreamingAnswer | null): void {
+    if (after?.status && after.status !== before?.status) {
+      this.emit({ kind: 'status', text: after.status });
     }
   }
 
@@ -715,7 +766,16 @@ export class ChatController implements ChatSession {
     this.stopFollowing();
     this.lastSequence = 0;
     this.suppressedTurns = this.sendAbort ? 1 : 0;
-    this.set({ conversationId: null, status: 'ai', messages: [], conversationRating: null, followed: null, offline: false, confirmations: [] });
+    this.set({
+      conversationId: null,
+      status: 'ai',
+      messages: [],
+      conversationRating: null,
+      followed: null,
+      offline: false,
+      confirmations: [],
+      handoverOffered: false,
+    });
   }
 
   private mergeMessages(incoming: readonly VisitorMessage[], announce: boolean): void {
@@ -758,9 +818,15 @@ export class ChatController implements ChatSession {
       this.emit({ kind: 'error', text: event.message });
     }
     if (event.type === 'confirmation-required') {
-      this.set({ confirmations: [...this.state.confirmations.filter((item) => item.callId !== event.callId), { callId: event.callId, title: event.title }] });
+      const { callId, title, details } = event;
+      this.set({ confirmations: [...this.state.confirmations.filter((item) => item.callId !== callId), { callId, title, details }] });
     }
+    if (event.type === 'handover-offered') {
+      this.set({ handoverOffered: true });
+    }
+    const before = this.state.pending?.id === id ? this.state.pending.answer : null;
     this.updatePending(id, (pending) => ({ ...pending, answer: reduceAnswer(pending.answer ?? emptyAnswer(), event) }));
+    this.announceStatus(before, this.state.pending?.answer ?? null);
   }
 
   private async finishOwnTurn(id: number): Promise<void> {
@@ -901,7 +967,9 @@ export class ChatController implements ChatSession {
         if (event.event.type === 'error' && event.event.message) {
           this.emit({ kind: 'error', text: event.event.message });
         }
-        this.set({ followed: reduceAnswer(this.state.followed ?? emptyAnswer(), event.event) });
+        const before = this.state.followed;
+        this.set({ followed: reduceAnswer(before ?? emptyAnswer(), event.event) });
+        this.announceStatus(before, this.state.followed);
         return;
       }
       case 'status':

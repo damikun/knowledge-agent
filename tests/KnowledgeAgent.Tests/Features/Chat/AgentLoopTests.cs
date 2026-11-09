@@ -88,8 +88,8 @@ public sealed class AgentLoopTests
 
         events.OfType<ToolResultEvent>().ShouldAllBe(result => !result.IsError);
         var results = orchestrator.Requests[1].Messages[^1].ToolResults();
-        results[1].ResultText().ShouldEndWith("Alpha text.");
-        results[2].ResultText().ShouldEndWith("Beta text.");
+        results[1].ResultText().Unwrapped().ShouldEndWith("Alpha text.");
+        results[2].ResultText().Unwrapped().ShouldEndWith("Beta text.");
     }
 
     [Fact]
@@ -261,6 +261,7 @@ public sealed class AgentLoopTests
             ChatEventTypes.Conversation,
             ChatEventTypes.AgentStarted,
             ChatEventTypes.TextDelta,
+            ChatEventTypes.StepFinished,
             ChatEventTypes.Usage,
             ChatEventTypes.AgentCompleted,
             ChatEventTypes.Conversation,

@@ -20,6 +20,8 @@ export interface McpToolDto {
   openWorld: boolean | null;
   /** auto for tools marked read-only, confirm for the rest. */
   defaultPolicy: McpToolPolicy;
+  /** Of the current definition; an agent keeps the one it approved. */
+  fingerprint: string;
 }
 
 interface McpCheckDto {
@@ -40,6 +42,8 @@ export interface McpServerDto {
   hasSecret: boolean;
   secretHint: string | null;
   enabled: boolean;
+  /** Each tool call carries the verified user's ID in its _meta. */
+  sendIdentity: boolean;
   lastCheck: McpCheckDto | null;
   serverName: string | null;
   serverVersion: string | null;
@@ -58,6 +62,7 @@ export interface SaveMcpServerRequest {
   headerName: string | null;
   secret: string | null;
   enabled?: boolean;
+  sendIdentity?: boolean;
 }
 
 export interface McpTestResultDto {

@@ -25,7 +25,11 @@ function mcpApps(value: unknown): AgentMcpAppDto[] {
       changesPolicy: set.changesPolicy === 'verifiedOnly' ? 'verifiedOnly' : 'confirm',
       tools: asArray<Record<string, unknown>>(set.tools)
         .filter((tool) => isRecord(tool) && typeof tool.name === 'string')
-        .map((tool) => ({ name: tool.name as string, policy: tool.policy === undefined || tool.policy === null ? null : toPolicy(tool.policy) })),
+        .map((tool) => ({
+          name: tool.name as string,
+          policy: tool.policy === undefined || tool.policy === null ? null : toPolicy(tool.policy),
+          fingerprint: typeof tool.fingerprint === 'string' && tool.fingerprint ? tool.fingerprint : null,
+        })),
     }));
 }
 

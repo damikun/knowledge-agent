@@ -49,7 +49,7 @@ public sealed class HandoverLifecycleTests : IAsyncLifetime
                 services.AddSingleton<IIntegrationSettings>(_integrations);
                 services.AddSingleton<IEmailTransport>(_email);
                 services.AddSingleton<ConversationEventHub>();
-                services.AddSingleton<IConversationNotifier, NullConversationNotifier>();
+                services.AddSingleton<ILiveBus, InProcessLiveBus>();
                 services.AddSingleton<ChatTurnHost>();
                 services.AddScoped<ConversationTimeline>();
                 services.AddScoped<IWidgetRepository, WidgetRepository>();
@@ -109,7 +109,7 @@ public sealed class HandoverLifecycleTests : IAsyncLifetime
         await InScopeAsync((IConversationRepository conversations) => conversations.CreateAsync(conversation, Ct));
 
         var outcome = await InScopeAsync((IHandoverService handover) =>
-            handover.RequestFromAgentAsync(conversation.Id, "asked for a person", "Ana wants to cancel.", Ct));
+            handover.OfferAsync(conversation.Id, Ct));
 
         (outcome.Started, outcome.Simulated).ShouldBe((true, true));
         outcome.Instruction.ShouldContain("nobody was asked");

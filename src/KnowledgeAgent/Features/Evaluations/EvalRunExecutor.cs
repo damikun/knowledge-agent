@@ -73,7 +73,7 @@ internal sealed class EvalRunExecutor(
 
             var signature = EvalSignature.Create(result.Settings, record.Judge);
             var baseline = dataset.Baselines.TryGetValue(signature, out var accepted) ? accepted : null;
-            var gate = QualityGate.Evaluate(dataset.Gate, result.Metrics, result.FailedItems, baseline, result.Items.Count, dataset.Items.Count);
+            var gate = QualityGate.Evaluate(dataset.Gate, result.Metrics, result.FailedItems, baseline, result.Items.Count, dataset.Items.Count, record.Judge);
             warnings.AddRange(result.Warnings);
             if (langfuseObserver is not null)
             {

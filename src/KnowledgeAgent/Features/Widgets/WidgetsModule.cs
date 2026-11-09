@@ -22,6 +22,7 @@ public static class WidgetsModule
         services.TryAddScoped<IWidgetRepository, WidgetRepository>();
         services.TryAddScoped<IWidgetService, WidgetService>();
         services.TryAddScoped<VisitorService>();
+        services.TryAddScoped<LinkHosts>();
         services.TryAddSingleton<VisitorTokens>();
         services.TryAddSingleton<WidgetIdentity>();
         services.TryAddSingleton<WidgetRateLimiter>();

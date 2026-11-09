@@ -2,16 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest';
 import { controlledEventStream, jsonResponse, mockFetch, sseResponse, type FetchHandler } from '../../test/utils';
-import {
-  problem,
-  streamCitation,
-  visitorConversation,
-  visitorMessage,
-  visitorSession,
-  WIDGET_API,
-  WIDGET_KEY,
-  widgetConfig,
-} from '../test/fixtures';
+import { problem, streamCitation, visitorConversation, visitorMessage, visitorSession, WIDGET_API, WIDGET_KEY, widgetConfig } from '../test/fixtures';
 import { envelope } from '../shared/preview';
 import { WidgetApp } from './WidgetApp';
 
@@ -183,7 +174,8 @@ describe('widget frame', () => {
       routes({
         [`POST ${WIDGET_API}/messages`]: (_url: URL, init: RequestInit) => turn.respond(init),
         [`GET ${WIDGET_API}/conversations/c1/events`]: (_url: URL, init: RequestInit) => controlledEventStream().respond(init),
-        [`GET ${WIDGET_API}/conversations/c1`]: () => jsonResponse(visitorConversation([visitorMessage(1, 'visitor', 'Hi'), visitorMessage(2, 'assistant', 'Hello!')])),
+        [`GET ${WIDGET_API}/conversations/c1`]: () =>
+          jsonResponse(visitorConversation([visitorMessage(1, 'visitor', 'Hi'), visitorMessage(2, 'assistant', 'Hello!')])),
       }),
     );
     renderWidget();
@@ -199,6 +191,61 @@ describe('widget frame', () => {
     turn.close();
     await waitFor(() => expect(busy().at(-1)).toEqual({ source: 'knowledge-agent', type: 'busy', busy: false }));
     expect(screen.getByRole('textbox', { name: 'Message' }).closest('.ka-glow-ring')).toBeNull();
+  });
+
+  it('turns a note written before a tool call into a status line that the answer replaces', async () => {
+    const user = userEvent.setup();
+    const turn = controlledEventStream();
+    mockFetch(
+      routes({
+        [`POST ${WIDGET_API}/messages`]: (_url: URL, init: RequestInit) => turn.respond(init),
+        [`GET ${WIDGET_API}/conversations/c1/events`]: (_url: URL, init: RequestInit) => controlledEventStream().respond(init),
+      }),
+    );
+    renderWidget();
+
+    await user.type(await screen.findByRole('textbox', { name: 'Message' }), 'How long is the return window?{Enter}');
+    turn.send('conversation', { conversationId: 'c1', title: 'Returns', isNew: true });
+    turn.send('text-delta', { text: "Sure. I'll check the **returns policy** [S1].", step: 1 });
+    expect(await screen.findByText('returns policy')).toBeInTheDocument();
+
+    turn.send('step-finished', { step: 1, kind: 'interim' });
+    const status = await screen.findByTestId('answer-status');
+    expect(status).toHaveTextContent("I'll check the returns policy.");
+    expect(status.closest('[aria-live], [role="status"], [role="log"], [role="alert"]')).toBeNull();
+    await waitFor(() => expect(document.querySelector('[aria-live="polite"]')).toHaveTextContent("I'll check the returns policy."));
+    expect(screen.queryByText('returns policy')).not.toBeInTheDocument();
+
+    turn.send('tool-call', { callId: 'k1', toolName: 'search_knowledge_base', arguments: null });
+    await waitFor(() => expect(screen.getByTestId('answer-status')).toBeInTheDocument());
+    expect(screen.queryByText('Searching the knowledge base')).not.toBeInTheDocument();
+    turn.send('tool-result', { callId: 'k1', toolName: 'search_knowledge_base', isError: false, summary: '', durationMs: 5, citations: [] });
+
+    turn.send('text-delta', { text: 'Returns are accepted for thirty days.', step: 2 });
+    expect(await screen.findByText('Returns are accepted for thirty days.')).toBeInTheDocument();
+    expect(screen.queryByTestId('answer-status')).not.toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('Sure.');
+  });
+
+  it('starts a new paragraph for the text of a new step instead of gluing the steps together', async () => {
+    const user = userEvent.setup();
+    const turn = controlledEventStream();
+    mockFetch(
+      routes({
+        [`POST ${WIDGET_API}/messages`]: (_url: URL, init: RequestInit) => turn.respond(init),
+        [`GET ${WIDGET_API}/conversations/c1/events`]: (_url: URL, init: RequestInit) => controlledEventStream().respond(init),
+      }),
+    );
+    renderWidget();
+
+    await user.type(await screen.findByRole('textbox', { name: 'Message' }), 'Hi{Enter}');
+    turn.send('conversation', { conversationId: 'c1', title: 'Hi', isNew: true });
+    turn.send('text-delta', { text: 'Let me look.', step: 1 });
+    turn.send('text-delta', { text: 'Hello there.', step: 2 });
+
+    expect(await screen.findByText('Hello there.')).toBeInTheDocument();
+    expect(screen.getByText('Let me look.')).toBeInTheDocument();
+    expect(document.body.textContent).not.toContain('look.Hello');
   });
 
   it('paints the theme with its overrides on the page, and leaves the footer out when the widget hides it', async () => {
@@ -258,7 +305,12 @@ describe('widget frame', () => {
   it('rates answers with thumbs, with an optional comment after thumbs down, and shows saved ratings', async () => {
     const user = userEvent.setup();
     const older = visitorMessage(2, 'assistant', 'We ship worldwide.', { id: 'answer-0', rating: 1 });
-    const resumed = resumedConversation([visitorMessage(1, 'visitor', 'Shipping?'), older, visitorMessage(3, 'visitor', 'Returns?'), { ...answerWithSources, sequence: 4 }]);
+    const resumed = resumedConversation([
+      visitorMessage(1, 'visitor', 'Shipping?'),
+      older,
+      visitorMessage(3, 'visitor', 'Returns?'),
+      { ...answerWithSources, sequence: 4 },
+    ]);
     const fetchMock = mockFetch(
       routes(
         { ...resumed.routes, [`POST ${WIDGET_API}/conversations/c1/feedback`]: { id: 'f1', messageId: 'answer-1', rating: -1 } },
@@ -373,14 +425,18 @@ describe('widget frame', () => {
     await user.click(screen.getByRole('button', { name: 'Keep chatting with the assistant' }));
 
     await waitFor(() => expect(screen.queryByText('Waiting for someone from the team to join.')).not.toBeInTheDocument());
-    expect(requestHeaders(fetchMock, `POST ${WIDGET_API}/conversations/c1/handover/cancel`)[0]).toMatchObject({ Authorization: 'Bearer visitor-token' });
+    expect(requestHeaders(fetchMock, `POST ${WIDGET_API}/conversations/c1/handover/cancel`)[0]).toMatchObject({
+      Authorization: 'Bearer visitor-token',
+    });
     expect(screen.getByRole('button', { name: 'Talk to a person' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument();
 
     await waitFor(() => expect(resumed.live.isOpen).toBe(true));
     resumed.live.send('conversation', { conversationId: 'c1', status: 'ai' });
     resumed.live.send('message', visitorMessage(4, 'system', "You're chatting with the assistant again."), 4);
-    expect(await within(screen.getByRole('region', { name: 'Messages' })).findByText("You're chatting with the assistant again.")).toBeInTheDocument();
+    expect(
+      await within(screen.getByRole('region', { name: 'Messages' })).findByText("You're chatting with the assistant again."),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -589,7 +645,10 @@ describe('widget frame', () => {
         [`POST ${WIDGET_API}/messages`]: () =>
           ++posts === 1
             ? problem(401, { title: 'Session expired' })
-            : sseResponse([{ event: 'text-delta', data: { text: 'Hello there.' } }, { event: 'done', data: { conversationId: '', turnId: 't1', finishReason: 'stop' } }]),
+            : sseResponse([
+                { event: 'text-delta', data: { text: 'Hello there.' } },
+                { event: 'done', data: { conversationId: '', turnId: 't1', finishReason: 'stop' } },
+              ]),
       }),
     );
     renderWidget();
@@ -687,6 +746,78 @@ describe('widget frame', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'More options' })).toHaveFocus();
     expect(hostMessages()).toEqual([]);
+  });
+
+  it('shows an offered person and the arguments of an action to confirm, and asks for the person on its button', async () => {
+    const user = userEvent.setup();
+    const resumed = resumedConversation([visitorMessage(1, 'visitor', 'Returns?'), answerWithSources]);
+    const fetchMock = mockFetch(
+      routes(
+        {
+          ...resumed.routes,
+          [`POST ${WIDGET_API}/messages`]: () =>
+            sseResponse([
+              { event: 'handover-offered', data: { callId: 'h1' } },
+              {
+                event: 'confirmation-required',
+                data: {
+                  callId: 'm1',
+                  toolName: '',
+                  title: 'Refund order',
+                  connection: 'Shop',
+                  expiresAt: '2099-01-01T00:00:00Z',
+                  details: [
+                    { label: 'order_id', value: '1042' },
+                    { label: 'amount', value: '20 EUR' },
+                  ],
+                },
+              },
+              { event: 'text-delta', data: { text: 'Press the button if you want a colleague.' } },
+              { event: 'done', data: { conversationId: 'c1', turnId: 't2', finishReason: 'stop' } },
+            ]),
+          [`POST ${WIDGET_API}/conversations/c1/handover`]: { status: 'handover_pending', started: true },
+        },
+        { handoverEnabled: true },
+        { conversationId: 'c1' },
+      ),
+    );
+    renderWidget();
+
+    await screen.findByText('Returns?', { selector: 'p' });
+    await user.type(screen.getByRole('textbox', { name: 'Message' }), 'I want my money back{Enter}');
+
+    const action = await screen.findByRole('group', { name: 'Refund order' });
+    expect(within(action).getByText('order_id:')).toBeInTheDocument();
+    expect(within(action).getByText('1042')).toBeInTheDocument();
+    expect(within(action).getByText('20 EUR')).toBeInTheDocument();
+    const offer = screen.getByRole('group', { name: 'Want someone from the team to take over?' });
+    expect(screen.getAllByRole('button', { name: 'Talk to a person' })).toHaveLength(1);
+    expect(requestBodies(fetchMock, `POST ${WIDGET_API}/conversations/c1/handover`)).toEqual([]);
+
+    await user.click(within(offer).getByRole('button', { name: 'Talk to a person' }));
+
+    expect(await screen.findByText('Waiting for someone from the team to join.')).toBeInTheDocument();
+    expect(requestBodies(fetchMock, `POST ${WIDGET_API}/conversations/c1/handover`)).toEqual([{}]);
+    expect(screen.queryByRole('group', { name: 'Want someone from the team to take over?' })).not.toBeInTheDocument();
+  });
+
+  it('links only to the hosts the widget allows and shows other addresses as text', async () => {
+    const answer = visitorMessage(
+      2,
+      'assistant',
+      'Fill in [the form](https://evil.test/f?d=1) or read [our returns page](https://www.shop.example/returns).',
+      {
+        id: 'answer-1',
+      },
+    );
+    const resumed = resumedConversation([visitorMessage(1, 'visitor', 'Returns?'), answer]);
+    mockFetch(routes(resumed.routes, { linkHosts: ['shop.example'] }, { conversationId: 'c1' }));
+    renderWidget();
+
+    const allowed = await screen.findByRole('link', { name: /our returns page/ });
+    expect(allowed).toHaveAttribute('href', 'https://www.shop.example/returns');
+    expect(screen.queryByRole('link', { name: /the form/ })).not.toBeInTheDocument();
+    expect(screen.getByText('the form (https://evil.test/f?d=1)')).toBeInTheDocument();
   });
 
   it('says when the widget does not exist', async () => {

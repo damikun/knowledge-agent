@@ -85,12 +85,17 @@ internal static class WidgetEndpoints
         HttpResponse response,
         IWidgetRepository widgets,
         VisitorService visitors,
+        LinkHosts links,
         CancellationToken cancellationToken)
     {
         response.Headers.CacheControl = "no-store";
-        return await widgets.GetAsync(id, cancellationToken) is { } widget
-            ? TypedResults.Ok(await visitors.StartPreviewSessionAsync(widget, cancellationToken))
-            : NotFound(id);
+        if (await widgets.GetAsync(id, cancellationToken) is not { } widget)
+        {
+            return NotFound(id);
+        }
+
+        var session = await visitors.StartPreviewSessionAsync(widget, cancellationToken);
+        return TypedResults.Ok(session with { Config = session.Config with { LinkHosts = await links.ForWidgetAsync(widget, cancellationToken) } });
     }
 
     private static async Task<Results<Created<WidgetAssetDto>, ProblemHttpResult, ValidationProblem>> UploadAssetAsync(

@@ -16,6 +16,7 @@ internal static class AgentTurnCapture
     {
         var started = Stopwatch.GetTimestamp();
         var answer = new StringBuilder();
+        var lastInterim = string.Empty;
         var available = new Dictionary<string, CitationDto>(StringComparer.OrdinalIgnoreCase);
         string? finishReason = null, error = null, errorCode = null, provider = null, model = null;
         long? inputTokens = null, outputTokens = null;
@@ -39,6 +40,16 @@ internal static class AgentTurnCapture
                         break;
                     case TextDeltaEvent delta when isOrchestrator:
                         answer.Append(delta.Text);
+                        break;
+
+                    // Scored like the stored answer: text written before tool calls is not part of it.
+                    case StepFinishedEvent { Kind: StepFinishedEvent.Interim } when isOrchestrator:
+                        if (!string.IsNullOrWhiteSpace(answer.ToString()))
+                        {
+                            lastInterim = answer.ToString();
+                        }
+
+                        answer.Clear();
                         break;
                     case ToolCallEvent:
                         toolCalls++;
@@ -74,8 +85,14 @@ internal static class AgentTurnCapture
             errorCode ??= ChatErrorCodes.InternalError;
         }
 
+        var text = answer.ToString().Trim();
+        if (text.Length == 0 && error is null && finishReason != ChatFinishReasons.Stopped)
+        {
+            text = lastInterim.Trim();
+        }
+
         return new AgentTurnResult(
-            answer.ToString().Trim(),
+            text,
             available,
             finishReason,
             error,

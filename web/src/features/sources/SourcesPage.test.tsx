@@ -88,6 +88,19 @@ describe('SourcesPage', () => {
     expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
   });
 
+  it('labels sources with passages that look written to the assistant', async () => {
+    serve({ sources: [sourceDto({ metadata: { suspiciousChunks: '3' } }), sourceDto({ id: 'clean', title: 'Clean notes' })] });
+    renderWithProviders(<SourcesPage />);
+
+    const table = await screen.findByRole('table');
+    const [, flagged, clean] = within(table).getAllByRole('row');
+    expect(within(flagged!).getByText('Suspicious content')).toHaveAttribute(
+      'title',
+      '3 passages look written to the assistant. Read them before you rely on this source.',
+    );
+    expect(within(clean!).queryByText('Suspicious content')).not.toBeInTheDocument();
+  });
+
   it('shows the library counts from the stats, not from the loaded page', async () => {
     serve(
       { sources: [sourceDto()] },

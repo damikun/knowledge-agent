@@ -4,8 +4,10 @@ using System.Text.Json;
 using System.Threading.Channels;
 using KnowledgeAgent.Features.Agents;
 using KnowledgeAgent.Features.Chat.Agents;
+using KnowledgeAgent.Features.Chat.History;
 using KnowledgeAgent.Features.Chat.Live;
 using KnowledgeAgent.Features.Chat.Tools;
+using KnowledgeAgent.Features.Feedback;
 using KnowledgeAgent.Features.Prompts;
 using KnowledgeAgent.Features.Sources;
 using KnowledgeAgent.Infrastructure.AI;
@@ -26,7 +28,8 @@ public sealed record ChatCaller(
     bool HandoverAvailable = false,
     string? StaffId = null,
     Guid? ContactId = null,
-    bool Verified = false)
+    bool Verified = false,
+    bool FeedbackAvailable = true)
 {
     public static readonly ChatCaller Portal = new(ConversationChannel.Portal);
 
@@ -48,9 +51,11 @@ internal sealed class ChatTurnExecutor(
     AgentCatalog catalog,
     AgentRunner runner,
     TitleGenerator titleGenerator,
+    ConversationHistoryBuilder historyBuilder,
     IEnumerable<IFirstAnswerHook> firstAnswerHooks,
     IEnumerable<IVisitorProfile> visitorProfiles,
     IEnumerable<IAgentToolSource> toolSources,
+    IEnumerable<IFeedbackRecorder> feedbackRecorders,
     IOptions<AgentOptions> options,
     TimeProvider timeProvider,
     ILogger<ChatTurnExecutor> logger)
@@ -198,8 +203,10 @@ internal sealed class ChatTurnExecutor(
             ? Task.Run(() => titleGenerator.GenerateAsync(message, cancellationToken), CancellationToken.None)
             : null;
 
-        // Replay previous turns verbatim: prompt caching needs a stable prefix and Claude rejects modified thinking blocks.
-        var history = BuildHistory(conversation);
+        // Built only from stored turns, so every turn starts with the same prefix and the prompt cache keeps working.
+        var replayed = historyBuilder.Build(conversation);
+        var history = replayed.Messages;
+        AgentTelemetry.SetHistory(activity, replayed.Mode.ToString().ToLowerInvariant(), replayed.Turns, replayed.StubbedResults, replayed.EstimatedTokens);
         if (current != agent)
         {
             await UseSystemPromptAsync(history, conversation, request, agent, current, orchestrator, caller, cancellationToken);
@@ -221,6 +228,13 @@ internal sealed class ChatTurnExecutor(
                 : await AnswerConfirmationAsync(pending, request.Confirmation!.Approved, message, orchestrator, turn, cancellationToken);
             history.Add(new ChatMessage(ChatRole.User, prompt));
             await RunTeamAsync(new TeamTurn(conversation, request, caller, agent, current, orchestrator, profile, history, turn, activity, outcome), cancellationToken);
+
+            // The visitor saw that text, so an empty last step must not leave them without an answer.
+            if (outcome.Error is null && string.IsNullOrWhiteSpace(outcome.Answer) && outcome.LastInterimText is { } interim)
+            {
+                AgentLog.AnswerFromInterim(logger, turnId, conversation.Id);
+                outcome.Answer = interim;
+            }
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested && broadcast.StopRequested)
         {
@@ -369,9 +383,13 @@ internal sealed class ChatTurnExecutor(
         return orchestrator with
         {
             ToolNames = orchestrator.ToolNames
-                .Where(tool => tool == ToolNames.RequestHumanHandover
-                    ? !agent.IsBuiltIn && agent.HandoverPolicy != HandoverPolicy.Never && caller.HandoverAvailable
-                    : agent.Tools.Contains(tool))
+                .Where(tool => tool switch
+                {
+                    ToolNames.RequestHumanHandover => !agent.IsBuiltIn && agent.HandoverPolicy != HandoverPolicy.Never && caller.HandoverAvailable,
+                    // Hosts without the feedback feature, such as an isolated eval run, would only offer a tool that fails.
+                    ToolNames.RecordFeedback => agent.Tools.Contains(tool) && caller.FeedbackAvailable && feedbackRecorders.Any(),
+                    _ => agent.Tools.Contains(tool),
+                })
                 .ToList(),
             ExtraTools = extra,
         };
@@ -455,6 +473,9 @@ internal sealed class ChatTurnExecutor(
         else
         {
             var variables = await BuildSystemPromptVariablesAsync(request, current, definition, caller, conversation.SourceIds, cancellationToken);
+
+            // Rendered on every turn, so the date is the conversation's, like the front agent's frozen prompt; today's date would change the cached prefix daily.
+            variables["today"] = conversation.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             variables["frontAgentName"] = front.Name;
             variables["handBackEnabled"] = definition.HandoffTools.Any(tool => tool.Name == ToolNames.TransferBack);
             if (!front.ShowSpecialistName)
@@ -514,6 +535,7 @@ internal sealed class ChatTurnExecutor(
             current = transfer.Back ? front : transfer.Target;
             definition = await AgentForTurnAsync(front, current, caller, allowHandoff: handoffs < MaxHandoffsPerTurn, cancellationToken);
             profile = ProfileFor(request, conversation, front, current);
+            ConversationHistoryBuilder.DropReasoningOfCurrentTurn(history);
             await UseSystemPromptAsync(history, conversation, request, front, current, definition, caller, cancellationToken);
             turn.ScopeSourceIds = await agents.ResolveScopeAsync(current, conversation.SourceIds, cancellationToken);
         }
@@ -657,9 +679,26 @@ internal sealed class ChatTurnExecutor(
             Minus(usage.TotalTokens, before.TotalTokens)));
         sink.Emit(new AgentCompletedEvent(result.FinishReason, result.Iterations));
 
-        outcome.Answer = outcome.Answer.Length > 0 && result.FullText.Length > 0
-            ? outcome.Answer + "\n\n" + result.FullText
-            : outcome.Answer + result.FullText;
+        if (!_options.AnswerIsFinalStep)
+        {
+            outcome.Answer = outcome.Answer.Length > 0 && result.FullText.Length > 0
+                ? outcome.Answer + "\n\n" + result.FullText
+                : outcome.Answer + result.FullText;
+        }
+        else
+        {
+            // The answer is the last step of the agent that answered; after a hand-off the specialist's replaces the front agent's.
+            if (result.FinalText.Length > 0 || result.Error is not null)
+            {
+                outcome.Answer = result.FinalText;
+            }
+
+            if (result.Steps.LastOrDefault(step => step.Interim && !string.IsNullOrWhiteSpace(step.Text)) is { } interim)
+            {
+                outcome.LastInterimText = interim.Text;
+            }
+        }
+
         outcome.Iterations += result.Iterations;
         outcome.FinishReason = result.FinishReason;
         outcome.Error = result.Error;
@@ -880,29 +919,6 @@ internal sealed class ChatTurnExecutor(
         }
     }
 
-    private List<ChatMessage> BuildHistory(Conversation conversation)
-    {
-        var history = new List<ChatMessage>();
-        if (!string.IsNullOrEmpty(conversation.SystemPrompt))
-        {
-            history.Add(new ChatMessage(ChatRole.System, conversation.SystemPrompt));
-        }
-
-        foreach (var previous in conversation.Turns.OrderBy(turn => turn.Sequence))
-        {
-            try
-            {
-                history.AddRange(ChatJson.DeserializeMessages(previous.ModelMessagesJson));
-            }
-            catch (JsonException ex)
-            {
-                AgentLog.HistoryTurnSkipped(logger, ex, previous.Id, conversation.Id);
-            }
-        }
-
-        return history;
-    }
-
     private sealed class TurnOutcome
     {
         public string Answer { get; set; } = string.Empty;
@@ -913,6 +929,8 @@ internal sealed class ChatTurnExecutor(
         public AgentRunError? Error { get; set; }
 
         public string? AnsweredBy { get; set; }
+
+        public string? LastInterimText { get; set; }
 
         public bool Stopped { get; private set; }
 

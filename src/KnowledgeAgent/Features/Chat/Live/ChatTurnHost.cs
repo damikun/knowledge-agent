@@ -134,8 +134,22 @@ public sealed class TurnBroadcast
         return true;
     }
 
-    public string AnswerSoFar() =>
-        string.Concat(Snapshot().OfType<TextDeltaEvent>().Where(item => item.ParentCallId is null).Select(item => item.Text));
+    // The text written since the last interim step: notes written before tool calls are not part of the answer.
+    public string AnswerSoFar()
+    {
+        var events = Snapshot();
+        var start = 0;
+        for (var index = events.Count - 1; index >= 0; index--)
+        {
+            if (events[index] is StepFinishedEvent { Kind: StepFinishedEvent.Interim, ParentCallId: null })
+            {
+                start = index + 1;
+                break;
+            }
+        }
+
+        return string.Concat(events.Skip(start).OfType<TextDeltaEvent>().Where(item => item.ParentCallId is null).Select(item => item.Text));
+    }
 
     public Guid? ConversationId { get; internal set; }
 

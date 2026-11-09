@@ -6,11 +6,14 @@ namespace KnowledgeAgent.Features.Widgets;
 internal static class WidgetChatCaller
 {
     public static ChatCaller ForVisitor(Widget widget, WidgetVisitor visitor) =>
-        new(ConversationChannel.Widget, visitor.Name, widget.Id, visitor.Id, HandoverAvailable: widget.Settings.Behavior.HandoverEnabled);
+        new(ConversationChannel.Widget, visitor.Name, widget.Id, visitor.Id, HandoverAvailable: widget.Settings.Behavior.HandoverEnabled,
+            FeedbackAvailable: widget.Settings.Behavior.FeedbackEnabled);
 
     public static ChatCaller ForPreview(Widget widget, WidgetVisitor visitor) =>
-        new(ConversationChannel.Portal, visitor.Name, widget.Id, visitor.Id, HandoverAvailable: widget.Settings.Behavior.HandoverEnabled);
+        new(ConversationChannel.Portal, visitor.Name, widget.Id, visitor.Id, HandoverAvailable: widget.Settings.Behavior.HandoverEnabled,
+            FeedbackAvailable: widget.Settings.Behavior.FeedbackEnabled);
 
     public static ChatCaller ForTest(Widget widget, string? staffName, string? staffId = null) =>
-        new(ConversationChannel.Portal, staffName, widget.Id, HandoverAvailable: widget.Settings.Behavior.HandoverEnabled, StaffId: staffId);
+        new(ConversationChannel.Portal, staffName, widget.Id, HandoverAvailable: widget.Settings.Behavior.HandoverEnabled, StaffId: staffId,
+            FeedbackAvailable: widget.Settings.Behavior.FeedbackEnabled);
 }

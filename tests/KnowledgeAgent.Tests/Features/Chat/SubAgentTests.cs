@@ -39,10 +39,12 @@ public sealed class SubAgentTests
         researcherEvents.CollapsedTypes().ShouldBe(
         [
             ChatEventTypes.AgentStarted,
+            ChatEventTypes.StepFinished,
             ChatEventTypes.ToolCall,
             ChatEventTypes.ToolResult,
             ChatEventTypes.ReasoningDelta,
             ChatEventTypes.TextDelta,
+            ChatEventTypes.StepFinished,
             ChatEventTypes.AgentCompleted,
         ]);
         researcherEvents.OfType<AgentStartedEvent>().Single().Model.ShouldBe("researcher-model");
@@ -56,7 +58,7 @@ public sealed class SubAgentTests
         delegateResult.IsError.ShouldBeFalse();
         delegateResult.Summary.ShouldBe("Researcher finished after 2 step(s) with 2 citation(s)");
         delegateResult.Citations.Select(c => c.Ref).ShouldBe(["S1", "S2"]);
-        orchestrator.Requests[1].Messages[^1].ToolResults().Single().ResultText()
+        orchestrator.Requests[1].Messages[^1].ToolResults().Single().ResultText().Unwrapped()
             .ShouldBe("Report: Pro plan 10 EUR/month [S1]. Support 24/7 [S2].");
 
         var firstResearcherRequest = researcher.Requests[0];

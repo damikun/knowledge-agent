@@ -85,7 +85,7 @@ internal sealed class FindSourcesTool : IAgentTool
 
         var repository = invocation.Services.GetRequiredService<ISourceRepository>();
         var page = await repository.FindAsync(query, cancellationToken);
-        return new ToolResult(Format(page, query), Summarize(page, query));
+        return new ToolResult(Format(page, query), Summarize(page, query)) { Untrusted = true };
     }
 
     public static string Format(SourcePage page, SourceQuery query)

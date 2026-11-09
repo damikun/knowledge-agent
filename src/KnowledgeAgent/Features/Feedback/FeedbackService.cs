@@ -38,7 +38,8 @@ public sealed record FeedbackAuthorRef(FeedbackAuthor Author, string Key);
 
 public interface IFeedbackRecorder
 {
-    Task<Feedback> RecordFromAgentAsync(Guid conversationId, int sentiment, string comment, CancellationToken cancellationToken = default);
+    // Null when the conversation already has as many notes from the assistant as allowed.
+    Task<Feedback?> RecordFromAgentAsync(Guid conversationId, int sentiment, string comment, int maxPerConversation, CancellationToken cancellationToken = default);
 }
 
 public interface IFeedbackService : IFeedbackRecorder
@@ -129,10 +130,18 @@ internal sealed partial class FeedbackService(
         return saved.ToDto();
     }
 
-    public async Task<Feedback> RecordFromAgentAsync(Guid conversationId, int sentiment, string comment, CancellationToken cancellationToken = default)
+    public const string AgentAuthorKey = "agent";
+
+    public async Task<Feedback?> RecordFromAgentAsync(Guid conversationId, int sentiment, string comment, int maxPerConversation, CancellationToken cancellationToken = default)
     {
         var conversation = await conversations.GetAsync(conversationId, includeTurns: false, cancellationToken)
             ?? throw new InvalidOperationException($"Conversation {conversationId} does not exist.");
+        var recorded = await feedback.ListByAuthorAsync(conversationId, AgentAuthorKey, cancellationToken);
+        if (recorded.Count(item => item.Kind == FeedbackKind.Agent) >= maxPerConversation)
+        {
+            return null;
+        }
+
         var now = timeProvider.GetUtcNow();
         var saved = await feedback.SaveAsync(
             new Feedback
@@ -142,8 +151,8 @@ internal sealed partial class FeedbackService(
                 Kind = FeedbackKind.Agent,
                 Rating = Math.Clamp(sentiment, -1, 1),
                 Comment = comment.Length > Feedback.MaxCommentLength ? comment[..Feedback.MaxCommentLength] : comment,
-                Author = conversation.Channel == ConversationChannel.Widget ? FeedbackAuthor.Visitor : FeedbackAuthor.Staff,
-                AuthorKey = conversation.VisitorId?.ToString() ?? "portal",
+                Author = FeedbackAuthor.Agent,
+                AuthorKey = AgentAuthorKey,
                 WidgetId = conversation.WidgetId,
                 AgentId = conversation.AgentId,
                 CreatedAt = now,

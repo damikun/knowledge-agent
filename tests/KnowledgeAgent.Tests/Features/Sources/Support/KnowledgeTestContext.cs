@@ -89,7 +89,10 @@ internal sealed class KnowledgeTestContext : IAsyncDisposable
     public Task<T> WithSourceServiceAsync<T>(Func<ISourceService, Task<T>> action) =>
         WithScopeAsync(sp => action(sp.GetRequiredService<ISourceService>()));
 
-    public Task<IReadOnlyList<KnowledgeSearchHit>> SearchAsync(KnowledgeSearchRequest request) =>
+    public async Task<IReadOnlyList<KnowledgeSearchHit>> SearchAsync(KnowledgeSearchRequest request) =>
+        (await SearchResultAsync(request)).Hits;
+
+    public Task<KnowledgeSearchResult> SearchResultAsync(KnowledgeSearchRequest request) =>
         WithScopeAsync(sp => sp.GetRequiredService<IKnowledgeSearch>().SearchAsync(request, TestContext.Current.CancellationToken));
 
     public async Task<Source> SeedAsync(Source source, SourceContent? content = null)

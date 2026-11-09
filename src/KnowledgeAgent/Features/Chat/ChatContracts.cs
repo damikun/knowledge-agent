@@ -33,6 +33,8 @@ public static class ChatEventTypes
     public const string Done = "done";
     public const string ConfirmationRequired = "confirmation-required";
     public const string AgentTransfer = "agent-transfer";
+    public const string HandoverOffered = "handover-offered";
+    public const string StepFinished = "step-finished";
 }
 
 public abstract record ChatStreamEvent
@@ -61,6 +63,20 @@ public sealed record TextDeltaEvent(string Text) : ChatStreamEvent
 {
     [JsonIgnore]
     public override string EventType => ChatEventTypes.TextDelta;
+
+    // The model call that wrote the text; numbered per turn, so a new number starts a new paragraph.
+    public int Step { get; init; }
+}
+
+// Ends one model call. "interim": tools run next, so its text was a note on the way and is not the answer.
+// "final": its text is the agent's answer. Clients that ignore this event see every step's text, as before.
+public sealed record StepFinishedEvent(int Step, string Kind) : ChatStreamEvent
+{
+    public const string Interim = "interim";
+    public const string Final = "final";
+
+    [JsonIgnore]
+    public override string EventType => ChatEventTypes.StepFinished;
 }
 
 public sealed record ReasoningDeltaEvent(string Text) : ChatStreamEvent
@@ -97,6 +113,18 @@ public sealed record ConfirmationRequiredEvent(
 {
     [JsonIgnore]
     public override string EventType => ChatEventTypes.ConfirmationRequired;
+
+    public IReadOnlyList<ConfirmationDetailDto> Details { get; init; } = [];
+}
+
+// One argument of an action that waits for Confirm, in words the person can check.
+public sealed record ConfirmationDetailDto(string Label, string Value);
+
+// The agent offered a person; the visitor asks for one with the widget's own button.
+public sealed record HandoverOfferedEvent(string CallId) : ChatStreamEvent
+{
+    [JsonIgnore]
+    public override string EventType => ChatEventTypes.HandoverOffered;
 }
 
 public sealed record AgentTransferEvent(string CallId, Guid? ToAgentId, string ToAgent, string ToAgentName, string Reason, bool Back) : ChatStreamEvent
@@ -152,10 +180,15 @@ public sealed record ToolCallDto(
     public string? Result { get; init; }
 
     public ToolCallConfirmationDto? Confirmation { get; init; }
+
+    // What the agent wrote before this call, on the first call of a step only.
+    public string? Preamble { get; init; }
 }
 
 public sealed record ToolCallConfirmationDto(string Status, string Title, string? Connection, DateTimeOffset ExpiresAt)
 {
+    public IReadOnlyList<ConfirmationDetailDto>? Details { get; init; }
+
     public const string Pending = "pending";
     public const string Confirmed = "confirmed";
     public const string Declined = "declined";

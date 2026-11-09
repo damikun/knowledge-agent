@@ -20,6 +20,10 @@ public sealed class McpOptions
 
     public int ToolListRefreshMinutes { get; set; } = 10;
     public int ToolListRefreshTimeoutSeconds { get; set; } = 5;
+
+    public int MaxCallsPerTurn { get; set; } = 6;
+    public int MaxAutoCallsPerTurn { get; set; } = 3;
+    public int MaxConfirmationsPerTurn { get; set; } = 1;
 }
 
 // Same private-network rule as source fetching, with no redirects and no proxy so the address check can't be

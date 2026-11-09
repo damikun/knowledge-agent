@@ -3,7 +3,8 @@ import type { Guid, IsoDateTime } from '../../lib/types';
 /** answer: thumbs (1 or -1); conversation: stars (1 to 5); agent: noted by the assistant (-1, 0 or 1). */
 export type FeedbackKind = 'answer' | 'conversation' | 'agent';
 
-type FeedbackAuthor = 'visitor' | 'staff';
+// agent: a note the assistant wrote from the chat, which nobody confirmed.
+type FeedbackAuthor = 'visitor' | 'staff' | 'agent';
 
 /** A null widget is the portal chat. */
 export interface FeedbackSummaryDto {

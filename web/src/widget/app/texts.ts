@@ -6,6 +6,7 @@ export const DEFAULT_TEXTS = {
   newChat: 'New chat',
   endChat: 'End chat',
   talkToPerson: 'Talk to a person',
+  handoverOffer: 'Want someone from the team to take over?',
   waitingForPerson: 'Waiting for someone from the team to join.',
   keepChatting: 'Keep chatting with the assistant',
   personJoined: 'You are chatting with {name}.',

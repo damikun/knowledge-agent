@@ -112,4 +112,7 @@ public interface IEvalTarget : IAsyncDisposable
 
 public sealed record EvalItemOutcome(EvalItemResultDto Result, string? RootSpanId);
 
-public sealed record RetrievalResult(IReadOnlyList<KnowledgeSearchHit> Hits, string? Error);
+public sealed record RetrievalResult(IReadOnlyList<KnowledgeSearchHit> Hits, string? Error)
+{
+    public IReadOnlyList<string> Degraded { get; init; } = [];
+}

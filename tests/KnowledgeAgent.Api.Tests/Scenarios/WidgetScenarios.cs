@@ -172,7 +172,7 @@ public abstract class WidgetScenarios(AppFixture fixture)
 
         var stream = await SendAsync(app, widget.PublicKey, session.Token, new VisitorMessageRequest($"How long is the {marker} return window?"));
         stream.Errors.ShouldBeEmpty(stream.Describe());
-        stream.Types.Distinct().ShouldBeSubsetOf([ChatEventTypes.Conversation, ChatEventTypes.ToolCall, ChatEventTypes.ToolResult, ChatEventTypes.TextDelta, ChatEventTypes.Done]);
+        stream.Types.Distinct().ShouldBeSubsetOf([ChatEventTypes.Conversation, ChatEventTypes.ToolCall, ChatEventTypes.ToolResult, ChatEventTypes.TextDelta, ChatEventTypes.StepFinished, ChatEventTypes.Done]);
         stream.All<ToolCallEvent>(ChatEventTypes.ToolCall).ShouldAllBe(call => call.Arguments == null);
         var results = stream.All<ToolResultEvent>(ChatEventTypes.ToolResult);
         results.ShouldNotBeEmpty(stream.Describe());

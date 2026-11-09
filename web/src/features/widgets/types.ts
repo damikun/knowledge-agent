@@ -166,4 +166,5 @@ export interface WidgetPreviewConfig {
   contactCapture: string;
   texts: Record<string, string>;
   maxMessageLength: number;
+  linkHosts?: string[];
 }

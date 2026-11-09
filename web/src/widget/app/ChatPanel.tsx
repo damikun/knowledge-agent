@@ -88,6 +88,8 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
   const showSuggestions = config.suggestedQuestions.length > 0 && messages.length === 0 && !pending && !state.followed && !needsContact;
   const canHandOver =
     config.handoverEnabled && state.conversationId !== null && status === 'ai' && state.phase === 'ready' && !answering && !contactPrompt;
+  // The offer bar has the same button.
+  const showHandoverButton = canHandOver && !state.handoverOffered;
 
   // Stable, so typing doesn't re-render the message list.
   const send = useCallback(
@@ -211,8 +213,14 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
         </div>
       </div>
       <div className={clsx('shrink-0', !config.showFooter && 'pb-3')}>
-        <StatusBars state={state} session={session} answering={answering} onLeftQueue={focusComposer} />
-        {canHandOver ? (
+        <StatusBars
+          state={state}
+          session={session}
+          answering={answering}
+          onLeftQueue={focusComposer}
+          {...(canHandOver ? { onAskForPerson: () => void askForPerson() } : {})}
+        />
+        {showHandoverButton ? (
           <div className="px-4 pt-2">
             <button
               type="button"

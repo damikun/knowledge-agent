@@ -60,7 +60,7 @@ internal sealed class InMemoryAgentRepository : IAgentRepository
                 Enabled = app.Enabled,
                 Mode = app.Mode,
                 ChangesPolicy = app.ChangesPolicy,
-                Tools = app.Tools.Select(tool => new AgentMcpTool { Name = tool.Name, Policy = tool.Policy }).ToList(),
+                Tools = app.Tools.Select(tool => new AgentMcpTool { Name = tool.Name, Policy = tool.Policy, Fingerprint = tool.Fingerprint, Approved = tool.Approved }).ToList(),
             })
             .ToList(),
         McpServerEnabled = agent.McpServerEnabled,

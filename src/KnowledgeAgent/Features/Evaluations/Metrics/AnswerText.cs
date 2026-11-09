@@ -46,6 +46,21 @@ public static partial class AnswerText
             .Any(alternative => ContainsOnBoundaries(text, alternative));
     }
 
+    // Whether the answer says the knowledge base does not answer the question, in the usual ways models phrase it.
+    public static bool Declines(string? answer) =>
+        !string.IsNullOrWhiteSpace(answer) && DeclinePatterns().Any(pattern => pattern.IsMatch(Normalize(answer)));
+
+    private static IEnumerable<Regex> DeclinePatterns()
+    {
+        yield return NotFound();
+        yield return DoesNotSay();
+        yield return HasNoInformation();
+        yield return NoInformationAbout();
+        yield return NotInTheSources();
+        yield return NoSource();
+        yield return DoNotKnow();
+    }
+
     private static bool ContainsOnBoundaries(string text, string value)
     {
         for (var index = text.IndexOf(value, StringComparison.Ordinal); index >= 0; index = text.IndexOf(value, index + 1, StringComparison.Ordinal))
@@ -128,6 +143,12 @@ public static partial class AnswerText
         var builder = new StringBuilder(value.Length);
         foreach (var character in value.Normalize(NormalizationForm.FormKC))
         {
+            // Markdown emphasis, so "**27** days" reads as "27 days".
+            if (character == '*')
+            {
+                continue;
+            }
+
             builder.Append(character switch
             {
                 '‐' or '‑' or '‒' or '–' or '—' or '―' or '−' => '-',
@@ -170,6 +191,27 @@ public static partial class AnswerText
 
     [GeneratedRegex(@"\s+")]
     private static partial Regex Whitespace();
+
+    [GeneratedRegex(@"\b(?:could ?n't|could not|can't|cannot|can not|did ?n't|did not|was ?n't able to|was not able to|were not able to|am not able to|(?:was |am |were )?unable to)\s+(?:find|locate|identify|see|confirm)\b")]
+    private static partial Regex NotFound();
+
+    [GeneratedRegex(@"\b(?:does ?n't|does not|do ?n't|do not|did ?n't|did not)\s+(?:give|say|mention|contain|cover|include|list|state|specify|provide|document|describe|name|show|have)\b")]
+    private static partial Regex DoesNotSay();
+
+    [GeneratedRegex(@"\b(?:has|have|had|contains?|there is|there's|there are|i found|found)\s+no\s+(?:\w+\s+)?(?:information|info|details?|mention|records?|data|documentation|sources?|passages?|answer)\b")]
+    private static partial Regex HasNoInformation();
+
+    [GeneratedRegex(@"\bno\s+(?:\w+\s+)?(?:information|info|details|mention|records?|data|documentation)\s+(?:on|about|of|regarding|for|in)\b")]
+    private static partial Regex NoInformationAbout();
+
+    [GeneratedRegex(@"(?:\bnot|n't)\s+(?:\w+\s+)?(?:in|covered|mentioned|documented|listed|included|available|found|specified|stated|described)\s+(?:in|by|anywhere in)?\s*(?:the|your|our|any of the|any)?\s*(?:knowledge base|knowledge|documents?|docs|documentation|sources?|corpus|passages?|materials?)\b")]
+    private static partial Regex NotInTheSources();
+
+    [GeneratedRegex(@"\bno\s+(?:\w+\s+)?sources?\b")]
+    private static partial Regex NoSource();
+
+    [GeneratedRegex(@"\bi\s+(?:do ?n't|do not)\s+know\b")]
+    private static partial Regex DoNotKnow();
 
     [GeneratedRegex(@"(?<=\d),(?=\d{3}(?!\d))")]
     private static partial Regex ThousandsSeparator();

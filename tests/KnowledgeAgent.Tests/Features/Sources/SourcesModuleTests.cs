@@ -127,7 +127,7 @@ public sealed class SourcesModuleTests
             await using (var scope = host.Services.CreateAsyncScope())
             {
                 var search = scope.ServiceProvider.GetRequiredService<IKnowledgeSearch>();
-                var hits = await search.SearchAsync(new KnowledgeSearchRequest("release train Thursday sign-off", TopK: 3), Ct);
+                var hits = (await search.SearchAsync(new KnowledgeSearchRequest("release train Thursday sign-off", TopK: 3), Ct)).Hits;
                 hits[0].SourceId.ShouldBe(text.Id);
                 hits[0].SourceTitle.ShouldBe("Release plan");
             }

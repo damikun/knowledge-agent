@@ -21,11 +21,66 @@ function run(events: ChatEvent[], state: ChatState = createChatState()): ChatSta
 }
 
 describe('chatReducer', () => {
+  it('moves a note written before tool calls from the answer to the call it introduced', () => {
+    const state = run([
+      ev('text-delta', { text: "I'll check the handbook.", step: 1 }),
+      ev('step-finished', { step: 1, kind: 'interim' }),
+      ev('tool-call', { callId: 'c1', toolName: 'search_knowledge_base', arguments: { query: 'vacation' } }),
+      ev('tool-call', { callId: 'c2', toolName: 'grep_sources', arguments: { pattern: 'vacation' } }),
+      ev('tool-result', { callId: 'c1', toolName: 'search_knowledge_base', isError: false, summary: '', durationMs: 5, citations: [citationS1] }),
+      ev('tool-result', { callId: 'c2', toolName: 'grep_sources', isError: false, summary: '', durationMs: 5, citations: [] }),
+      ev('text-delta', { text: 'You get 25 days [S1].', step: 2 }),
+      ev('step-finished', { step: 2, kind: 'final' }),
+      ev('done', { conversationId: CONVERSATION_ID, turnId: TURN_ID, finishReason: 'stop' }),
+    ]);
+    const turn = state.turns[0]!;
+    expect(turn.text).toBe('You get 25 days [S1].');
+    expect(turn.tools.map((tool) => tool.preamble ?? null)).toEqual(["I'll check the handbook.", null]);
+  });
+
+  it('keeps the last note as the answer when the last step wrote nothing, like the stored answer', () => {
+    const state = run([
+      ev('text-delta', { text: 'You get 25 days [S1].', step: 1 }),
+      ev('step-finished', { step: 1, kind: 'interim' }),
+      ev('tool-call', { callId: 'c1', toolName: 'search_knowledge_base', arguments: null }),
+      ev('tool-result', { callId: 'c1', toolName: 'search_knowledge_base', isError: false, summary: '', durationMs: 5, citations: [] }),
+      ev('step-finished', { step: 2, kind: 'final' }),
+      ev('done', { conversationId: CONVERSATION_ID, turnId: TURN_ID, finishReason: 'stop' }),
+    ]);
+    expect(state.turns[0]!.text).toBe('You get 25 days [S1].');
+  });
+
+  it("leaves a sub-agent's notes in its report", () => {
+    const state = run([
+      ev('tool-call', { callId: 'r1', toolName: 'delegate_research', arguments: { task: 'vacation' } }),
+      ev('text-delta', { agent: 'researcher', parentCallId: 'r1', text: 'Searching first.', step: 2 }),
+      ev('step-finished', { agent: 'researcher', parentCallId: 'r1', step: 2, kind: 'interim' }),
+    ]);
+    expect(state.turns[0]!.tools[0]!.subAgent?.text).toBe('Searching first.');
+  });
+
   it('starts a streaming turn on send', () => {
     const state = chatReducer(createChatState(), { type: 'send', id: 'local-1', message: 'Hi', at: 5 });
     expect(state.streaming).toBe(true);
     expect(state.turns).toHaveLength(1);
     expect(state.turns[0]).toMatchObject({ id: 'local-1', key: 'local-1', userMessage: 'Hi', status: 'streaming', persisted: false, startedAt: 5 });
+  });
+
+  it('reads the note of a stored tool call', () => {
+    const [tool] = buildToolTree([
+      {
+        callId: 'c1',
+        toolName: 'search_knowledge_base',
+        agent: 'orchestrator',
+        parentCallId: null,
+        arguments: null,
+        summary: '',
+        isError: false,
+        durationMs: 1,
+        preamble: 'Checking.',
+      },
+    ]);
+    expect(tool!.preamble).toBe('Checking.');
   });
 
   it('folds a full event sequence (search, nested researcher, answer, title update, done) into one turn', () => {
@@ -105,7 +160,14 @@ describe('chatReducer', () => {
     const state = run([
       ev('tool-call', { callId: 'call-research', toolName: 'delegate_research', arguments: { task: 'x' } }),
       ev('error', { agent: 'researcher', parentCallId: 'call-research', message: 'Researcher timed out', code: 'provider_error' }),
-      ev('tool-result', { callId: 'call-research', toolName: 'delegate_research', isError: true, summary: 'Research failed', durationMs: 120000, citations: [] }),
+      ev('tool-result', {
+        callId: 'call-research',
+        toolName: 'delegate_research',
+        isError: true,
+        summary: 'Research failed',
+        durationMs: 120000,
+        citations: [],
+      }),
       ev('error', { message: 'The model provider returned an error.', code: 'provider_error' }),
       ev('done', { conversationId: CONVERSATION_ID, turnId: TURN_ID, finishReason: 'error' }),
     ]);
@@ -128,7 +190,10 @@ describe('chatReducer', () => {
   });
 
   it('marks a stream that ends without done as interrupted', () => {
-    let state = run([ev('text-delta', { text: 'Partial' }), ev('tool-call', { callId: 'c1', toolName: 'search_knowledge_base', arguments: { query: 'q' } })]);
+    let state = run([
+      ev('text-delta', { text: 'Partial' }),
+      ev('tool-call', { callId: 'c1', toolName: 'search_knowledge_base', arguments: { query: 'q' } }),
+    ]);
     state = chatReducer(state, { type: 'stream-ended', at: 9_000 });
     const turn = state.turns[0]!;
     expect(turn.status).toBe('error');
@@ -154,7 +219,10 @@ describe('chatReducer', () => {
   it('records client-side failures (HTTP errors) on the turn', () => {
     let state = chatReducer(createChatState(), { type: 'send', id: 'l', message: 'Hi', at: 0 });
     state = chatReducer(state, { type: 'failed', message: 'Message: The message must not be empty.', at: 10 });
-    expect(state.turns[0]).toMatchObject({ status: 'error', errors: [{ message: 'Message: The message must not be empty.', code: null, agent: 'orchestrator' }] });
+    expect(state.turns[0]).toMatchObject({
+      status: 'error',
+      errors: [{ message: 'Message: The message must not be empty.', code: null, agent: 'orchestrator' }],
+    });
   });
 
   it('creates a placeholder card for nested events whose parent call is unknown', () => {
@@ -197,11 +265,22 @@ describe('chatReducer', () => {
       ev('done', { conversationId: CONVERSATION_ID, turnId: TURN_ID, finishReason: 'stopped' }),
     ]);
     expect(state.streaming).toBe(false);
-    expect(state.turns[0]).toMatchObject({ status: 'cancelled', id: TURN_ID, persisted: true, finishReason: 'stopped', text: 'New employees get', errors: [] });
+    expect(state.turns[0]).toMatchObject({
+      status: 'cancelled',
+      id: TURN_ID,
+      persisted: true,
+      finishReason: 'stopped',
+      text: 'New employees get',
+      errors: [],
+    });
     expect(state.turns[0]!.tools[0]!.status).toBe('cancelled');
 
     let followed = chatReducer(createChatState(), { type: 'follow', turnId: TURN_ID, message: 'Hi', at: 0 });
-    followed = chatReducer(followed, { type: 'event', event: ev('done', { conversationId: CONVERSATION_ID, turnId: TURN_ID, finishReason: 'stopped' }), at: 1 });
+    followed = chatReducer(followed, {
+      type: 'event',
+      event: ev('done', { conversationId: CONVERSATION_ID, turnId: TURN_ID, finishReason: 'stopped' }),
+      at: 1,
+    });
     expect(followed.turns[0]!.status).toBe('cancelled');
   });
 
@@ -217,9 +296,36 @@ describe('chatReducer', () => {
 describe('history mapping', () => {
   it('rebuilds nested tool calls from the flat persisted list', () => {
     const tree = buildToolTree([
-      { callId: 'a', toolName: 'search_knowledge_base', agent: 'orchestrator', parentCallId: null, arguments: { query: 'q' }, summary: 'ok', isError: false, durationMs: 10 },
-      { callId: 'b', toolName: 'delegate_research', agent: 'orchestrator', parentCallId: null, arguments: { task: 't' }, summary: 'done', isError: false, durationMs: 30 },
-      { callId: 'c', toolName: 'read_source', agent: 'researcher', parentCallId: 'b', arguments: { source_id: 's' }, summary: 'read', isError: true, durationMs: 5 },
+      {
+        callId: 'a',
+        toolName: 'search_knowledge_base',
+        agent: 'orchestrator',
+        parentCallId: null,
+        arguments: { query: 'q' },
+        summary: 'ok',
+        isError: false,
+        durationMs: 10,
+      },
+      {
+        callId: 'b',
+        toolName: 'delegate_research',
+        agent: 'orchestrator',
+        parentCallId: null,
+        arguments: { task: 't' },
+        summary: 'done',
+        isError: false,
+        durationMs: 30,
+      },
+      {
+        callId: 'c',
+        toolName: 'read_source',
+        agent: 'researcher',
+        parentCallId: 'b',
+        arguments: { source_id: 's' },
+        summary: 'read',
+        isError: true,
+        durationMs: 5,
+      },
     ]);
     expect(tree.map((t) => t.callId)).toEqual(['a', 'b']);
     expect(tree[1]!.children.map((t) => t.callId)).toEqual(['c']);
@@ -243,7 +349,11 @@ describe('history mapping', () => {
   });
 
   it('maps a stored stopped turn to a stopped view with its text', () => {
-    expect(turnFromDto(turnDto({ assistantMessage: 'You get', finishReason: 'stopped' }))).toMatchObject({ status: 'cancelled', text: 'You get', errors: [] });
+    expect(turnFromDto(turnDto({ assistantMessage: 'You get', finishReason: 'stopped' }))).toMatchObject({
+      status: 'cancelled',
+      text: 'You get',
+      errors: [],
+    });
     expect(turnFromDto(turnDto({ finishReason: 'cancelled' })).status).toBe('cancelled');
     expect(turnFromDto(turnDto({ finishReason: 'stopped', error: 'The answer could not be saved.' })).status).toBe('error');
   });
@@ -260,7 +370,10 @@ describe('history mapping', () => {
   });
 
   it('indexes citations across the conversation', () => {
-    const index = citationIndex([turnFromDto(turnDto({ citations: [citationS1] })), turnFromDto(turnDto({ id: 'x', citations: [citationS2, citationS3] }))]);
+    const index = citationIndex([
+      turnFromDto(turnDto({ citations: [citationS1] })),
+      turnFromDto(turnDto({ id: 'x', citations: [citationS2, citationS3] })),
+    ]);
     expect([...index.keys()]).toEqual(['S1', 'S2', 'S3']);
   });
 });

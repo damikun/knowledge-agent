@@ -10,6 +10,7 @@ public static class EvalMetricLabels
         [EvalMetrics.RetrievalRecallAt10] = "Retrieval recall@10",
         [EvalMetrics.RetrievalMrrAt10] = "Retrieval MRR@10",
         [EvalMetrics.AgentSourceRecall] = "Sources found by agent",
+        [EvalMetrics.AnsweredWithCitation] = "Answered with a citation",
         [EvalMetrics.CitationValidity] = "Valid citations",
         [EvalMetrics.CitationSourceRecall] = "Expected sources cited",
         [EvalMetrics.CitationPrecision] = "Citation precision",

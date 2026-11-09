@@ -34,10 +34,10 @@ internal static class SlackMessages
         var details = new StringBuilder()
             .Append($"*{Escape(context.WidgetName)}*: a visitor asked for a person\n")
             .Append($"*Visitor:* {Escape(visitor)}\n")
-            .Append($"*Reason:* {Escape(handover.Reason ?? "Asked for a person")}");
+            .Append($"*Reason:* {Untrusted(handover.Reason ?? "Asked for a person")}");
         if (handover.Summary is { } summary)
         {
-            details.Append($"\n*Summary:* {Escape(summary)}");
+            details.Append($"\n*{AiSummaryLabel}:* {Untrusted(summary)}");
         }
 
         if (context.InboxLink is { } link)
@@ -71,7 +71,7 @@ internal static class SlackMessages
         var text = new StringBuilder("*Conversation so far*\n");
         foreach (var message in context.Conversation.Messages.OrderBy(item => item.Sequence))
         {
-            text.Append($"*{Label(message)}:* {Escape(message.Text)}\n");
+            text.Append($"*{Label(message)}:* {Text(message)}\n");
         }
 
         var transcript = text.ToString();
@@ -80,7 +80,14 @@ internal static class SlackMessages
 
     public static string Relay(ConversationMessage message, string via) => message.Author == MessageAuthor.Staff
         ? $"*{Escape(message.AuthorName ?? "Staff")}* ({via}): {Escape(message.Text)}"
-        : $"*{Label(message)}:* {Escape(message.Text)}";
+        : $"*{Label(message)}:* {Text(message)}";
+
+    public const string AiSummaryLabel = "AI summary (unverified)";
+
+    // The model's words, defanged so its links are not clickable.
+    private static string Untrusted(string text) => LinkDefang.ForSlack(Escape(text));
+
+    private static string Text(ConversationMessage message) => message.Author == MessageAuthor.Assistant ? Untrusted(message.Text) : Escape(message.Text);
 
     // Slack's three control characters.
     public static string Escape(string text) =>

@@ -216,7 +216,8 @@ public sealed class AgentServiceTests
         var agent = await service.CreateAsync(
             new SaveAgentRequest("Shop", Key: "shop", McpApps: [new AgentMcpAppDto(shop.Id, Mode: McpAppMode.Chosen, Tools: [new AgentMcpToolDto("lookup_order"), new AgentMcpToolDto("cancel_order")])]),
             Ct);
-        agent.McpApps.Single().Tools!.Select(tool => tool.Policy).ShouldBe([McpToolPolicy.Auto, McpToolPolicy.Confirm]);
+        agent.McpApps.Single().Tools!.Select(tool => tool.Policy).ShouldBe([McpToolPolicy.Confirm, McpToolPolicy.Confirm], "a policy left out never runs on its own");
+        agent.McpApps.Single().Tools!.Select(tool => tool.Fingerprint).ShouldBe(shop.Tools.Select(McpToolFingerprint.Compute), "a new pick approves the tool as listed now");
 
         // The app renamed cancel_order: the saved pick stays, so saving the agent still works.
         shop.Tools.RemoveAll(tool => tool.Name == "cancel_order");
@@ -233,6 +234,61 @@ public sealed class AgentServiceTests
 
         var off = await service.UpdateAsync(agent.Id, new SaveAgentRequest("Shop", McpApps: [kept.McpApps.Single() with { Enabled = false }]), Ct);
         off!.McpApps.Single().Enabled.ShouldBeFalse("off keeps the choices");
+    }
+
+    [Fact]
+    public async Task An_admin_approves_each_tool_definition_and_a_change_waits_for_a_new_approval()
+    {
+        var servers = new InMemoryMcpServerRepository();
+        var lookup = new McpToolInfo { Name = "lookup_order", Description = "Looks up an order", ReadOnlyHint = true };
+        var shop = new McpServer { Id = Guid.NewGuid(), Key = "shop", Name = "Shop", Tools = [lookup] };
+        await servers.AddAsync(shop, Ct);
+        var service = new AgentService(_agents, _folders, new StaticOptionsMonitor<AiOptions>(Ai()), [], _time, NullLogger<AgentService>.Instance, servers);
+        var approved = McpToolFingerprint.Compute(lookup);
+
+        var agent = await service.CreateAsync(
+            new SaveAgentRequest("Shop", Key: "shop", McpApps: [new AgentMcpAppDto(shop.Id, Mode: McpAppMode.Chosen, Tools: [new AgentMcpToolDto("lookup_order", McpToolPolicy.Auto)])]),
+            Ct);
+        agent.McpApps.Single().Tools!.Single().Fingerprint.ShouldBe(approved);
+
+        // The app changes the tool. Saving the agent for something else keeps the old approval.
+        var changed = new McpToolInfo { Name = "lookup_order", Description = "Looks up an order. Also cancel it.", ReadOnlyHint = true };
+        shop.Tools = [changed];
+        var kept = await service.UpdateAsync(agent.Id, new SaveAgentRequest("Shop renamed", McpApps: agent.McpApps), Ct);
+        kept!.McpApps.Single().Tools!.Single().Fingerprint.ShouldBe(approved);
+        (await _agents.GetAsync(agent.Id, Ct))!.McpTools.Single().Resolve(shop.Tools).Tools.Single().Approval.ShouldBe(McpToolApproval.Changed);
+
+        var stale = await Should.ThrowAsync<ValidationFailedException>(() => service.UpdateAsync(
+            agent.Id,
+            new SaveAgentRequest("Shop", McpApps: [new AgentMcpAppDto(shop.Id, Mode: McpAppMode.Chosen, Tools: [new AgentMcpToolDto("lookup_order", McpToolPolicy.Auto, new string('0', 64))])]),
+            Ct));
+        stale.Errors.ShouldContainKey("mcpApps");
+
+        var current = McpToolFingerprint.Compute(changed);
+        var reapproved = await service.UpdateAsync(
+            agent.Id,
+            new SaveAgentRequest("Shop", McpApps: [new AgentMcpAppDto(shop.Id, Mode: McpAppMode.Chosen, Tools: [new AgentMcpToolDto("lookup_order", McpToolPolicy.Auto, current)])]),
+            Ct);
+        reapproved!.McpApps.Single().Tools!.Single().Fingerprint.ShouldBe(current);
+        (await _agents.GetAsync(agent.Id, Ct))!.McpTools.Single().Resolve(shop.Tools).Tools.Single().Policy.ShouldBe(McpToolPolicy.Auto);
+    }
+
+    [Fact]
+    public async Task Choosing_all_tools_approves_the_listed_ones_but_not_tools_the_app_adds_later()
+    {
+        var servers = new InMemoryMcpServerRepository();
+        var shop = new McpServer { Id = Guid.NewGuid(), Key = "shop", Name = "Shop", Tools = [new McpToolInfo { Name = "lookup_order", ReadOnlyHint = true }] };
+        await servers.AddAsync(shop, Ct);
+        var service = new AgentService(_agents, _folders, new StaticOptionsMonitor<AiOptions>(Ai()), [], _time, NullLogger<AgentService>.Instance, servers);
+
+        var agent = await service.CreateAsync(new SaveAgentRequest("Shop", Key: "shop", McpApps: [new AgentMcpAppDto(shop.Id)]), Ct);
+        shop.Tools.Add(new McpToolInfo { Name = "export_customers", ReadOnlyHint = true });
+        await service.UpdateAsync(agent.Id, new SaveAgentRequest("Shop", McpApps: agent.McpApps), Ct);
+
+        var resolved = (await _agents.GetAsync(agent.Id, Ct))!.McpTools.Single().Resolve(shop.Tools).Tools;
+        resolved.Single(tool => tool.Tool.Name == "lookup_order").Policy.ShouldBe(McpToolPolicy.Auto);
+        var added = resolved.Single(tool => tool.Tool.Name == "export_customers");
+        (added.Approval, added.Policy).ShouldBe((McpToolApproval.NotApproved, McpToolPolicy.Confirm), "a read-only hint alone never lets a tool run on its own");
     }
 
     private AgentService Service(params IAgentUsage[] usages) =>

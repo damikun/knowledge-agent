@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using KnowledgeAgent.Features.Agents;
 using KnowledgeAgent.Features.Chat;
+using KnowledgeAgent.Features.Chat.Agents;
 using KnowledgeAgent.Features.Chat.Tools;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,11 +56,20 @@ internal sealed partial class McpToolSource(
                 LogToolSkipped(logger, name, server.Key, agent.Key);
             }
 
-            foreach (var (info, policy) in offered)
+            foreach (var (info, policy, approval) in offered)
             {
+                if (approval != McpToolApproval.Approved)
+                {
+                    LogNeedsApproval(logger, info.Name, server.Key, agent.Key, approval);
+                    GuardTelemetry.Record(
+                        Activity.Current,
+                        approval == McpToolApproval.Changed ? GuardTelemetry.Reasons.McpDefinitionChanged : GuardTelemetry.Reasons.McpNotApproved,
+                        McpToolNames.For(server.Key, info.Name));
+                }
+
                 if (Allows(policy, caller) && names.Add(McpToolNames.For(server.Key, info.Name)))
                 {
-                    tools.Add(new McpAgentTool(server, info, policy, pool, options.CurrentValue));
+                    tools.Add(new McpAgentTool(server, info, policy, pool, options.CurrentValue, McpAgentTool.SafetyOf(info, approval)));
                 }
             }
         }
@@ -101,6 +112,10 @@ internal sealed partial class McpToolSource(
     [LoggerMessage(Level = LogLevel.Information, Message = "Skipped tool {Tool} of MCP server {Server} for agent {Agent}: the server no longer lists it")]
     private static partial void LogToolSkipped(ILogger logger, string tool, string server, string agent);
 
+    [LoggerMessage(Level = LogLevel.Information,
+        Message = "Tool {Tool} of MCP server {Server} needs approval for agent {Agent} ({Approval}); it runs only after the person confirms")]
+    private static partial void LogNeedsApproval(ILogger logger, string tool, string server, string agent, McpToolApproval approval);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Saving the refreshed tools of MCP server {ServerId} failed")]
     private static partial void LogSaveFailed(ILogger logger, Exception exception, Guid serverId);
 }
@@ -121,14 +136,22 @@ internal sealed class McpAgentTool : IAgentTool
     private readonly McpToolPolicy _policy;
     private readonly McpClientPool _pool;
     private readonly McpOptions _options;
+    private readonly McpCallSafety _safety;
 
-    public McpAgentTool(McpServer server, McpToolInfo tool, McpToolPolicy policy, McpClientPool pool, McpOptions options)
+    public McpAgentTool(
+        McpServer server,
+        McpToolInfo tool,
+        McpToolPolicy policy,
+        McpClientPool pool,
+        McpOptions options,
+        McpCallSafety safety = McpCallSafety.SideEffects)
     {
         _server = server;
         _tool = tool;
         _policy = policy;
         _pool = pool;
         _options = options;
+        _safety = safety;
         Name = McpToolNames.For(server.Key, tool.Name);
         var description = $"{tool.Title ?? tool.Name}, from {server.Name}. {tool.Description}".Trim();
         if (NeedsConfirmation)
@@ -149,25 +172,57 @@ internal sealed class McpAgentTool : IAgentTool
 
     public string ServerName => _server.Name;
 
+    // The hints are the server's claim, so they count only in the definition an admin approved.
+    internal static McpCallSafety SafetyOf(McpToolInfo tool, McpToolApproval approval) =>
+        approval == McpToolApproval.Approved && (tool.ReadOnlyHint == true || tool.IdempotentHint == true)
+            ? McpCallSafety.RetrySafe
+            : McpCallSafety.SideEffects;
+
     public async Task<ToolResult> InvokeAsync(ToolInvocation invocation, CancellationToken cancellationToken)
     {
+        var turn = invocation.Turn;
         if (NeedsConfirmation && !invocation.Confirmed)
         {
+            if (!turn.TryTakeBudget(TurnBudgets.McpConfirm, _options.MaxConfirmationsPerTurn))
+            {
+                return TurnBudgets.LimitReached(Name, TurnBudgets.McpConfirm);
+            }
+
             return new ToolResult(WaitingText, WaitingSummary)
             {
-                Confirmation = new ToolConfirmationPrompt(_tool.Title ?? _tool.Name, _server.Name),
+                Confirmation = new ToolConfirmationPrompt(_tool.Title ?? _tool.Name, _server.Name)
+                {
+                    Details = McpConfirmationDetails.Describe(_tool.InputSchema, invocation.Arguments.Values),
+                },
             };
         }
 
+        if (!turn.TryTakeBudget(TurnBudgets.McpCall, _options.MaxCallsPerTurn))
+        {
+            return TurnBudgets.LimitReached(Name, TurnBudgets.McpCall);
+        }
+
+        if (!invocation.Confirmed && !turn.TryTakeBudget(TurnBudgets.McpAuto, _options.MaxAutoCallsPerTurn))
+        {
+            return TurnBudgets.LimitReached(Name, TurnBudgets.McpAuto);
+        }
+
+        var caller = _server.SendIdentity ? await McpCallerIdentity.ForAsync(turn.Caller, invocation.Services, cancellationToken) : null;
         CallToolResult result;
         try
         {
-            result = await _pool.CallAsync(_server, _tool.Name, invocation.Arguments.Values, cancellationToken);
+            result = await _pool.CallAsync(_server, _tool.Name, invocation.Arguments.Values, caller, _safety, IdempotencyKey(invocation), cancellationToken);
         }
         catch (McpProtocolException ex)
         {
             var message = $"{_server.Name} refused the call: {Shorten(ex.Message, 300)}";
             return ToolResult.Failure(message) with { LogText = message };
+        }
+        catch (McpConnectionException ex) when (ex.MayHaveRun && _safety == McpCallSafety.SideEffects)
+        {
+            var message = $"{_server.Name} did not confirm the result ({ex.Message}). The action may or may not have run: do not call it again. "
+                + "Tell the person it is unclear and that they should check before trying again.";
+            return ToolResult.Failure(message) with { LogText = ex.Message };
         }
         catch (McpConnectionException ex)
         {
@@ -180,8 +235,11 @@ internal sealed class McpAgentTool : IAgentTool
         var summary = isError
             ? $"{_server.Name} reported an error"
             : string.Create(CultureInfo.InvariantCulture, $"{_server.Name} answered ({text.Length:N0} characters)");
-        return new ToolResult(isError ? "Error: " + text : text, summary, isError) { LogText = Shorten(text, Math.Max(100, _options.LoggedResultChars)) };
+        return new ToolResult(isError ? "Error: " + text : text, summary, isError) { LogText = Shorten(text, Math.Max(100, _options.LoggedResultChars)), Untrusted = true };
     }
+
+    // Stable across the retries of one call, and different for a call the model makes again.
+    internal static string IdempotencyKey(ToolInvocation invocation) => $"{invocation.Turn.TurnId:N}:{invocation.CallId}";
 
     internal static string Render(CallToolResult result)
     {
