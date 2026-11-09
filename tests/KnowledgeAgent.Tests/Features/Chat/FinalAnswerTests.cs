@@ -4,6 +4,7 @@ using System.Text;
 using System.Text.Json;
 using KnowledgeAgent.Features.Agents;
 using KnowledgeAgent.Features.Chat;
+using KnowledgeAgent.Features.Chat.History;
 using KnowledgeAgent.Features.Chat.Live;
 using KnowledgeAgent.Features.Chat.Tools;
 using KnowledgeAgent.Features.Evaluations.Running;
@@ -168,6 +169,7 @@ public sealed class FinalAnswerTests
         var (_, turn, _) = await StopAsync(host, started);
 
         turn.AssistantMessage.ShouldBe("The Pro plan");
+        turn.ModelMessages()[^1].Text.ShouldBe(InterruptedTurn.StoppedReply("The Pro plan"));
     }
 
     [Fact]

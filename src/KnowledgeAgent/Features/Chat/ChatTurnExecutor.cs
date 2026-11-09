@@ -255,8 +255,7 @@ internal sealed class ChatTurnExecutor(
         AgentRunError? persistError = null;
         try
         {
-            // Failed turns keep their text for the UI but add no model messages, so the next turn's context stays valid.
-            var committed = outcome.Error is null && !outcome.Stopped ? history.Skip(firstAppended).ToList() : [];
+            var committed = MessagesToKeep(outcome, history[firstAppended..], turn.ToolCalls);
             var record = new ConversationTurn
             {
                 Id = turnId,
@@ -317,6 +316,15 @@ internal sealed class ChatTurnExecutor(
             await RunFirstAnswerHooksAsync(conversation);
         }
     }
+
+    // A refusal is left out, so the request that caused it is not sent to the model again.
+    private static List<ChatMessage> MessagesToKeep(TurnOutcome outcome, List<ChatMessage> appended, ToolCallLog toolCalls) => outcome switch
+    {
+        { FinishReason: ChatFinishReasons.Refusal } => [],
+        { Stopped: true } => InterruptedTurn.Close(appended, toolCalls.FinishedCallIds(), InterruptedTurn.StoppedReply(outcome.Answer)),
+        { Error: not null } => InterruptedTurn.Close(appended, toolCalls.FinishedCallIds(), InterruptedTurn.FailedReply),
+        _ => appended,
+    };
 
     private async Task RunFirstAnswerHooksAsync(Conversation conversation)
     {

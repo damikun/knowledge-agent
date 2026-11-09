@@ -1,6 +1,7 @@
 using System.Net;
 using KnowledgeAgent.Features.Chat;
 using KnowledgeAgent.Features.Chat.Agents;
+using KnowledgeAgent.Features.Chat.History;
 using KnowledgeAgent.Features.Chat.Tools;
 using KnowledgeAgent.Features.Search;
 using KnowledgeAgent.Features.Sources;
@@ -308,7 +309,8 @@ public sealed class AgentLoopTests
         turn.Error.ShouldBe(error.Message);
         turn.FinishReason.ShouldBe("error");
         turn.Provider.ShouldBeNull();
-        turn.ModelMessagesJson.ShouldBe("[]");
+        turn.ModelMessages().Select(message => message.Text)
+            .ShouldBe(["What is in my documents about onboarding new employees in the Berlin office?", InterruptedTurn.FailedReply]);
     }
 
     [Fact]

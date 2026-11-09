@@ -1,6 +1,7 @@
 using System.Runtime.CompilerServices;
 using KnowledgeAgent.Features.Agents;
 using KnowledgeAgent.Features.Chat;
+using KnowledgeAgent.Features.Chat.History;
 using KnowledgeAgent.Features.Chat.Live;
 using KnowledgeAgent.Features.Chat.Tools;
 using KnowledgeAgent.Features.Feedback;
@@ -180,7 +181,7 @@ public sealed class AgentChatTests
     }
 
     [Fact]
-    public async Task A_stopped_answer_keeps_its_text_and_stays_out_of_the_next_turns_context()
+    public async Task A_stopped_answer_keeps_its_text_and_the_next_turn_knows_where_it_stopped()
     {
         using var host = new AgentTestHost();
         var started = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -201,7 +202,7 @@ public sealed class AgentChatTests
         var turn = host.SingleTurn(conversationId);
         turn.AssistantMessage.ShouldBe("Part one");
         turn.FinishReason.ShouldBe(ChatFinishReasons.Stopped);
-        turn.ModelMessages().ShouldBeEmpty();
+        turn.ModelMessages().Select(message => message.Text).ShouldBe(["Explain everything", InterruptedTurn.StoppedReply("Part one")]);
         host.Conversations.Get(conversationId).Messages.Select(message => (message.Author, message.Text))
             .ShouldBe([(MessageAuthor.User, "Explain everything"), (MessageAuthor.Assistant, "Part one")]);
         turns.IsActive(conversationId).ShouldBeFalse();
@@ -209,7 +210,7 @@ public sealed class AgentChatTests
         var scripted = host.ChatClients.Script("orchestrator").ThenText("Short version.");
         (await host.ChatAsync("Just the short version", conversationId, Ct)).Text().ShouldBe("Short version.");
         scripted.Requests.ShouldHaveSingleItem().Messages.Where(message => message.Role != ChatRole.System).Select(message => message.Text)
-            .ShouldBe(["Just the short version"]);
+            .ShouldBe(["Explain everything", InterruptedTurn.StoppedReply("Part one"), "Just the short version"]);
         turns.Stop(conversationId).ShouldBeFalse("nothing is running");
     }
 

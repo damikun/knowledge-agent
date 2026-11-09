@@ -26,19 +26,42 @@ internal sealed class ToolCallLog
         }
     }
 
+    public IReadOnlySet<string> FinishedCallIds()
+    {
+        lock (_gate)
+        {
+            return _entries.Where(entry => entry.Finished).Select(entry => entry.CallId).ToHashSet(StringComparer.Ordinal);
+        }
+    }
+
     internal sealed class Entry(string callId, string toolName, string agent, string? parentCallId, JsonElement? arguments, string? preamble)
     {
         private readonly Lock _gate = new();
+        private bool _finished;
         private string _summary = string.Empty;
         private bool _isError;
         private long _durationMs;
         private string? _result;
         private ToolCallConfirmationDto? _confirmation;
 
+        public string CallId => callId;
+
+        public bool Finished
+        {
+            get
+            {
+                lock (_gate)
+                {
+                    return _finished;
+                }
+            }
+        }
+
         public void Complete(string summary, bool isError, long durationMs, string? result = null, ToolCallConfirmationDto? confirmation = null)
         {
             lock (_gate)
             {
+                _finished = true;
                 _summary = summary;
                 _isError = isError;
                 _durationMs = durationMs;
