@@ -43,7 +43,13 @@ public abstract class HandoverScenarios(AppFixture fixture)
         var first = await visitor.ChatAsync("Can I change my order?");
         var conversationId = first.ConversationId;
 
-        var requested = await visitor.PostAsync<VisitorHandoverDto>($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana"));
+        // The widget asks for the address first; a client that skips the form is held to it too.
+        using (var noEmail = await visitor.PostRawAsync($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana")))
+        {
+            (await noEmail.ReadProblemAsync(HttpStatusCode.BadRequest)).FieldErrors.ShouldContainKey("email");
+        }
+
+        var requested = await visitor.PostAsync<VisitorHandoverDto>($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana", Email: "ana@visitor.test"));
         requested.Started.ShouldBeTrue();
         requested.Status.ShouldBe("handover_pending");
         var waiting = await visitor.HistoryAsync(conversationId);
@@ -120,7 +126,7 @@ public abstract class HandoverScenarios(AppFixture fixture)
             none.StatusCode.ShouldBe(HttpStatusCode.NoContent);
         }
 
-        var requested = await visitor.PostAsync<VisitorHandoverDto>($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana"));
+        var requested = await visitor.PostAsync<VisitorHandoverDto>($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana", Email: "ana@visitor.test"));
 
         requested.Started.ShouldBeTrue();
         (await visitor.HistoryAsync(conversationId)).Status.ShouldBe("handover_pending");
@@ -393,7 +399,7 @@ public abstract class HandoverScenarios(AppFixture fixture)
         var widget = await CreateWidgetAsync(app, new WidgetHandover { Channel = WidgetChoices.HandoverSlack });
         var visitor = await VisitorClient.StartAsync(app, widget.PublicKey);
         var conversationId = (await visitor.ChatAsync("Where is my parcel?")).ConversationId;
-        await visitor.PostAsync<VisitorHandoverDto>($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana"));
+        await visitor.PostAsync<VisitorHandoverDto>($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana", Email: "ana@visitor.test"));
         (await ApiClient.EventuallyAsync(() => slack.Posts.Count >= 2, Patience)).ShouldBeTrue("the request and its transcript are posted");
 
         using (var cancel = await visitor.PostRawAsync($"conversations/{conversationId}/handover/cancel", new { }))
@@ -434,7 +440,7 @@ public abstract class HandoverScenarios(AppFixture fixture)
         var widget = await CreateWidgetAsync(app, new WidgetHandover { Channel = WidgetChoices.HandoverPortal, WaitMinutes = 1 });
         var visitor = await VisitorClient.StartAsync(app, widget.PublicKey);
         var conversationId = (await visitor.ChatAsync("Can I change my delivery address?")).ConversationId;
-        await visitor.PostAsync<VisitorHandoverDto>($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana"));
+        await visitor.PostAsync<VisitorHandoverDto>($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana", Email: "ana@visitor.test"));
 
         await ExpireAsync(app, conversationId);
 

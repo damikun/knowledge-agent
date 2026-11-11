@@ -28,7 +28,7 @@ public abstract class ConversationInsightsScenarios(AppFixture fixture)
         var word = ApiClient.UniqueWord();
         var widget = await CreateWidgetAsync(app);
         var asked = await StartVisitorConversationAsync(app, widget.PublicKey, $"Can I return the {word} kettle?");
-        await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/handover", new VisitorHandoverRequest(Name: "Ana"));
+        await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/handover", new VisitorHandoverRequest(Name: "Ana", Email: "ana@visitor.test"));
         await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/feedback", new SubmitFeedbackRequest(2));
         (await app.ChatAsync(new ChatRequestDto(null, $"What is the {word} policy?"))).Errors.ShouldBeEmpty();
 
@@ -71,7 +71,7 @@ public abstract class ConversationInsightsScenarios(AppFixture fixture)
         var widget = await CreateWidgetAsync(app);
         var word = ApiClient.UniqueWord();
         var asked = await StartVisitorConversationAsync(app, widget.PublicKey, $"Do you deliver {word} on Sundays?");
-        await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/handover", new VisitorHandoverRequest());
+        await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/handover", new VisitorHandoverRequest(Email: "ana@visitor.test"));
         await StartVisitorConversationAsync(app, widget.PublicKey, "Hello there");
 
         var analytics = await app.Client.GetJsonAsync<AnalyticsDto>("/api/analytics?days=7");

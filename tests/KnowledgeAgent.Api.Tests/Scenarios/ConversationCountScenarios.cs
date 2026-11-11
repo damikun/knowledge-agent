@@ -22,7 +22,7 @@ public abstract class ConversationCountScenarios(AppFixture fixture)
         app.ChatModels.Reset();
         var widget = await CreateWidgetAsync(app);
         var waiting = await StartVisitorConversationAsync(app, widget.PublicKey, "Can I change my order?");
-        await PostAsVisitorAsync(app, widget.PublicKey, waiting, $"conversations/{waiting.ConversationId}/handover", new VisitorHandoverRequest(Name: "Ana"));
+        await PostAsVisitorAsync(app, widget.PublicKey, waiting, $"conversations/{waiting.ConversationId}/handover", new VisitorHandoverRequest(Name: "Ana", Email: "ana@visitor.test"));
         var answered = await StartVisitorConversationAsync(app, widget.PublicKey, "Do you ship abroad?");
         var closed = await StartVisitorConversationAsync(app, widget.PublicKey, "Thanks, that is all.");
         using (var close = await app.Client.PostAsync($"/api/conversations/{closed.ConversationId}/close", null, Ct))

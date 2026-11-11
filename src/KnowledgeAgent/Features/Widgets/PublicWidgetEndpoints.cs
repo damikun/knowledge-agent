@@ -473,8 +473,8 @@ internal static class PublicWidgetEndpoints
         }
 
         var contact = await visitors.UpdateContactAsync(visitor, request.Name, request.Email, cancellationToken);
-        if (contact.Email is null && widget.Settings.Behavior.ContactCapture != WidgetChoices.ContactNever
-            && widget.Settings.Handover.Channel == WidgetChoices.HandoverEmail)
+        // The widget asks first; this holds for any client, whichever channel the team is reached on.
+        if (contact.Email is null && widget.Settings.Behavior.ContactCapture != WidgetChoices.ContactNever)
         {
             return ApiResults.Validation("email", "Leave your email address so the team can reply.");
         }

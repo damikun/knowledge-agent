@@ -32,7 +32,7 @@ public abstract class AssignmentScenarios(AppFixture fixture)
 
         var widget = await CreateWidgetAsync(app);
         var waiting = await StartVisitorConversationAsync(app, widget.PublicKey, "Can I change my order?");
-        await PostAsVisitorAsync(app, widget.PublicKey, waiting, $"conversations/{waiting.ConversationId}/handover", new VisitorHandoverRequest(Name: "Ana"));
+        await PostAsVisitorAsync(app, widget.PublicKey, waiting, $"conversations/{waiting.ConversationId}/handover", new VisitorHandoverRequest(Name: "Ana", Email: "ana@visitor.test"));
         var id = waiting.ConversationId!.Value;
         var mineUrl = $"/api/conversations?widgetId={widget.Id}&assignee=me&status=ai,handover_pending,human";
 

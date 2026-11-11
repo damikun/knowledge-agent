@@ -27,7 +27,7 @@ public abstract class OverviewScenarios(AppFixture fixture)
         (await app.ChatAsync(new ChatRequestDto(null, "What is our travel policy?"))).Errors.ShouldBeEmpty();
         (await app.ChatAsync(new ChatRequestDto(null, "Testing the shop widget", WidgetId: widget.Id))).Errors.ShouldBeEmpty();
         var asked = await StartVisitorConversationAsync(app, widget.PublicKey, "Can I change my order?");
-        await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/handover", new VisitorHandoverRequest(Name: "Ana"));
+        await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/handover", new VisitorHandoverRequest(Name: "Ana", Email: "ana@visitor.test"));
         await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/feedback", new SubmitFeedbackRequest(4));
         await StartVisitorConversationAsync(app, widget.PublicKey, "Do you ship abroad?");
 
