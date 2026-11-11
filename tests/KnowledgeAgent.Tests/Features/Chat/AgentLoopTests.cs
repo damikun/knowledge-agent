@@ -2,6 +2,7 @@ using System.Net;
 using KnowledgeAgent.Features.Chat;
 using KnowledgeAgent.Features.Chat.Agents;
 using KnowledgeAgent.Features.Chat.History;
+using KnowledgeAgent.Features.Chat.Live;
 using KnowledgeAgent.Features.Chat.Tools;
 using KnowledgeAgent.Features.Search;
 using KnowledgeAgent.Features.Sources;
@@ -44,8 +45,10 @@ public sealed class AgentLoopTests
         var chat = host.ChatAsync("Compare things", cancellationToken: Ct);
         await slowSearchStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), Ct);
 
-        // The fast search finishing while the slow one is blocked proves the calls run concurrently.
-        await WaitUntilAsync(() => host.Search.Requests.Any(r => r.Query == "fast"));
+        // The other two calls returning while the slow one is blocked proves the calls run concurrently.
+        var turns = host.Services.GetRequiredService<ChatTurnHost>();
+        await WaitUntilAsync(() => host.Conversations.All.SingleOrDefault() is { } conversation
+            && turns.Find(conversation.Id)?.Snapshot().OfType<ToolResultEvent>().Count() == 2);
         releaseSlowSearch.SetResult();
         var events = await chat;
 
