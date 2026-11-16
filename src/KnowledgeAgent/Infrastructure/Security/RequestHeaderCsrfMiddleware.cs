@@ -2,8 +2,6 @@ using Microsoft.AspNetCore.Http;
 
 namespace KnowledgeAgent.Infrastructure.Security;
 
-// Cookie-authenticated changes must carry a header that a cross-site page cannot set without a CORS preflight.
-// Requests without the cookie (Inngest, widgets, tests) are not affected.
 internal sealed class RequestHeaderCsrfMiddleware(RequestDelegate next)
 {
     public async Task InvokeAsync(HttpContext context)

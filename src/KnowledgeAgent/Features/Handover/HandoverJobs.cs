@@ -271,7 +271,6 @@ internal sealed partial class HandoverExpireJob(
             }
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
-                // The request has ended, so a retry would not send it either; the visitor hears that nobody was emailed.
                 handover.LastError = ex.Message.Length > 1000 ? ex.Message[..1000] : ex.Message;
                 await handovers.SaveDeliveryAsync(handover, cancellationToken);
                 LogEmailFailed(logger, ex, handover.Id);
@@ -311,7 +310,6 @@ internal sealed partial class HandoverExpireJob(
     private static partial void LogEmailFailed(ILogger logger, Exception exception, Guid handoverId);
 }
 
-// Key: "<message id>:<where it was written>".
 internal sealed class HandoverRelayJob(
     IConversationRepository conversations,
     IHandoverRepository handovers,
@@ -483,7 +481,6 @@ internal sealed partial class MailPollJob(
         return true;
     }
 
-    // Message-ID, or a SHA-256 of sender/subject/date/text: string.GetHashCode is randomized per process.
     internal static string InboundDedupeKey(InboundEmail inbound)
     {
         var envelope = inbound.Envelope;

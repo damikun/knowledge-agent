@@ -18,7 +18,6 @@ public sealed class ExperimentItemScope : IDisposable
     public const string ItemMetadataPrefix = "langfuse.experiment.item.metadata.";
     public const string Environment = "langfuse.environment";
 
-    // Not OpenTelemetry baggage, which would leak experiment ids into outgoing HTTP headers.
     private static readonly AsyncLocal<ExperimentItemScope?> Current = new();
     private static readonly ActivityListener Listener = CreateListener();
 
@@ -82,7 +81,6 @@ public sealed class ExperimentItemScope : IDisposable
     {
         ShouldListenTo = source => source.Name.StartsWith(KnowledgeAgentTelemetry.Prefix, StringComparison.Ordinal),
 
-        // Deliberately no Sample callback, so this listener only tags spans that an exporter samples anyway.
         ActivityStarted = activity => Current.Value?.OnStarted(activity),
     };
 

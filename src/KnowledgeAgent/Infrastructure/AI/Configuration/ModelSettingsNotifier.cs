@@ -4,7 +4,6 @@ namespace KnowledgeAgent.Infrastructure.AI.Configuration;
 
 public sealed partial class ModelSettingsNotifier(IEnumerable<IModelSettingsListener> listeners, ILogger<ModelSettingsNotifier> logger)
 {
-    // The settings are saved by then, so a failing listener is logged rather than failing the request.
     public async Task NotifyAsync(CancellationToken cancellationToken)
     {
         foreach (var listener in listeners)

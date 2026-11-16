@@ -96,7 +96,6 @@ internal sealed class GrepSourcesTool(IOptions<AgentOptions> options) : IAgentTo
             return new ToolResult(FormatNoPassages(match, page), Summarize(match, page.TotalPassages, page.TotalSources));
         }
 
-        // Citations keep the snippet, so the portal shows the passage around the match rather than its start.
         var pattern = new Regex(TextMatching.Pattern(text, matchCase, wholeWords), RegexOptions.CultureInvariant);
         var budget = Math.Clamp((_maxChars - HeaderBudget) / page.Items.Count - HitHeaderBudget, MinPassageChars, MaxPassageChars);
         var hits = page.Items.Select(hit => hit with { Content = Snippet(hit.Content, pattern, budget) }).ToList();
@@ -172,7 +171,6 @@ internal sealed class GrepSourcesTool(IOptions<AgentOptions> options) : IAgentTo
         return builder.ToString();
     }
 
-    // The match sits in the first quarter, so a snippet shortened from the start still shows it.
     internal static string Snippet(string content, Regex pattern, int maxChars)
     {
         var text = TextUtil.CollapseWhitespace(content);

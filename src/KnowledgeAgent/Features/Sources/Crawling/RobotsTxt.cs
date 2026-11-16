@@ -4,7 +4,6 @@ namespace KnowledgeAgent.Features.Sources.Crawling;
 
 internal sealed record RobotsRule(bool Allow, string Pattern);
 
-// The rules of robots.txt that apply to one user agent (RFC 9309), as plain data so a crawl plan can carry them.
 internal sealed record RobotsRules(IReadOnlyList<RobotsRule> Rules, double? CrawlDelaySeconds)
 {
     public static RobotsRules AllowAll { get; } = new([], null);
@@ -19,7 +18,6 @@ internal sealed record RobotsRules(IReadOnlyList<RobotsRule> Rules, double? Craw
             return true;
         }
 
-        // The longest matching pattern wins, and Allow wins a tie.
         RobotsRule? best = null;
         foreach (var rule in Rules)
         {
@@ -37,7 +35,6 @@ internal sealed record RobotsRules(IReadOnlyList<RobotsRule> Rules, double? Craw
         return best?.Allow ?? true;
     }
 
-    // '*' matches any run of characters and a trailing '$' anchors the end; otherwise a pattern matches a prefix.
     internal static bool Matches(string pattern, string path)
     {
         var anchored = pattern.EndsWith('$');
@@ -84,7 +81,6 @@ internal sealed record RobotsTxt(RobotsRules Rules, IReadOnlyList<string> Sitema
 {
     public static RobotsTxt Empty { get; } = new(RobotsRules.AllowAll, []);
 
-    // Groups naming the agent's product token apply; without one, the '*' groups do.
     public static RobotsTxt Parse(string? text, string userAgentToken)
     {
         if (string.IsNullOrWhiteSpace(text))
@@ -156,7 +152,6 @@ internal sealed record RobotsTxt(RobotsRules Rules, IReadOnlyList<string> Sitema
         return new RobotsTxt(new RobotsRules(rules, delays.Count > 0 ? delays.Max() : null), sitemaps);
     }
 
-    // "KnowledgeAgent/1.0 (+https://…)" is matched by "KnowledgeAgent".
     public static string ProductToken(string userAgent)
     {
         var trimmed = userAgent.Trim();

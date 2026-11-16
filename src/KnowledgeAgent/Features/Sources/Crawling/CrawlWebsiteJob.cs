@@ -4,8 +4,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Sources.Crawling;
 
-// A discovery step, one step per page and a finishing step, so a failing page fails alone and a retried run skips the
-// finished ones. The code between steps uses only their results, so a replay visits the same pages in the same order.
 internal sealed partial class CrawlWebsiteJob(
     WebsiteCrawler crawler,
     ISourceRepository repository,

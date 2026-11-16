@@ -17,7 +17,6 @@ public sealed class ExperimentItemScopeTests : IDisposable
     {
         _listener = new ActivityListener
         {
-            // By name: reading the static field here could create the source mid-registration and miss it.
             ShouldListenTo = source => source.Name == SourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = _stopped.Enqueue,
@@ -36,7 +35,6 @@ public sealed class ExperimentItemScopeTests : IDisposable
         {
             RunDetached(() =>
             {
-                // Setup spans before the turn are not part of the item.
                 using (Source.StartActivity("search knowledge"))
                 {
                 }
@@ -47,7 +45,6 @@ public sealed class ExperimentItemScopeTests : IDisposable
                 }
             });
 
-            // A separate trace started while the scope is active stays untagged.
             RunDetached(() =>
             {
                 using (Source.StartActivity("eval.judge"))
@@ -124,7 +121,6 @@ public sealed class ExperimentItemScopeTests : IDisposable
         }
     }
 
-    // Runs the action the way the chat service does: on another task with no ambient parent span.
     private static void RunDetached(Action action) => Task.Run(() =>
     {
         Activity.Current = null;

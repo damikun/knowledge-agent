@@ -9,10 +9,8 @@ using OpenTelemetry.Trace;
 
 namespace Microsoft.Extensions.Hosting;
 
-// A dedicated tracer provider limited to the agent sources keeps HTTP and database spans out of Langfuse.
 public static class LangfuseTracing
 {
-    // Without this header Langfuse v4 does not ingest OTLP data in real time and new traces can take minutes to appear.
     public const string IngestionVersionHeader = "x-langfuse-ingestion-version=4";
 
     private static readonly string[] DefaultSources = ["KnowledgeAgent.Agents", "KnowledgeAgent.AI", "KnowledgeAgent.Evaluation"];
@@ -33,7 +31,6 @@ public static class LangfuseTracing
         return builder;
     }
 
-    /// <summary>For processes without hosted services. The caller flushes and disposes the provider.</summary>
     public static TracerProvider? CreateTracerProvider(
         IConfiguration configuration,
         string serviceName,

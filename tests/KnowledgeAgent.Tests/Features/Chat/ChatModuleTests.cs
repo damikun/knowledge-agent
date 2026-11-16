@@ -112,7 +112,6 @@ public sealed class ChatModuleTests
     {
         var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings());
 
-        // Never opened: building the bus and the listener does not connect.
         using var dataSource = NpgsqlDataSource.Create("Host=localhost");
         builder.Services.AddSingleton(dataSource);
         builder.AddChat();

@@ -19,7 +19,6 @@ public sealed class EmbeddingServiceTests
 
         (await host.Embeddings.IsAvailableAsync(Ct)).ShouldBeFalse();
 
-        // Ingestion relies on this to tell a missing model from a transient failure.
         var error = await Should.ThrowAsync<ModelNotConfiguredException>(() => host.Embeddings.EmbedAsync(["text"], EmbeddingPurpose.Document, Ct));
         error.Message.ShouldContain("'embedding' profile");
         error.Message.ShouldContain("voyage");

@@ -65,7 +65,6 @@ internal static class VectorStoreGuard
             throw new ArgumentException("MinScore must be a number.", nameof(query));
         }
 
-        // Scores are clamped to [-1, 1], so a threshold at or below -1 filters nothing and one above 1 filters everything.
         var matchesNothing = minScore > 1d;
         if (minScore <= -1d)
         {
@@ -131,7 +130,6 @@ internal static class VectorStoreGuard
     public static (int Skip, int Take) NormalizePage(int skip, int take) =>
         (Math.Max(0, skip), Math.Clamp(take, 0, VectorStoreLimits.MaxPageSize));
 
-    // Non-finite scores become 0 because NaN and infinity cannot be serialized to JSON.
     public static double NormalizeScore(double cosineSimilarity) =>
         double.IsFinite(cosineSimilarity) ? Math.Clamp(cosineSimilarity, -1d, 1d) : 0d;
 }

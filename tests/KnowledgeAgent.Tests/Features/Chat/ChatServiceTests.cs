@@ -74,7 +74,6 @@ public sealed class ChatServiceTests
             return received;
         });
 
-        // The client leaves while the model is still writing; the turn goes on without it.
         await started.Task.WaitAsync(TimeSpan.FromSeconds(10), Ct);
         await cancellation.CancelAsync();
         var events = await reading.WaitAsync(TimeSpan.FromSeconds(10), Ct);

@@ -12,7 +12,6 @@ internal sealed record NormalizedKeywordSearch(
     public bool MatchesNothing => Terms.Count == 0;
 }
 
-// The ClickHouse store evaluates the same BM25 formulas and patterns in SQL, so changes must be mirrored there.
 internal static class KeywordScoring
 {
     public const double K1 = 1.2;
@@ -20,7 +19,6 @@ internal static class KeywordScoring
     public const int MaxTerms = 16;
     public const int MaxTermLength = 100;
 
-    // Matches the term at a word start, in syntax that both RE2 (ClickHouse) and .NET accept.
     public static string Pattern(string term) => @"(?i)(?:^|[^\p{L}\p{N}])" + Escape(term);
 
     public static double Idf(long chunkCount, long documentFrequency) =>
@@ -31,10 +29,8 @@ internal static class KeywordScoring
             ? 0
             : idf * termFrequency * (K1 + 1) / (termFrequency + K1 * (1 - B + B * length / averageLength));
 
-    // Counts code points to match ClickHouse's lengthUTF8.
     public static int Length(string content) => content.EnumerateRunes().Count();
 
-    // RE2 and .NET both read escaped punctuation literally, and neither accepts an escaped letter or underscore.
     internal static string Escape(string term)
     {
         var builder = new StringBuilder(term.Length * 2);

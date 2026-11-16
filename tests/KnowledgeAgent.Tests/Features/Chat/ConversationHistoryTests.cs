@@ -46,7 +46,7 @@ public sealed class ConversationHistoryTests
         secondTurn.Count.ShouldBe(6);
         secondTurn[0].Role.ShouldBe(ChatRole.System);
         secondTurn[0].Text.ShouldBe(orchestrator.Requests[0].Messages[0].Text);
-        secondTurn[0].Text.ShouldBe("You are Knowledge Agent (Knowledge Agent). Today is 2026-10-22. Ready sources: 0.");
+        secondTurn[0].Text.ShouldBe("You are Assistant (Knowledge Agent). Today is 2026-10-22. Ready sources: 0.");
         secondTurn.Take(4).ToJson().ShouldBe(firstTurnFinal.ToJson());
         secondTurn[^1].Role.ShouldBe(ChatRole.User);
         secondTurn[^1].Text.ShouldBe("Thanks!");
@@ -176,7 +176,7 @@ public sealed class ConversationHistoryTests
         var events = await host.ChatAsync(new ChatRequestDto(null, "Čo je v poznámkach?", [newer.Id], "fast", variables), Ct);
 
         var render = host.Prompts.RendersOf(PromptNames.OrchestratorSystem).Single();
-        render.Variables["agentName"].ShouldBe("Knowledge Agent");
+        render.Variables["agentName"].ShouldBe("Assistant");
         render.Variables["appName"].ShouldBeOfType<JsonElement>().GetString().ShouldBe("Acme Docs");
         render.Variables["language"].ShouldBeOfType<JsonElement>().GetString().ShouldBe("Slovak");
         render.Variables["today"].ShouldBe("2026-10-22");
@@ -200,7 +200,7 @@ public sealed class ConversationHistoryTests
         var conversation = host.Conversations.Get(events.ConversationId());
         conversation.Profile.ShouldBe("fast");
         conversation.SourceIds.ShouldBe([newer.Id]);
-        conversation.SystemPrompt.ShouldBe("You are Knowledge Agent (Acme Docs). Today is 2026-10-22. Ready sources: 2.");
+        conversation.SystemPrompt.ShouldBe("You are Assistant (Acme Docs). Today is 2026-10-22. Ready sources: 2.");
     }
 
     [Fact]
@@ -260,7 +260,6 @@ public sealed class ConversationHistoryTests
         large.ShouldContain("\"sourceCount\":1800");
         large.ShouldContain("\"pendingSourceCount\":200");
         large.ShouldNotContain("Source 1999", Case.Sensitive, "no per-source data may reach the prompt");
-        // Only the digits of the totals differ: the prompt does not grow with the knowledge base.
         (large.Length - small.Length).ShouldBeLessThan(16);
     }
 

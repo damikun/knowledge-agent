@@ -122,7 +122,6 @@ internal sealed partial class ReplySuggester(
 
         var prompt = await prompts.RenderAsync(PromptNames.ReplySuggestion, variables, cancellationToken: cancellationToken);
 
-        // A model config written for another profile must not override the agent's own.
         var patch = prompt.Profile is null || string.Equals(prompt.Profile, profile, StringComparison.OrdinalIgnoreCase) ? prompt.ModelPatch : null;
         var model = await chatClients.CreateAsync(profile, patch, requestPatch: null, cancellationToken);
 
@@ -163,7 +162,6 @@ internal sealed partial class ReplySuggester(
         return new ReplySuggestionDto(text, citations.TurnCitations.Where(citation => cited.Contains(citation.Ref)).ToList());
     }
 
-    // The conversation as one message, so the model reads it as material to answer rather than as its own turns.
     internal static string Transcript(IReadOnlyList<ConversationMessage> messages, string staffName)
     {
         var text = new StringBuilder("The conversation so far, oldest first:\n\n<conversation>\n");

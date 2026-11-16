@@ -5,8 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KnowledgeAgent.Tests.Features.Sources.Folders;
 
-// Covers the folder repository and the folder side of the source repository. Tests share one database per class,
-// so each one works with its own folders and sources.
 public abstract class SourceFolderRepositoryContractTests<TFixture>
     where TFixture : PersistenceFixture
 {
@@ -14,7 +12,6 @@ public abstract class SourceFolderRepositoryContractTests<TFixture>
 
     protected SourceFolderRepositoryContractTests(TFixture fixture)
     {
-        // Skip here when the database is unavailable, before Should.ThrowAsync can mistake the skip for a failure.
         _ = fixture.Services;
         Fixture = fixture;
     }
@@ -147,7 +144,6 @@ public abstract class SourceFolderRepositoryContractTests<TFixture>
     [Fact]
     public async Task Update_of_a_stale_source_keeps_the_folder_it_was_moved_to()
     {
-        // Ingestion loads a source, works on it for a while and saves it, possibly after someone moved it.
         var folder = await AddFolderAsync("Reports");
         var source = await AddSourceAsync("Quarterly report");
         var stale = await GetSourceAsync(source.Id);

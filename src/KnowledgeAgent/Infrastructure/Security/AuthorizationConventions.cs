@@ -7,7 +7,6 @@ namespace KnowledgeAgent.Infrastructure.Security;
 
 public static class AuthorizationConventions
 {
-    // Reading stays open to staff; anything that changes data needs the admin role.
     public static TBuilder RequireAdminForChanges<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder
     {

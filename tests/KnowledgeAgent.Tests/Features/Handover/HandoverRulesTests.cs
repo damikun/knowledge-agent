@@ -105,7 +105,6 @@ public sealed class HandoverRulesTests
 
         var key = MailPollJob.InboundDedupeKey(Mail("Thanks, that helped.\r\nAnna"));
 
-        // A fixed value: the key must not change between processes or instances, as string.GetHashCode does.
         key.ShouldBe("email:sha256:" + ExpectedHash);
         MailPollJob.InboundDedupeKey(Mail("Thanks, that helped.\nAnna\n", from: " Anna@Example.com")).ShouldBe(key, "line endings, outer space and the address case do not matter");
         MailPollJob.InboundDedupeKey(Mail("Thanks, that helped.\r\nAnna", date: sent.ToUniversalTime())).ShouldBe(key, "the same instant in another zone");

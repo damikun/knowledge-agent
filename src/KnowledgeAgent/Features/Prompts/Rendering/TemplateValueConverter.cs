@@ -7,7 +7,6 @@ using System.Text.Json.Nodes;
 
 namespace KnowledgeAgent.Features.Prompts.Rendering;
 
-// Keys are case-insensitive so that PascalCase C# properties work with camelCase templates.
 internal static class TemplateValueConverter
 {
     internal const int MaxDepth = 64;
@@ -55,7 +54,6 @@ internal static class TemplateValueConverter
 
         EnsureDepth(depth);
 
-        // Reference cycles are cut instead of recursing forever.
         if (!type.IsValueType && !visited.Add(value))
         {
             return null;
@@ -93,7 +91,6 @@ internal static class TemplateValueConverter
             return false;
         }
 
-        // Other framework types render via ToString() because reflecting over them produces huge or meaningless graphs.
         var ns = type.Namespace;
         return ns is not null && (ns == "System" || ns.StartsWith("System.", StringComparison.Ordinal));
     }
@@ -184,7 +181,6 @@ internal static class TemplateValueConverter
                 return text;
             default:
             {
-                // Values created from CLR objects round-trip through JSON so that the result is uniform.
                 using var document = JsonDocument.Parse(node.ToJsonString());
                 return ConvertElement(document.RootElement, depth);
             }
@@ -261,7 +257,6 @@ internal static class TemplateValueConverter
             }
             catch (TargetInvocationException)
             {
-                // A throwing getter must not break rendering, so the member renders as missing.
                 continue;
             }
 

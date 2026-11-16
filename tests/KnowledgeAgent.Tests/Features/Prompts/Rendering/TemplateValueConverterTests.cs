@@ -23,7 +23,7 @@ public sealed class TemplateValueConverterTests
         result["f"].ShouldBe(false);
         result["n"].ShouldBeNull();
         result["a"].ShouldBeOfType<List<object?>>().ShouldBe(new List<object?> { 1L, "two" });
-        result["o"].ShouldBeOfType<Dictionary<string, object?>>()["K"].ShouldBe("v"); // keys are case-insensitive
+        result["o"].ShouldBeOfType<Dictionary<string, object?>>()["K"].ShouldBe("v");
     }
 
     [Fact]
@@ -70,7 +70,7 @@ public sealed class TemplateValueConverterTests
         result["scores"].ShouldBeOfType<Dictionary<string, object?>>()["math"].ShouldBe(1);
         result["legacy"].ShouldBeOfType<Dictionary<string, object?>>()["key"].ShouldBe("value");
         result["custom"].ShouldBeOfType<Dictionary<string, object?>>()["k"].ShouldBe("v");
-        result["pairs"].ShouldBeOfType<Dictionary<string, object?>>()["p"].ShouldBe(1); // sequences of string-keyed pairs act as dictionaries
+        result["pairs"].ShouldBeOfType<Dictionary<string, object?>>()["p"].ShouldBe(1);
     }
 
     [Fact]

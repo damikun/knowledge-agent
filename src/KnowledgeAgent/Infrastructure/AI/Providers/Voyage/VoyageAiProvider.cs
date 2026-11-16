@@ -12,7 +12,6 @@ internal sealed class VoyageAiProvider : IAiProvider, IAiProviderDescriptor
     public const string DefaultEmbeddingModel = "voyage-4";
     public const int DefaultDimensions = 1024;
 
-    // Voyage has no model listing endpoint, so the connection test reports this fixed list.
     internal static readonly IReadOnlyList<string> KnownModels =
         ["rerank-2.5", "rerank-2.5-lite", "voyage-3.5", "voyage-3.5-lite", "voyage-4", "voyage-4-large", "voyage-4-lite", "voyage-code-3"];
 
@@ -45,7 +44,6 @@ internal sealed class VoyageAiProvider : IAiProvider, IAiProviderDescriptor
         embeddingOptions.AdditionalProperties[VoyageEmbeddingGenerator.InputTypeProperty] = purpose == EmbeddingPurpose.Query ? "query" : "document";
     }
 
-    // A rerank request of a few tokens is the cheapest way to verify the key.
     public async Task<ProviderConnectionTest> TestConnectionAsync(AiProviderOptions options, CancellationToken cancellationToken = default)
     {
         using var client = CreateClient(options);

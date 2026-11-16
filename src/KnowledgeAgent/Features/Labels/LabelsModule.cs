@@ -34,7 +34,6 @@ internal sealed class LabelFirstAnswerHook(IJobQueue jobs) : IFirstAnswerHook
             : Task.CompletedTask;
 }
 
-// The in-memory store starts empty, so seed it here; PostgreSQL got the defaults once from the migration.
 internal sealed partial class LabelSeedInitializer(
     IServiceScopeFactory scopeFactory,
     TimeProvider timeProvider,

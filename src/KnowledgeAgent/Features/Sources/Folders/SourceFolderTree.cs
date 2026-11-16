@@ -1,6 +1,5 @@
 namespace KnowledgeAgent.Features.Sources.Folders;
 
-// Walks skip folders they have already visited, so a parent cycle in bad data cannot hang them.
 internal sealed class SourceFolderTree
 {
     private readonly Dictionary<Guid, SourceFolder> _folders;
@@ -18,7 +17,6 @@ internal sealed class SourceFolderTree
 
     public int DepthOf(Guid id) => PathTo(id).Count;
 
-    // 1 for a folder without subfolders.
     public int HeightOf(Guid id)
     {
         var height = 0;
@@ -39,14 +37,11 @@ internal sealed class SourceFolderTree
 
     public bool IsInside(Guid id, Guid ancestorId) => PathTo(id).Any(folder => folder.Id == ancestorId);
 
-    // The Internal folder or one of its subfolders.
     public bool IsInternal(Guid id) => PathTo(id).Any(folder => folder.IsInternal);
 
-    // The Internal folder and every folder below it: what only the built-in agent searches.
     public IReadOnlySet<Guid> InternalFolderIds() =>
         _folders.Values.Where(folder => folder.IsInternal).SelectMany(folder => SubtreeOf(folder.Id)).Select(folder => folder.Id).ToHashSet();
 
-    // The folder itself and every folder below it.
     public IReadOnlyList<SourceFolder> SubtreeOf(Guid id)
     {
         if (Find(id) is not { } root)
@@ -64,7 +59,6 @@ internal sealed class SourceFolderTree
         return subtree;
     }
 
-    // From the top-level folder down to the folder itself.
     public IReadOnlyList<SourceFolder> PathTo(Guid id)
     {
         var path = new List<SourceFolder>();

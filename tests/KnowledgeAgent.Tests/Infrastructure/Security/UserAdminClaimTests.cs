@@ -25,7 +25,6 @@ public sealed class UserAdminClaimTests
         UserAdminClaim.IsUserAdmin(Run(new Claim(UserAdminClaim.KeycloakClaim, "view-realm"), new Claim("roles", "admin"))).ShouldBeFalse();
         UserAdminClaim.IsUserAdmin(Run(new Claim("roles", "admin"))).ShouldBeFalse("an admin of the app is not a Keycloak user admin");
 
-        // A session check starts from the new ID token; a claim left over from before must not survive.
         UserAdminClaim.IsUserAdmin(Run(new Claim(UserAdminClaim.Name, "true"))).ShouldBeFalse();
     }
 

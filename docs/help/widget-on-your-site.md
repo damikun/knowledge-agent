@@ -4,7 +4,7 @@ A widget puts a chat with one of your agents on any website with one script tag.
 
 ## Create a widget
 
-1. Create an agent first if you have none yet ([Agents](/agents/new)). The built-in agent cannot answer on a website.
+1. Pick the agent the widget talks to. A new install has one, Assistant, which searches all your sources; for a public site you usually want an agent limited to what visitors may see ([Agents](/agents/new)).
 2. Open [Widgets](/widgets/new), choose the agent and give the widget a name.
 3. Click any part of the live preview, such as the launcher, the header or a message, to change its texts and colors. The Theme tab sets the look of the whole widget: Glow, Glass or Solid, your brand color, and light, dark or the visitor's system mode.
 4. Save. Undo and Redo work until you leave the editor.

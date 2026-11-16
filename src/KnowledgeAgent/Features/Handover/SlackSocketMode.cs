@@ -80,7 +80,6 @@ internal sealed partial class SlackInbound(
     private static partial void LogReply(ILogger logger, Guid handoverId);
 }
 
-// Socket Mode needs no public URL or signing secret. Slack wants an ack within three seconds, so ack first, then handle.
 internal sealed partial class SlackSocketModeService(
     IIntegrationSettings integrations,
     ISlackGateway slack,
@@ -169,7 +168,6 @@ internal sealed partial class SlackSocketModeService(
             switch (envelope?["type"]?.GetValue<string>())
             {
                 case "disconnect":
-                    // Slack rotates connections every few hours and says so first.
                     return;
                 case "events_api" when envelope["payload"] is { } payload:
                     _ = DispatchAsync((inbound, token) => inbound.HandleEventAsync(payload, token), cancellationToken);
@@ -216,7 +214,6 @@ internal sealed partial class SlackSocketModeService(
 
     private void OnSettingsChanged()
     {
-        // Not disposed: the connection loop may still be reading its token.
         Interlocked.Exchange(ref _settingsChanged, new CancellationTokenSource()).Cancel();
     }
 

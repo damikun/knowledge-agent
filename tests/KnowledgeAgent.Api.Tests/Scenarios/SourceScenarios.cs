@@ -485,7 +485,6 @@ public abstract class SourceScenarios(AppFixture fixture)
         all.Total.ShouldBe(3);
         all.NextOffset.ShouldBeNull();
 
-        // The portal reads these exact property names.
         using (var page = JsonDocument.Parse(await app.Client.GetStringAsync("/api/sources?limit=1", Ct)))
         {
             page.RootElement.EnumerateObject().Select(p => p.Name).ShouldBe(["items", "total", "offset", "limit", "nextOffset"]);

@@ -42,7 +42,6 @@ internal sealed class AiTestHost : IDisposable
         Action<IServiceCollection>? configureServices = null,
         bool registerOverrideStore = true)
     {
-        // An empty builder reads no environment variables, so the machine's API keys never leak into tests.
         var builder = Host.CreateEmptyApplicationBuilder(new HostApplicationBuilderSettings { EnvironmentName = Environments.Development });
         builder.ConfigureContainer(new DefaultServiceProviderFactory(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true }));
         builder.Configuration.AddInMemoryCollection(configuration ?? TestConfig.Base());

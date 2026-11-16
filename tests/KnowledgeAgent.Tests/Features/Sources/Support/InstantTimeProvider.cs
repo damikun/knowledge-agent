@@ -2,8 +2,6 @@ using System.Diagnostics;
 
 namespace KnowledgeAgent.Tests.Features.Sources.Support;
 
-// A clock that jumps ahead instead of waiting: a timer fires right away and moves the clock by its due time, so
-// tests can check how long something would have waited without waiting for it.
 internal sealed class InstantTimeProvider : TimeProvider
 {
     private readonly Lock _gate = new();

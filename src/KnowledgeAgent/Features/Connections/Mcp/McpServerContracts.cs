@@ -38,13 +38,11 @@ public sealed record McpToolDto(
     bool? OpenWorld,
     McpToolPolicy DefaultPolicy)
 {
-    // Agents keep the fingerprint they approved; a different one here means the tool changed since.
     public string Fingerprint { get; init; } = string.Empty;
 }
 
 public sealed record McpServerUseDto(Guid AgentId, string AgentName, int ToolCount, McpAppMode Mode = McpAppMode.All);
 
-// Secret: null keeps the saved one, an empty string removes it. AuthType defaults to none.
 public sealed record SaveMcpServerRequest(
     string Name,
     string Url,

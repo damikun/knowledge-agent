@@ -8,13 +8,11 @@ internal static class SourceMetadataKeys
     public const string SiteName = "siteName";
     public const string AutoTitle = "autoTitle";
 
-    // Crawled pages: the validators for conditional requests, the sitemap's lastmod and the crawl that last saw the page.
     public const string ETag = "etag";
     public const string LastModified = "lastModified";
     public const string SitemapLastModified = "sitemapLastModified";
     public const string CrawlRun = "crawlRun";
 
-    // How many chunks look written to the assistant rather than the reader; absent when none do.
     public const string SuspiciousChunks = "suspiciousChunks";
 }
 
@@ -39,7 +37,6 @@ internal static class SourceDefaults
 
     public static string SiteOf(Uri uri) => NormalizeSite(uri.IdnHost);
 
-    // "www.example.com" and "example.com" are one site, so pages added either way are counted and filtered together.
     public static string NormalizeSite(string host)
     {
         var site = host.Trim().TrimEnd('.').ToLowerInvariant();

@@ -3,7 +3,6 @@ using KnowledgeAgent.Features.Chat;
 
 namespace KnowledgeAgent.Tests.Features.Chat.Fakes;
 
-// Returns copies, like a database would, so tests catch code that relies on in-memory mutation.
 public sealed class InMemoryConversationRepository : IConversationRepository
 {
     private readonly ConcurrentDictionary<Guid, Conversation> _conversations = new();
@@ -87,6 +86,30 @@ public sealed class InMemoryConversationRepository : IConversationRepository
                 .OrderByDescending(conversation => conversation.UpdatedAt)
                 .Select(conversation => (Guid?)conversation.Id)
                 .FirstOrDefault());
+        }
+    }
+
+    public Task<IReadOnlyList<VisitorConversationSummary>> ListForVisitorAsync(
+        Guid widgetId,
+        Guid visitorId,
+        Guid? contactId,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        lock (_gate)
+        {
+            IReadOnlyList<VisitorConversationSummary> summaries = _conversations.Values
+                .Where(conversation => conversation.WidgetId == widgetId
+                    && (conversation.VisitorId == visitorId || (contactId is not null && conversation.ContactId == contactId)))
+                .OrderByDescending(conversation => conversation.UpdatedAt)
+                .Take(take)
+                .Select(conversation => new VisitorConversationSummary(
+                    conversation.Id,
+                    conversation.Status,
+                    conversation.UpdatedAt,
+                    conversation.Messages.Where(message => !message.StaffOnly && message.Author != MessageAuthor.System).MaxBy(message => message.Sequence)))
+                .ToList();
+            return Task.FromResult(summaries);
         }
     }
 

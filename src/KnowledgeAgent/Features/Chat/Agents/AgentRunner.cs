@@ -66,10 +66,7 @@ internal sealed class AgentRunner(
                 finalText = text;
             }
 
-            if (_options.AnswerIsFinalStep)
-            {
-                sink.Emit(new StepFinishedEvent(step, interim ? StepFinishedEvent.Interim : StepFinishedEvent.Final));
-            }
+            sink.Emit(new StepFinishedEvent(step, interim ? StepFinishedEvent.Interim : StepFinishedEvent.Final));
         }
 
         while (true)
@@ -114,7 +111,6 @@ internal sealed class AgentRunner(
                 .Where(call => !call.InformationalOnly)
                 .ToList();
 
-            // Sent before the tools run, so a client can turn the text into a status line while it waits.
             FinishStep(step, text, interim: calls.Count > 0 && !forceFinal);
             if (calls.Count == 0)
             {
@@ -126,7 +122,6 @@ internal sealed class AgentRunner(
 
             if (forceFinal)
             {
-                // The model ignored ToolMode.None. Answer every call so the history stays valid for later turns.
                 foreach (var call in calls)
                 {
                     AgentLog.ToolCallRejected(logger, call.CallId, agent.Name, "tool-call limit reached");
@@ -157,7 +152,6 @@ internal sealed class AgentRunner(
         var chatOptions = request.Model.CreateOptions();
         if (tools.Count > 0)
         {
-            // The final call still sends the tools, with ToolMode.None, so the cached prompt prefix stays valid.
             chatOptions.Tools = [.. tools];
             chatOptions.ToolMode = final ? ChatToolMode.None : ChatToolMode.Auto;
             chatOptions.AllowMultipleToolCalls = true;
@@ -235,7 +229,6 @@ internal sealed class AgentRunner(
         string? preamble,
         CancellationToken cancellationToken)
     {
-        // Runs synchronously up to the first await, so tool-call events are emitted in call order.
         var startedAt = timeProvider.GetTimestamp();
         var arguments = ToolArguments.ToJson(call.Arguments);
         sink.Emit(new ToolCallEvent(call.CallId, call.Name, arguments));

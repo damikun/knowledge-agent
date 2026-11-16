@@ -17,7 +17,6 @@ public static class LangfuseDatasets
     public const string ItemIdSeparator = ":";
     public const string MetadataSourceValue = "knowledge-agent";
 
-    // Prefixed with the dataset name because Langfuse item ids are unique per project, not per dataset.
     public static string ItemId(string datasetName, string itemId) => datasetName + ItemIdSeparator + itemId;
 
     public static async Task<LangfuseSyncResult> SyncAsync(LangfuseEvalClient client, EvalDataset dataset, CancellationToken cancellationToken)
@@ -44,7 +43,6 @@ public static class LangfuseDatasets
         {
             var desired = ToUpsert(dataset.Name, item);
 
-            // Unchanged items are not rewritten, so Langfuse dataset versions only track real edits.
             if (existing.TryGetValue(desired.Id, out var current) && current.IsActive && IsSame(current, desired))
             {
                 unchanged++;
@@ -110,7 +108,6 @@ public static class LangfuseDatasets
         var prefix = dataset.Name + ItemIdSeparator;
         foreach (var item in items.Where(item => item.IsActive))
         {
-            // The extra keys cover items added to the dataset from chat traces.
             var question = FirstText(item.Input, "question", "message", "query", "input", "text");
             if (string.IsNullOrWhiteSpace(question))
             {

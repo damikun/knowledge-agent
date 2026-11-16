@@ -7,20 +7,16 @@ public abstract record ConversationLiveEvent;
 
 public sealed record MessageAddedEvent(ConversationMessageDto Message) : ConversationLiveEvent;
 
-// Index is the event's position in its turn, so a view that replayed the turn so far can skip what it already sent.
 public sealed record TurnStreamEvent(ChatStreamEvent Event, Guid TurnKey, int Index) : ConversationLiveEvent;
 
 public sealed record ConversationChangedEvent(Guid ConversationId, string Status) : ConversationLiveEvent;
 
 public sealed class ConversationEventHub
 {
-    // A view that cannot keep up loses the oldest events; it catches up from the stored messages when it reconnects.
     private const int SubscriberCapacity = 1_000;
 
     private readonly ConcurrentDictionary<Guid, ConcurrentDictionary<Guid, ChannelWriter<ConversationLiveEvent>>> _subscribers = new();
 
-    // Guards subscribe and unsubscribe, so a join racing the last leave isn't added to a set being removed.
-    // Publishing reads without it.
     private readonly Lock _membership = new();
 
     public Subscription Subscribe(Guid conversationId)

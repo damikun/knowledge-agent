@@ -62,7 +62,6 @@ public sealed class PromptsModuleTests
         using var host = BuildHost(LangfuseConfiguration(server));
         var services = host.Services;
 
-        // Mirrors what the API host does before serving requests.
         foreach (var initializer in services.GetServices<IStartupInitializer>().OrderBy(i => i.Order))
         {
             await initializer.InitializeAsync(Ct);
@@ -87,7 +86,6 @@ public sealed class PromptsModuleTests
         degraded.Entries["langfuse"].Status.ShouldBe(HealthStatus.Degraded);
         degraded.Entries["langfuse"].Description.ShouldNotBeNull().ShouldContain("unreachable");
 
-        // Cached prompts keep working while Langfuse is down.
         (await prompts.GetTemplateAsync(PromptNames.ConversationTitle, cancellationToken: Ct)).Origin.ShouldBe(PromptOrigin.Langfuse);
     }
 

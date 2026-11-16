@@ -24,7 +24,6 @@ public sealed class PostgresRepositoryTests(PostgresPersistenceFixture fixture)
         using var host = PersistenceHost.Build(PostgresPersistenceFixture.PostgresSettings(connectionString));
 
         await PersistenceHost.RunStartupInitializersAsync(host.Services, Ct);
-        // Idempotent: a second start finds nothing to apply.
         await PersistenceHost.RunStartupInitializersAsync(host.Services, Ct);
 
         await using var scope = host.Services.CreateAsyncScope();
@@ -50,7 +49,6 @@ public sealed class PostgresRepositoryTests(PostgresPersistenceFixture fixture)
     [Fact]
     public async Task Values_protected_by_one_instance_can_be_read_by_another_sharing_the_database()
     {
-        // Provider API keys saved in the portal must stay readable after restarts and container rebuilds.
         var settings = PostgresPersistenceFixture.PostgresSettings(Fixture.ConnectionStringFor($"ka_dataprotection_{Guid.NewGuid():N}"));
         string protectedValue;
         using (var first = PersistenceHost.Build(settings))
@@ -144,8 +142,8 @@ public sealed class PostgresRepositoryTests(PostgresPersistenceFixture fixture)
             () => columns["eval_datasets.normalized_name"].ShouldBe("character varying"),
             () => columns["contacts.attributes"].ShouldBe("jsonb"),
             () => columns["contacts.attribute_sources"].ShouldBe("jsonb"),
-            () => columns["contacts.session_count"].ShouldBe("integer"),
-            () => columns["widget_visitors.session_count"].ShouldBe("integer"),
+            () => columns["contacts.visit_count"].ShouldBe("integer"),
+            () => columns["widget_visitors.visit_count"].ShouldBe("integer"),
             () => columns["contact_attributes.key"].ShouldBe("character varying"),
             () => columns["contact_attributes.last_seen_at"].ShouldBe("timestamp with time zone"),
             () => columns["segments.filter"].ShouldBe("jsonb"),
@@ -460,7 +458,6 @@ public sealed class PostgresRepositoryTests(PostgresPersistenceFixture fixture)
         await using var dataSource = NpgsqlDataSource.Create(Fixture.ConnectionString);
         await using var connection = await dataSource.OpenConnectionAsync(Ct);
 
-        // Sequential scans are disabled so the plan does not depend on the table's size.
         await using (var disable = new NpgsqlCommand("SET enable_seqscan = off", connection))
         {
             await disable.ExecuteNonQueryAsync(Ct);

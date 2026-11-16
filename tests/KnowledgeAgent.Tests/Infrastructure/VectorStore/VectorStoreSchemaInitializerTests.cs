@@ -150,7 +150,6 @@ public sealed class VectorStoreSchemaInitializerTests
     [Fact]
     public async Task UnreachableClickHouse_FailsAfterTheRetryBudget()
     {
-        // Nothing listens on port 1, so connections are refused immediately and no Docker is needed.
         using var store = new ClickHouseVectorStore(
             "Host=127.0.0.1;Port=1;Username=default;Password=",
             "knowledge",

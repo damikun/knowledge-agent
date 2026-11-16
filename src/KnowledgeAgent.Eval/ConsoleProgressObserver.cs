@@ -4,7 +4,6 @@ using KnowledgeAgent.Features.Evaluations.Running;
 
 namespace KnowledgeAgent.Eval;
 
-// Progress goes to stderr so that stdout carries only the report.
 internal sealed class ConsoleProgressObserver(bool quiet) : IEvalRunObserver
 {
     private readonly Lock _gate = new();

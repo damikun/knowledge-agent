@@ -27,7 +27,6 @@ internal sealed class FakeEmbeddingService(int dimensions = 64) : IEmbeddingServ
 
     public void FailNext(int count) => Volatile.Write(ref _failuresRemaining, count);
 
-    // A model is missing while every call fails with ModelNotConfiguredException, as the real service does then.
     public Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default) =>
         Task.FromResult(!(AlwaysFail && FailureFactory() is ModelNotConfiguredException));
 

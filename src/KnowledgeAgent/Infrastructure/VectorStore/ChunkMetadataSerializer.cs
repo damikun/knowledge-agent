@@ -10,7 +10,6 @@ internal static class ChunkMetadataSerializer
 
     private static readonly JsonWriterOptions WriterOptions = new()
     {
-        // Safe because metadata never ends up in HTML, and it keeps non-ASCII text readable in the database.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
     };
 
@@ -81,7 +80,6 @@ internal static class ChunkMetadataSerializer
         }
     }
 
-    // Normalizes like a serialize and deserialize round trip, so in-memory results match stored ones.
     public static IReadOnlyDictionary<string, string> Copy(IReadOnlyDictionary<string, string>? metadata)
     {
         if (metadata is null || metadata.Count == 0)

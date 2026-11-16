@@ -19,7 +19,6 @@ public sealed class EvalRunQueue(IJobQueue jobs)
         return source;
     }
 
-    // Removes only this source, so a later run of the same id that registered meanwhile stays cancellable.
     internal void Unregister(Guid runId, CancellationTokenSource source)
     {
         _running.TryRemove(new KeyValuePair<Guid, CancellationTokenSource>(runId, source));

@@ -292,7 +292,6 @@ public sealed class ProviderSettingsServiceTests : IDisposable
     public void Official_OpenAI_model_suggestions_keep_chat_and_embedding_families(string model, bool expected) =>
         OpenAiProvider.IsChatOrEmbeddingModel(model).ShouldBe(expected);
 
-    // The fake provider stands for one with no key, endpoint or connection test, which no built-in provider is.
     private AiTestHost CreateHost(Dictionary<string, string?> configuration) =>
         AiTestHost.Create(configuration.With(("AI:Providers:fake:Type", FakeAiProvider.TypeName)), services =>
         {

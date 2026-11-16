@@ -14,7 +14,6 @@ public enum FeedbackAuthor
     Visitor,
     Staff,
 
-    // A note the assistant wrote from the chat; nobody confirmed it.
     Agent,
 }
 
@@ -33,7 +32,6 @@ public sealed class Feedback
     public List<string> Reasons { get; set; } = [];
     public FeedbackAuthor Author { get; set; }
 
-    // Visitor id or staff key, so a second rating replaces the first.
     public string AuthorKey { get; set; } = string.Empty;
 
     public Guid? WidgetId { get; set; }

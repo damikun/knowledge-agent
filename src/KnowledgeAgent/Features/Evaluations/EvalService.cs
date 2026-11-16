@@ -241,7 +241,6 @@ internal sealed class EvalService(
         }
         else if (record.Status == EvalRunStatuses.Running && !queue.TryCancel(id))
         {
-            // No process is running it any more, so nothing else will close it.
             record.Status = EvalRunStatuses.Cancelled;
             record.CompletedAt = timeProvider.GetUtcNow();
             await runs.UpdateAsync(record, cancellationToken);

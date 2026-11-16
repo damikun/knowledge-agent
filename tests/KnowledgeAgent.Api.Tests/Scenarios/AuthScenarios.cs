@@ -17,7 +17,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Api.Tests.Scenarios;
 
-// The other scenarios run as the local admin of Auth:Mode=None; these act as other users.
 public sealed class AuthScenarios(InMemoryAppFixture fixture) : IClassFixture<InMemoryAppFixture>
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -33,7 +32,6 @@ public sealed class AuthScenarios(InMemoryAppFixture fixture) : IClassFixture<In
         (await SendAsync(app, HttpMethod.Get, "/openapi/v1.json")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         (await SendAsync(app, HttpMethod.Get, "/health")).StatusCode.ShouldBe(HttpStatusCode.OK);
 
-        // Sign-in is off in the tests, so login goes straight back to a local path and never to another site.
         using var client = app.Factory.CreateClient(new() { AllowAutoRedirect = false });
         using var login = await client.GetAsync("/api/auth/login?returnUrl=//evil.example/x", Ct);
         login.StatusCode.ShouldBe(HttpStatusCode.Redirect);
@@ -83,7 +81,6 @@ public sealed class AuthScenarios(InMemoryAppFixture fixture) : IClassFixture<In
         (await SendAsync(app, HttpMethod.Post, $"/api/evals/datasets/{Guid.NewGuid()}/items/delete", new { ids = new[] { Guid.NewGuid() } }, AuthRoles.Support))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
 
-        // A profile or prompt variables change what the agent is told, so a support user may not pick them.
         using var chat = await SendAsync(app, HttpMethod.Post, "/api/chat", new ChatRequestDto(null, "Hello", null, "utility", null), AuthRoles.Support);
         (await chat.ReadProblemAsync(HttpStatusCode.Forbidden)).Title.ShouldBe("Admin role required");
     }
@@ -289,7 +286,6 @@ public sealed class AuthScenarios(InMemoryAppFixture fixture) : IClassFixture<In
         using var accepted = await app.Client.SendAsync(withHeader, Ct);
         accepted.StatusCode.ShouldBe(HttpStatusCode.Accepted);
 
-        // Reading needs no header, and neither does a request without the cookie (Inngest, widgets, scripts).
         using var read = new HttpRequestMessage(HttpMethod.Get, "/api/sources");
         read.Headers.Add("Cookie", $"{AuthModule.CookieName}=session");
         (await app.Client.SendAsync(read, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -300,7 +296,6 @@ public sealed class AuthScenarios(InMemoryAppFixture fixture) : IClassFixture<In
     {
         await using var app = await CreateOidcAppAsync();
 
-        // A session without a refresh token: there is nothing to check it with.
         using var response = await SendWithSessionAsync(app, Session(app, refreshToken: null, due: null));
 
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
@@ -353,7 +348,6 @@ public sealed class AuthScenarios(InMemoryAppFixture fixture) : IClassFixture<In
         health.Components.ShouldAllBe(c => !c.Detail.Contains("127.0.0.1") && !c.Detail.Contains("test-client-secret"));
     }
 
-    // Nothing answers at the authority, so these sessions are made the way the API's sign-in would make them.
     private Task<KnowledgeAgentApp> CreateOidcAppAsync() =>
         fixture.CreateAppAsync(options =>
         {

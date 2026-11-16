@@ -66,7 +66,6 @@ public sealed class PersistenceModuleTests
     [Fact]
     public async Task Per_host_InMemory_stores_do_not_cost_an_EF_service_provider_each()
     {
-        // EF warns once it has created more than 20 internal service providers.
         var logs = new FakeLogCollector();
         for (var i = 0; i < 25; i++)
         {
@@ -105,7 +104,6 @@ public sealed class PersistenceModuleTests
     [Fact]
     public async Task Postgres_provider_is_enriched_by_Aspire()
     {
-        // Resolving the context and its execution strategy never opens a connection.
         using var host = PersistenceHost.Build(PostgresPersistenceFixture.PostgresSettings(UnreachableConnectionString()));
         await using var scope = host.Services.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<KnowledgeDbContext>();
@@ -126,7 +124,6 @@ public sealed class PersistenceModuleTests
         };
         using var host = PersistenceHost.Build(settings);
 
-        // Would throw if it tried to reach the closed port.
         await PersistenceHost.RunStartupInitializersAsync(host.Services, Ct);
     }
 

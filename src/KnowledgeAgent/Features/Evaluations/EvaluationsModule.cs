@@ -65,7 +65,6 @@ public static class EvaluationsModule
         options.Retry.BackoffType = DelayBackoffType.Exponential;
         options.Retry.UseJitter = true;
 
-        // Creating a dataset is not idempotent, so unsafe methods are never retried.
         options.Retry.DisableForUnsafeHttpMethods();
         options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);
     }

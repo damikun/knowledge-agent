@@ -20,7 +20,6 @@ public static class WebApiModule
         services.AddExceptionHandler<ApiExceptionHandler>();
         services.ConfigureHttpJsonOptions(options => ApiJson.Configure(options.SerializerOptions));
 
-        // Throwing lets the exception handler answer malformed bodies and parameters with a descriptive problem.
         services.PostConfigure<RouteHandlerOptions>(options => options.ThrowOnBadRequest = true);
 
         return builder;

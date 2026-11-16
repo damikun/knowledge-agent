@@ -6,7 +6,6 @@ namespace KnowledgeAgent.Features.Integrations;
 
 public static class IntegrationsModule
 {
-    // Handover and Alerts send through these, so add it first.
     public static IHostApplicationBuilder AddIntegrations(this IHostApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);

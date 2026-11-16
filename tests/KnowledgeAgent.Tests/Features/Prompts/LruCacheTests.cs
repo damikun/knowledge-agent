@@ -10,7 +10,7 @@ public sealed class LruCacheTests
         var cache = new LruCache<string, int>(2);
         cache.Set("a", 1);
         cache.Set("b", 2);
-        cache.TryGet("a", out _).ShouldBeTrue(); // "b" is now the oldest
+        cache.TryGet("a", out _).ShouldBeTrue();
 
         cache.Set("c", 3);
 

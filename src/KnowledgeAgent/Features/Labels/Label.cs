@@ -76,7 +76,6 @@ internal sealed class ConversationLabelConfiguration : IEntityTypeConfiguration<
     }
 }
 
-// Seeded once by the migration so deletions stick; the in-memory store gets them from LabelSeedInitializer.
 internal static class LabelDefaults
 {
     public static readonly IReadOnlyList<(Guid Id, string Name, string Color, string Description)> All =

@@ -2,16 +2,11 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Infrastructure.Jobs;
 
-// Durable steps inside one job. A step runs and retries on its own, and once it has succeeded its result is reused
-// when the job runs again, so a job can be a loop of steps without redoing finished ones. Step ids must be unique and
-// stable within a job, and the code between steps must be deterministic. Results are stored as JSON on Inngest, so
-// steps return plain records.
 public interface IJobSteps
 {
     Task<T> RunAsync<T>(string id, Func<CancellationToken, Task<T>> step);
 }
 
-// Thrown where a step is awaited once it has failed all of its attempts. Catch it to carry on without the step.
 public sealed class JobStepFailedException(string stepId, string message, Exception? innerException = null)
     : Exception(message, innerException)
 {
@@ -20,7 +15,6 @@ public sealed class JobStepFailedException(string stepId, string message, Except
 
 public static class JobSteps
 {
-    // Runs each step once, for handlers invoked outside a job engine.
     public static IJobSteps Inline { get; } = new InlineJobSteps();
 
     private sealed class InlineJobSteps : IJobSteps
@@ -39,8 +33,6 @@ public static class JobSteps
     }
 }
 
-// The in-process runner keeps one instance per job across its attempts, so a retried job skips the steps that
-// already succeeded, as Inngest does. Failed steps are retried in place with a short backoff.
 internal sealed partial class InProcessJobSteps(
     int maxAttempts,
     TimeProvider timeProvider,

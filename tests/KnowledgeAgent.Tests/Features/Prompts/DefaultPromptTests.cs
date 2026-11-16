@@ -172,7 +172,6 @@ public sealed class DefaultPromptTests
     [Fact]
     public void Orchestrator_renders_the_same_from_json_variables()
     {
-        // The API passes JSON request variables through unchanged, so they must render like CLR values.
         var json = JsonSerializer.SerializeToElement(FullOrchestratorVariables());
         var variables = json.EnumerateObject().ToDictionary(p => p.Name, p => (object?)p.Value);
 

@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 
 namespace KnowledgeAgent.Infrastructure.Web;
 
-// Error text shown in the portal: one line, with credentials and URL query strings masked.
 internal static partial class ErrorMessages
 {
     public static string Redact(string? message)
@@ -12,7 +11,6 @@ internal static partial class ErrorMessages
             return string.Empty;
         }
 
-        // Only the first line is kept because providers sometimes append response bodies or diagnostics.
         var text = message.ReplaceLineEndings("\n")
             .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .FirstOrDefault() ?? string.Empty;

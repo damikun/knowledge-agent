@@ -310,7 +310,6 @@ public sealed class FakeLangfuseServer : IAsyncDisposable
                     }
                 })
                 .ToList();
-            // Langfuse v4 quirks: the default page size is 10 and meta is repeated as "pagination".
             var size = limit ?? 10;
             var pageNumber = page ?? 1;
             var data = new JsonArray(items.Skip((pageNumber - 1) * size).Take(size).Select(i => (JsonNode)i).ToArray());

@@ -53,7 +53,6 @@ public static class ItemScorer
             metrics[EvalMetrics.CitationValidity] = citations.Count(citation => citation.Valid) / (double)cited.Count;
         }
 
-        // Without this, an agent that never cites passes every citation metric: they only count answers with tags.
         if (item.Answerable && !turn.Failed)
         {
             metrics[EvalMetrics.AnsweredWithCitation] = citations.Any(citation => citation.Valid) ? 1 : 0;
@@ -81,7 +80,6 @@ public static class ItemScorer
             metrics[EvalMetrics.AnswerFactRecall] = (item.ExpectedFacts.Count - missingFacts.Count) / (double)item.ExpectedFacts.Count;
         }
 
-        // Declining has to be said: an answer that just lacks citations may be a guess. A failed turn is neither.
         if (!item.Answerable && !turn.Failed)
         {
             metrics[EvalMetrics.AnswerAbstained] = AnswerText.Declines(turn.Answer) ? 1 : 0;
@@ -90,7 +88,6 @@ public static class ItemScorer
         return new ItemScore(metrics, retrieved, citations, missingFacts);
     }
 
-    // With the judge, a decline also has to be correct: saying so plainly instead of hedging around an answer.
     public static void ApplyJudge(IDictionary<string, double> metrics)
     {
         ArgumentNullException.ThrowIfNull(metrics);

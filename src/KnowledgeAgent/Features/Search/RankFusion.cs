@@ -39,7 +39,6 @@ internal static class RankFusion
                 : (keyword[i], null, null, keyword[i].Score, i + 1);
         }
 
-        // Relative to a chunk that every retriever ranked first, so scores stay in 0..1.
         var maximum = (vectorShare + keywordShare) / (rrfK + 1);
         return byChunk.Values
             .Select(entry => new FusedCandidate(
@@ -58,7 +57,6 @@ internal static class RankFusion
 
     public static IReadOnlyList<FusedCandidate> Single(IReadOnlyList<VectorSearchHit> hits, bool keyword)
     {
-        // BM25 has no fixed scale: report it relative to the best hit so scores stay in 0..1 like the other modes.
         var best = keyword && hits.Count > 0 ? hits.Max(hit => hit.Score) : 1d;
         return hits
             .Select((hit, index) => keyword

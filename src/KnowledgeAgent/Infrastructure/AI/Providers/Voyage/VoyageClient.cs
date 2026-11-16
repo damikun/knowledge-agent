@@ -17,7 +17,6 @@ internal sealed class VoyageClient : IDisposable
     {
         _http = new HttpClient(handler ?? new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) })
         {
-            // The trailing slash keeps a path prefix such as /voyage/v1/ when relative paths are combined.
             BaseAddress = new Uri(endpoint.ToString().TrimEnd('/') + "/"),
             Timeout = RequestTimeout,
         };
@@ -143,7 +142,6 @@ internal sealed class VoyageClient : IDisposable
         }
         catch (JsonException)
         {
-            // Not JSON, for example a proxy's error page: the raw text is used.
         }
 
         text = text.ReplaceLineEndings(" ").Trim();

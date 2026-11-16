@@ -30,7 +30,6 @@ internal sealed partial class IngestionRecoveryInitializer(
 
         LogRecovered(logger, unfinished.Count);
 
-        // A model may have been configured while the API was down.
         await waitingSources.QueueIfReadyAsync(cancellationToken).ConfigureAwait(false);
     }
 

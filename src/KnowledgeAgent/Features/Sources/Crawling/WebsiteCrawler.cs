@@ -17,7 +17,6 @@ internal enum CrawlDiscovery
 
 internal sealed record PlannedPage(string Url, DateTimeOffset? LastModified, int Depth);
 
-// What the discovery step hands the rest of the crawl. Stored as a step result, so it is plain data.
 internal sealed record CrawlPlan(
     bool Found,
     string? Error,
@@ -67,7 +66,6 @@ internal sealed partial class WebsiteCrawler(
     public const int MaxSitemapFetches = 10;
     public const int MaxRobotsBytes = 512 * 1024;
 
-    // Less text than this on a page that runs scripts means the content is rendered in the browser.
     public const int MinPageTextLength = 100;
 
     public const string NeedsBrowserMessage =
@@ -139,7 +137,6 @@ internal sealed partial class WebsiteCrawler(
         var interval = Interval(request.Plan.Robots);
         var existing = await repository.FindPageAsync(website.Id, request.Page.Url, cancellationToken).ConfigureAwait(false);
 
-        // The sitemap says the page has not changed since it was last ingested.
         if (existing is { Status: SourceStatus.Ready } && request.Page.LastModified is { } lastModified && !request.CollectLinks
             && existing.Metadata.TryGetValue(SourceMetadataKeys.SitemapLastModified, out var storedLastModified)
             && storedLastModified == FormatDate(lastModified))
@@ -274,8 +271,6 @@ internal sealed partial class WebsiteCrawler(
         return await DoneAsync(request, outcome, page.Id, links, cancellationToken).ConfigureAwait(false);
     }
 
-    // Pages that failed every attempt are recorded, and pages this crawl did not reach are removed, unless the crawl
-    // failed as a whole: a site that is down must not lose its pages.
     public async Task<bool> FinishAsync(Guid websiteId, string runId, string? error, IReadOnlyList<FailedPage> failedPages, CancellationToken cancellationToken)
     {
         var website = await repository.GetAsync(websiteId, cancellationToken).ConfigureAwait(false);
@@ -336,7 +331,6 @@ internal sealed partial class WebsiteCrawler(
         }
         catch (IngestionException ex) when (ex.StatusCode is >= 400 and < 500)
         {
-            // RFC 9309: a robots.txt that is missing or forbidden places no restrictions.
             return RobotsTxt.Empty;
         }
     }
@@ -375,7 +369,6 @@ internal sealed partial class WebsiteCrawler(
             }
             catch (Exception ex) when (ex is IngestionException or InvalidDataException)
             {
-                // No sitemap or a broken one: links are followed instead.
                 LogSitemapSkipped(logger, next.Uri, ex.Message);
                 continue;
             }
@@ -509,7 +502,6 @@ internal sealed partial class WebsiteCrawler(
         return perRequest > crawlDelay ? perRequest : crawlDelay;
     }
 
-    // Validators are sent only for a page that is ready, so a page that failed or waits is fetched in full.
     private static FetchOptions Conditional(Source? existing) =>
         existing is { Status: SourceStatus.Ready }
             ? new FetchOptions

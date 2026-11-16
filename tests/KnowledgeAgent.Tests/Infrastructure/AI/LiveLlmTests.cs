@@ -21,7 +21,6 @@ public sealed class LiveLlmTests
 
     private static bool LiveEnabled => Environment.GetEnvironmentVariable("RUN_LIVE_LLM_TESTS") is "1" or "true";
 
-    // A cheaper model for routine live runs, e.g. LIVE_ANTHROPIC_MODEL=claude-haiku-5-5.
     private static string AnthropicModel => Environment.GetEnvironmentVariable("LIVE_ANTHROPIC_MODEL") is { Length: > 0 } model ? model : "claude-opus-5-5";
 
     [Fact]
@@ -51,7 +50,6 @@ public sealed class LiveLlmTests
             ("AI:Profiles:orchestrator:MaxOutputTokens", "4000")));
     }
 
-    // Earlier turns go back compacted and a hand-off drops the thinking of the turn so far; Claude must accept both.
     [Fact]
     public async Task Anthropic_accepts_a_compacted_history_and_a_hand_off_without_thinking()
     {
@@ -76,7 +74,6 @@ public sealed class LiveLlmTests
         turn.AddRange(first.Messages);
         turn.Add(new ChatMessage(ChatRole.Tool, [new FunctionResultContent(call.CallId, ToolResult + new string(' ', 600))]));
 
-        // A hand-off mid-turn: another system prompt, and no thinking from the turn so far.
         List<ChatMessage> handedOff = [new(ChatRole.System, "You are the warranty specialist. " + System), .. turn];
         ConversationHistoryBuilder.DropReasoningOfCurrentTurn(handedOff);
         var answer = await handle.Client.GetResponseAsync(handedOff, options, Ct);

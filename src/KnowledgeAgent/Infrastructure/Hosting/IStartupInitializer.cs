@@ -5,7 +5,6 @@ public interface IStartupInitializer
     int Order { get; }
     string Name { get; }
 
-    /// <summary>When false, a failure is logged and startup continues.</summary>
     bool IsCritical => true;
 
     Task InitializeAsync(CancellationToken cancellationToken);

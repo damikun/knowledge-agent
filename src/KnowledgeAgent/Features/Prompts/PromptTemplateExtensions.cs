@@ -6,7 +6,6 @@ namespace KnowledgeAgent.Features.Prompts;
 
 internal static class PromptTemplateExtensions
 {
-    // Cached templates are shared, and a JsonNode handed out twice could be mutated or re-parented by a caller.
     public static PromptTemplate Snapshot(this PromptTemplate template) =>
         template.Config is null ? template : template with { Config = (JsonObject)template.Config.DeepClone() };
 

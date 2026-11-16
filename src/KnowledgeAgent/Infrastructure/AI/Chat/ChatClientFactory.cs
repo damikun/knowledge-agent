@@ -25,7 +25,6 @@ internal sealed partial class ChatClientFactory(
         CancellationToken cancellationToken = default)
     {
         var profile = await resolver.ResolveAsync(profileName, promptPatch, requestPatch, cancellationToken);
-        // Rerank profiles are allowed: on a chat provider they rerank with an LLM.
         if (profile.Kind == ModelKind.Embedding)
         {
             throw new ModelNotConfiguredException(
@@ -54,7 +53,6 @@ internal sealed partial class ChatClientFactory(
             Reasoning = ReasoningSettings.ToReasoningOptions(profile.ReasoningEffort, profile.ReasoningOutput),
         };
 
-        // Applied last so providers can drop settings their models reject.
         provider.ConfigureChatOptions(options, providerOptions, profile);
         return options;
     }
@@ -69,7 +67,6 @@ internal sealed partial class ChatClientFactory(
         }
         catch
         {
-            // Failures are not cached so a corrected configuration or a transient error can succeed later.
             _clients.TryRemove(new KeyValuePair<string, Lazy<IChatClient>>(key, lazy));
             throw;
         }
@@ -92,7 +89,6 @@ internal sealed partial class ChatClientFactory(
 
         LogClientCreated(_logger, profile.ProviderKey, provider.Type, profile.Model);
 
-        // No function-invocation stage on purpose: callers run their own tool loop.
         return new ChatClientBuilder(inner)
             .UseOpenTelemetry(loggerFactory, KnowledgeAgentTelemetry.AI, client => client.EnableSensitiveData = sensitiveData)
             .UseLogging(loggerFactory)

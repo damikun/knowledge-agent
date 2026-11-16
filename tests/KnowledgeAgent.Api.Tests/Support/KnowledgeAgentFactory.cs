@@ -18,10 +18,8 @@ public sealed class KnowledgeAgentFactory(
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        // Not "Development", so user secrets and appsettings.Development.json stay out of the tests.
         builder.UseEnvironment(EnvironmentName);
 
-        // UseSetting values reach Program as command-line arguments, so modules see them while registering services.
         foreach (var (key, value) in settings)
         {
             builder.UseSetting(key, value ?? string.Empty);

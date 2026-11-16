@@ -79,7 +79,6 @@ internal sealed class ModelProfileOverrideStore(KnowledgeDbContext db, DbContext
         }
     }
 
-    // Matched in memory: the table holds a handful of rows and this behaves the same on every database provider.
     private static ModelProfileOverride? Match(List<ModelProfileOverride> overrides, string name) =>
         overrides.Find(profileOverride => string.Equals(profileOverride.Name, name, StringComparison.Ordinal))
         ?? overrides

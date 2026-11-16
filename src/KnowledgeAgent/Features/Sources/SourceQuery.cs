@@ -14,13 +14,11 @@ public sealed record SourceQuery(
     public const int MaxLimit = 100;
 }
 
-// A null FolderId selects the unfiled sources.
 public sealed record FolderFilter(Guid? FolderId)
 {
     public static FolderFilter Unfiled { get; } = new((Guid?)null);
 }
 
-// A null ParentId selects the sources that are not pages of a website.
 public sealed record ParentFilter(Guid? ParentId)
 {
     public static ParentFilter TopLevel { get; } = new((Guid?)null);

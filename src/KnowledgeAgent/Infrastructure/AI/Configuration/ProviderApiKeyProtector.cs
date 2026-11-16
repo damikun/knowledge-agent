@@ -7,7 +7,6 @@ namespace KnowledgeAgent.Infrastructure.AI.Configuration;
 
 internal sealed partial class ProviderApiKeyProtector(IDataProtectionProvider dataProtection, ILogger<ProviderApiKeyProtector> logger)
 {
-    // Changing the purpose makes every saved key undecryptable.
     internal const string Purpose = "KnowledgeAgent.AI.ProviderApiKeys.v1";
 
     private readonly IDataProtector _protector = dataProtection.CreateProtector(Purpose);
@@ -34,7 +33,6 @@ internal sealed partial class ProviderApiKeyProtector(IDataProtectionProvider da
         }
     }
 
-    // Short keys get no suffix so the hint never reveals a large part of them.
     public static string Hint(string apiKey) => apiKey.Length >= 12 ? "…" + apiKey[^4..] : "…";
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "The API key saved for provider '{ProviderKey}' cannot be decrypted (the Data Protection key ring changed?); save it again under Models → Providers")]

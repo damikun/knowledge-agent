@@ -9,7 +9,6 @@ namespace KnowledgeAgent.Features.Chat.History;
 
 internal sealed record ConversationHistory(List<ChatMessage> Messages, HistoryMode Mode, int Turns, int StubbedResults, long EstimatedTokens);
 
-// Stateless: the result depends only on the stored turns, so the prompt prefix stays the same from one turn to the next.
 internal sealed class ConversationHistoryBuilder(IOptions<HistoryOptions> options, ILogger<ConversationHistoryBuilder> logger)
 {
     public ConversationHistory Build(Conversation conversation)
@@ -50,8 +49,6 @@ internal sealed class ConversationHistoryBuilder(IOptions<HistoryOptions> option
         return new ConversationHistory(history, settings.Mode, turns.Count, stubbed, EstimateTokens(history));
     }
 
-    // Claude accepts a history whose earlier thinking blocks were all removed, but not one whose tool results changed
-    // under a thinking block that is still there. So a finished turn always loses its thinking first.
     internal static List<ChatMessage> CompactTurn(
         ConversationTurn turn,
         IReadOnlyList<ChatMessage> messages,
@@ -113,8 +110,6 @@ internal sealed class ConversationHistoryBuilder(IOptions<HistoryOptions> option
         return compacted;
     }
 
-    // Removes the thinking of the turn in progress before another agent takes over: its system prompt and tools
-    // differ, so the blocks would no longer match what they were made for.
     internal static int DropReasoningOfCurrentTurn(List<ChatMessage> history)
     {
         var start = history.FindLastIndex(message => message.Role == ChatRole.User);
@@ -143,7 +138,6 @@ internal sealed class ConversationHistoryBuilder(IOptions<HistoryOptions> option
         return dropped;
     }
 
-    // A confirmed action's output is appended to the person's message; in later turns only its start is needed.
     private static TextContent ShortenAppendedResult(TextContent content, string question, int maxChars)
     {
         var text = content.Text;

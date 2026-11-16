@@ -137,9 +137,9 @@ public sealed class PeopleMigrationTests(PostgresPersistenceFixture fixture) : I
                 ["email_custom"] = "string Email custom",
             },
             ignoreOrder: true);
-        (await RowsAsync(dataSource, "SELECT id::text, (attribute_sources -> 'plan' ->> 'source') || ' ' || session_count FROM contacts")).Values
+        (await RowsAsync(dataSource, "SELECT id::text, (attribute_sources -> 'plan' ->> 'source') || ' ' || visit_count FROM contacts")).Values
             .ShouldBe(["verified 2", "verified 1"], ignoreOrder: true);
-        (await RowsAsync(dataSource, "SELECT id::text, coalesce(contact_id::text, '-') || ' ' || session_count FROM widget_visitors WHERE id = '" + emptyBrowser + "'"))
+        (await RowsAsync(dataSource, "SELECT id::text, coalesce(contact_id::text, '-') || ' ' || visit_count FROM widget_visitors WHERE id = '" + emptyBrowser + "'"))
             .ShouldBe(new Dictionary<string, string> { [emptyBrowser.ToString()] = "- 1" }, "the page open's browser stays, without the empty contact");
 
         var contact = await db.Contacts.AsNoTracking().SingleAsync(item => item.Id == ada, Ct);

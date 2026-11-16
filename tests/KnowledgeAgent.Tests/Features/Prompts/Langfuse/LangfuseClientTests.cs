@@ -59,7 +59,7 @@ public sealed class LangfuseClientTests : IAsyncLifetime
         (await _client.GetPromptAsync("greeting", label: "staging", cancellationToken: Ct))!.Text.ShouldBe("v2");
         (await _client.GetPromptAsync("greeting", label: "latest", cancellationToken: Ct))!.Version.ShouldBe(2);
         (await _client.GetPromptAsync("greeting", version: 1, cancellationToken: Ct))!.Text.ShouldBe("v1");
-        (await _client.GetPromptAsync("greeting", label: "staging", version: 1, cancellationToken: Ct))!.Text.ShouldBe("v1"); // version wins
+        (await _client.GetPromptAsync("greeting", label: "staging", version: 1, cancellationToken: Ct))!.Text.ShouldBe("v1");
     }
 
     [Fact]
@@ -98,7 +98,6 @@ public sealed class LangfuseClientTests : IAsyncLifetime
     [Fact]
     public async Task Tolerates_chatmessage_entries_and_skips_placeholders()
     {
-        // Langfuse v3 stores typed chat entries, so create one through the raw API like a newer SDK would.
         const string body = """
             {"name":"typed-chat","type":"chat","labels":["production"],"prompt":[
               {"type":"chatmessage","role":"system","content":"Be {{tone}}."},
@@ -246,7 +245,7 @@ public sealed class LangfuseClientTests : IAsyncLifetime
         get.Message.ShouldNotContain("sk-lf-wrong");
         list.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         create.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
-        (await client.GetHealthAsync(Ct)).Status.ShouldBe("OK"); // health needs no credentials
+        (await client.GetHealthAsync(Ct)).Status.ShouldBe("OK");
     }
 
     [Fact]

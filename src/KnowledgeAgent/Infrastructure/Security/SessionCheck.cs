@@ -14,8 +14,6 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace KnowledgeAgent.Infrastructure.Security;
 
-// Re-checks each session every Auth:SessionCheckInterval by redeeming its refresh token.
-// While the provider is unreachable the session stays as it was and is retried a minute later.
 internal sealed partial class SessionCheck(
     IOptionsMonitor<OpenIdConnectOptions> oidcOptions,
     IOptions<AuthOptions> authOptions,
@@ -29,17 +27,13 @@ internal sealed partial class SessionCheck(
 
     private static readonly TimeSpan RetryAfter = TimeSpan.FromMinutes(1);
 
-    // Long enough for a slow token endpoint, short enough that requests do not hang on an unreachable one.
     private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(10);
 
     private readonly ConcurrentDictionary<string, Lazy<Task<Outcome>>> _checks = new(StringComparer.Ordinal);
 
-    // When the session of this request is due for a check; null when it is not checked, as with Auth:Mode=None.
     public static DateTimeOffset? DueAt(HttpContext context) =>
         context.Features.Get<IAuthenticateResultFeature>()?.AuthenticateResult?.Properties is { } properties ? DueAt(properties) : null;
 
-    // Keycloak needs the ID token as the logout hint and the check redeems the refresh token.
-    // The access token is dropped; it would only grow the cookie.
     public void Start(AuthenticationProperties properties)
     {
         properties.StoreTokens(Tokens(properties.GetTokenValue(IdToken), properties.GetTokenValue(RefreshToken)));
@@ -57,7 +51,6 @@ internal sealed partial class SessionCheck(
         Outcome outcome;
         if (context.Properties.GetTokenValue(RefreshToken) is { Length: > 0 } refreshToken)
         {
-            // Concurrent requests of one browser share one check, so Keycloak is asked once.
             var check = _checks.GetOrAdd(refreshToken, token => new Lazy<Task<Outcome>>(() => CheckAsync(token, principal)));
             outcome = await check.Value.WaitAsync(context.HttpContext.RequestAborted);
         }
@@ -70,7 +63,6 @@ internal sealed partial class SessionCheck(
         switch (outcome)
         {
             case Confirmed confirmed:
-                // A copy, as requests that shared the check must not share a principal.
                 context.ReplacePrincipal(confirmed.Principal.Clone());
                 context.Properties.StoreTokens(Tokens(confirmed.IdToken, confirmed.RefreshToken));
                 Schedule(context.Properties, authOptions.Value.SessionCheckInterval);
@@ -149,7 +141,6 @@ internal sealed partial class SessionCheck(
         }
         catch (Exception ex) when (ex is HttpRequestException or OperationCanceledException or InvalidOperationException)
         {
-            // InvalidOperationException is how the configuration manager reports metadata it could not fetch.
             return new Unreachable(ex.Message);
         }
 
@@ -158,7 +149,6 @@ internal sealed partial class SessionCheck(
             return new Unreachable($"the token endpoint answered {(int)status}");
         }
 
-        // Keycloak answers invalid_grant for a disabled account and for a session that ended there.
         var answer = Parse(body);
         if (status != HttpStatusCode.OK)
         {
@@ -193,7 +183,6 @@ internal sealed partial class SessionCheck(
             return new Ended("the new ID token belongs to another user");
         }
 
-        // Sign-in drops protocol claims such as aud, exp and nonce from the principal, and so does the check.
         using (var empty = JsonDocument.Parse("{}"))
         {
             foreach (var action in options.ClaimActions)

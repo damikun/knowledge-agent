@@ -2,9 +2,6 @@ using Microsoft.Extensions.AI;
 
 namespace KnowledgeAgent.Features.Chat.History;
 
-// A failed or stopped turn still goes into the history, so the next turn knows which tools already ran and does not
-// offer a hand-over or call an MCP action a second time. It is closed the way providers expect: every call gets a
-// result and the turn ends with a reply that says what happened.
 internal static class InterruptedTurn
 {
     internal const string StoppedNote = "(The person stopped this reply here.)";
@@ -29,7 +26,6 @@ internal static class InterruptedTurn
 
         var closed = messages.ToList();
 
-        // The thinking was made for a turn that never finished, so it is not sent again.
         ConversationHistoryBuilder.DropReasoningOfCurrentTurn(closed);
 
         var answered = closed

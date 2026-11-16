@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Chat.Live;
 
-// Turns what another instance published into events for the views on this one.
 internal sealed partial class ConversationLiveRelay(
     IServiceScopeFactory scopeFactory,
     ConversationEventHub hub,

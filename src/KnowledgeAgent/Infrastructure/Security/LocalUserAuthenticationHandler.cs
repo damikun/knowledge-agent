@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Infrastructure.Security;
 
-// Auth:Mode=None: every request is the same local admin, so the in-memory profile and the tests need no identity provider.
 internal sealed class LocalUserAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,

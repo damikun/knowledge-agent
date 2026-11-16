@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Http;
 
 namespace KnowledgeAgent.Features.Handover;
 
-// Per instance; replies are emailed only to visitors who left the chat.
 public sealed class VisitorPresence
 {
     private readonly ConcurrentDictionary<Guid, int> _viewers = new();

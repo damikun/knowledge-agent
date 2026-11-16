@@ -11,7 +11,6 @@ public sealed record MarkReadRequest(int? Sequence = null);
 
 public interface IConversationReads
 {
-    // Never moves back, so a late request does not undo a newer one; null when the conversation does not exist.
     Task<ConversationReadDto?> MarkReadAsync(string userId, Guid conversationId, int? sequence, CancellationToken cancellationToken = default);
 
     Task<ConversationReadDto?> MarkUnreadAsync(string userId, Guid conversationId, CancellationToken cancellationToken = default);
@@ -19,7 +18,6 @@ public interface IConversationReads
 
 internal static class UnreadQueries
 {
-    // Messages from before someone first signed in count as read, so a new colleague doesn't start with everything unread.
     public static async Task<DateTimeOffset> SinceAsync(KnowledgeDbContext db, string viewerId, CancellationToken cancellationToken) =>
         await db.StaffMembers.AsNoTracking()
             .Where(member => member.Id == viewerId)
@@ -47,7 +45,6 @@ internal sealed class ConversationReadRepository(KnowledgeDbContext db, DbContex
             return null;
         }
 
-        // Never past the last message, so a message that arrives later is not read in advance.
         var target = Math.Clamp(sequence ?? latest.Any, 0, latest.Any);
         var stored = await SaveAsync(userId, conversationId, target, forward: true, cancellationToken);
         return new ConversationReadDto(stored, latest.Counted > stored);
@@ -87,7 +84,6 @@ internal sealed class ConversationReadRepository(KnowledgeDbContext db, DbContex
         var now = timeProvider.GetUtcNow();
         if (db.Database.IsNpgsql())
         {
-            // One statement, so two tabs reading at once neither fail nor move the position back.
             if (forward)
             {
                 await db.Database.ExecuteSqlInterpolatedAsync(

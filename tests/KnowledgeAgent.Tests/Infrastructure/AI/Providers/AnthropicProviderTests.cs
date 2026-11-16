@@ -308,8 +308,6 @@ public sealed class AnthropicProviderTests : IAsyncLifetime
         request.Json["thinking"]!["block_binding"]!["prefix_mismatch_behavior"]!.GetValue<string>().ShouldBe("error");
     }
 
-    // Setting the thinking field stops the adapter from filling in thinking and effort, so the request must
-    // otherwise be exactly what the adapter sends without block binding.
     [Theory]
     [InlineData("adaptive")]
     [InlineData("extended")]
@@ -345,7 +343,6 @@ public sealed class AnthropicProviderTests : IAsyncLifetime
             }
         }
 
-        // Adaptive thinking cannot be turned off, so effort "none" is sent as "low" and gets block binding too.
         compared.ShouldBe((thinkingMode == "adaptive" ? 5 : 4) * 4 * 3);
     }
 

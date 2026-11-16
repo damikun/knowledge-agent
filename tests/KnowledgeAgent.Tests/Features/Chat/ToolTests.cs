@@ -365,7 +365,6 @@ public sealed class ToolTests : IDisposable
 
         first.Text.ShouldStartWith("Found \"torque\" (whole words, ignoring case) in 3 passages from 1 source; showing passages 1-2:");
         first.Text.ShouldEndWith("Joint 2 torque.\n\nMore passages: call grep_sources again with offset=2.");
-        // Each invocation here gets a fresh citation registry, so tags restart at S1.
         rest.Text.ShouldStartWith("Found \"torque\" (whole words, ignoring case) in 3 passages from 1 source; showing passages 3-3:\n\n[S1] Manual");
         rest.Text.ShouldNotContain("More passages");
         pastEnd.Text.ShouldBe("Found \"torque\" (whole words, ignoring case) in 3 passages from 1 source. Offset 5 is past the last result; use a smaller offset.");

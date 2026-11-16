@@ -88,7 +88,6 @@ public sealed class IngestionJobTests
         var allBusy = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         probe.Behavior = async (_, _) =>
         {
-            // The first three sources only finish once three run at the same time.
             if (probe.CurrentConcurrency >= 3)
             {
                 allBusy.TrySetResult();
@@ -270,7 +269,6 @@ public sealed class IngestionJobTests
 
         public FakeTimeProvider Time { get; }
 
-        // Queues the source and lets its debounce period pass, so it runs.
         public async Task EnqueueAsync(Guid sourceId)
         {
             await Queue.EnqueueAsync(sourceId, TestContext.Current.CancellationToken);

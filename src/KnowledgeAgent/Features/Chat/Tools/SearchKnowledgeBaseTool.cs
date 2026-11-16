@@ -54,7 +54,6 @@ internal sealed class SearchKnowledgeBaseTool(IOptions<AgentOptions> options) : 
         return new ToolResult(text, summary, Citations: citations.DistinctBy(citation => citation.Ref).ToList()) { Untrusted = true };
     }
 
-    // Test chat clients parse the output of FormatNoResults and Format, so both formats are a contract.
     public static string FormatNoResults(string query, IReadOnlyList<string>? degraded = null) =>
         $"No passages found for \"{query}\"." + DegradedNote(degraded);
 
@@ -95,7 +94,6 @@ internal sealed class SearchKnowledgeBaseTool(IOptions<AgentOptions> options) : 
 
     public const string DegradedSearchNote = "(Part of the search was unavailable for this query, so the results may be less complete than usual.)";
 
-    // On its own line after the first one, which test chat clients and history stubs read.
     private static string DegradedNote(IReadOnlyList<string>? degraded) => degraded switch
     {
         null or { Count: 0 } => string.Empty,
@@ -103,7 +101,6 @@ internal sealed class SearchKnowledgeBaseTool(IOptions<AgentOptions> options) : 
         _ => "\n" + DegradedSearchNote,
     };
 
-    // Null searches every source. The requested sources can narrow the scope but never widen it.
     public static IReadOnlyCollection<Guid>? ResolveSourceFilter(IReadOnlyList<Guid>? scope, IReadOnlyList<Guid> requested)
     {
         if (scope is null)

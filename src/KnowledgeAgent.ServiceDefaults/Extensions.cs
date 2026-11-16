@@ -21,7 +21,6 @@ public static class Extensions
 
         builder.Services.AddServiceDiscovery();
 
-        // No global resilience handler: its short timeouts would break LLM streaming and large downloads.
         builder.Services.ConfigureHttpClientDefaults(http => http.AddServiceDiscovery());
 
         return builder;
@@ -57,7 +56,6 @@ public static class Extensions
 
     private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder) where TBuilder : IHostApplicationBuilder
     {
-        // Per-signal exporters because UseOtlpExporter() cannot be combined with other OTLP exporters such as Langfuse's.
         if (!string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]))
         {
             builder.Services.AddOpenTelemetry()
@@ -81,7 +79,6 @@ public static class Extensions
 
     public static WebApplication MapDefaultEndpoints(this WebApplication app)
     {
-        // Exposed in every environment because container health checks rely on them.
         app.MapHealthChecks(HealthEndpointPath);
         app.MapHealthChecks(AlivenessEndpointPath, new HealthCheckOptions
         {

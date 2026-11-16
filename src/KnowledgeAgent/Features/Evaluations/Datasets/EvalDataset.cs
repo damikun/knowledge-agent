@@ -61,16 +61,12 @@ public sealed record EvalGateConfig(
         DefaultMaxRegression,
         null);
 
-    // Metrics a run must produce: a missing one fails the gate instead of skipping its minimum.
     public IReadOnlyList<string> Required { get; init; } = [];
 
-    // Required only when the judge runs.
     public IReadOnlyList<string> RequiredWithJudge { get; init; } = [];
 
-    // Allowed drop from the baseline per metric; the others use MaxRegression.
     public IReadOnlyDictionary<string, double> Tolerances { get; init; } = new Dictionary<string, double>(StringComparer.Ordinal);
 
-    // Minimums for the deterministic run in the tests (test embeddings and a rule-based agent), not for real models.
     public IReadOnlyDictionary<string, double> OfflineMinimums { get; init; } = new Dictionary<string, double>(StringComparer.Ordinal);
 
     public double ToleranceFor(string metric) => Tolerances.TryGetValue(metric, out var tolerance) ? tolerance : MaxRegression;

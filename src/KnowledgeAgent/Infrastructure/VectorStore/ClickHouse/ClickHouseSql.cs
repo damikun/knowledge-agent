@@ -4,16 +4,13 @@ using System.Text;
 
 namespace KnowledgeAgent.Infrastructure.VectorStore.ClickHouse;
 
-// Only validated identifiers are interpolated. Every user-supplied value is a {name:Type} query parameter.
 internal sealed class ClickHouseSql
 {
-    // Insert rows follow this column order, and created_at comes from its default.
     public static IReadOnlyList<string> InsertColumns { get; } =
         ["chunk_id", "source_id", "chunk_index", "content", "context", "metadata", "embedding_model", "dimensions", "embedding"];
 
     private const string SearchText = "if(empty(context), content, concat(context, ' ', content))";
 
-    // Written as system.columns reports them. Also sent with inserts so the driver skips its schema probe.
     public static IReadOnlyDictionary<string, string> ColumnTypes { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["chunk_id"] = "UUID",
@@ -87,7 +84,6 @@ internal sealed class ClickHouseSql
     public string CreateDatabase { get; }
     public string CreateTable { get; }
 
-    // Tables created before contextual retrieval get the column; existing chunks keep an empty context.
     public string AddContextColumn { get; }
     public string CountAll { get; }
     public string CountBySource { get; }
@@ -109,8 +105,6 @@ internal sealed class ClickHouseSql
 
     private string BuildTextSearch(TextSearchStatement statement, bool matchCase, bool filterSources)
     {
-        // position is a cheap prefilter on a word every match contains, before the regular expression runs.
-        // LIMIT 1 BY and uniqExact count a chunk stored for several embedding models once.
         var position = matchCase ? "position" : "positionCaseInsensitiveUTF8";
         var sourceFilter = filterSources ? "\nPREWHERE source_id IN {ids:Array(UUID)}" : string.Empty;
         var from = $$"""
@@ -142,9 +136,6 @@ internal sealed class ClickHouseSql
 
     private string BuildKeywordSearch(int termCount, bool filterSources)
     {
-        // match and countMatches need constant patterns, so each term gets its own expression instead of an array lambda.
-        // stats is (N, average length, df of term 0, df of term 1, ...) over every chunk of the model.
-        // positionCaseInsensitiveUTF8 is a cheap prefilter before the word-start match.
         var documentFrequencies = string.Join(
             ",\n                   ",
             Enumerable.Range(0, termCount).Select(i => string.Create(CultureInfo.InvariantCulture,
@@ -182,8 +173,6 @@ internal sealed class ClickHouseSql
 
     private string BuildSearch(bool filterSources, bool filterDistance)
     {
-        // PREWHERE runs first, so cosineDistance never sees embeddings of another size (SIZES_OF_ARRAYS_DONT_MATCH).
-        // Zero-length vectors give NaN, which counts as distance 1 like in the in-memory store.
         var sourceFilter = filterSources ? "\n  AND source_id IN {ids:Array(UUID)}" : string.Empty;
         var distanceFilter = filterDistance ? "\nWHERE distance <= {maxDistance:Float64}" : string.Empty;
         return $$"""

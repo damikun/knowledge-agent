@@ -67,7 +67,6 @@ public abstract class ConversationEventScenarios(AppFixture fixture)
         messages.Select(e => e.Id).ShouldBe(["3", "4"]);
         messages[0].Deserialize<ConversationMessageDto>().Text.ShouldBe("And about beavers?");
         messages[1].Deserialize<ConversationMessageDto>().Text.ShouldBe(second.Text);
-        // Token deltas reach viewers on the instance that runs the turn, which the test host always is.
         var turnTypes = live.Where(e => e.Event == "turn").Select(e => e.Json.GetProperty("type").GetString()).ToList();
         turnTypes.ShouldContain(ChatEventTypes.TextDelta);
         live.FindIndex(e => e.Event == "turn" && e.Json.GetProperty("type").GetString() == ChatEventTypes.TextDelta)
@@ -89,7 +88,6 @@ public abstract class ConversationEventScenarios(AppFixture fixture)
         chatResponse.StatusCode.ShouldBe(HttpStatusCode.OK);
         await gated.Started.WaitAsync(TimeSpan.FromSeconds(15), Ct);
 
-        // The client that asked goes away mid-answer, as on a page reload.
         Guid conversationId;
         await using (var chatEvents = SseReader.ReadAsync(chatResponse, Ct).GetAsyncEnumerator(Ct))
         {

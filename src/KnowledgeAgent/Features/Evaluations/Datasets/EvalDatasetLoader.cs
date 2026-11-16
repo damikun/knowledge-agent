@@ -52,7 +52,6 @@ public static partial class EvalDatasetLoader
             File.ReadAllText(datasetFile),
             relativePath =>
             {
-                // Corpus paths must stay inside the dataset folder.
                 var full = Path.GetFullPath(Path.Combine(directory, relativePath));
                 return full.StartsWith(root, StringComparison.Ordinal) && File.Exists(full) ? File.ReadAllBytes(full) : null;
             },

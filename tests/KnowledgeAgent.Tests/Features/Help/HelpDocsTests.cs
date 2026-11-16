@@ -4,7 +4,6 @@ using KnowledgeAgent.Features.Help;
 
 namespace KnowledgeAgent.Tests.Features.Help;
 
-// Every help file has a title and ships in the assembly, and every portal link matches a route in web/src/app/routes.tsx.
 public sealed partial class HelpDocsTests
 {
     private static readonly string Root = FindRoot();
@@ -52,7 +51,6 @@ public sealed partial class HelpDocsTests
         routes.ShouldNotContain(route => route.IsMatch("settings/system"));
     }
 
-    // Route paths are relative to "/"; ":name" is one segment and ":name?" an optional one.
     private static List<Regex> PortalRoutes()
     {
         var source = File.ReadAllText(Path.Combine(Root, "web", "src", "app", "routes.tsx"));

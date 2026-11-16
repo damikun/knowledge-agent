@@ -7,7 +7,6 @@ namespace KnowledgeAgent.Features.Alerts;
 
 public static class AlertsModule
 {
-    // Depends on Integrations, Handover, Analytics and the AI providers, so add it after them.
     public static IHostApplicationBuilder AddAlerts(this IHostApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);

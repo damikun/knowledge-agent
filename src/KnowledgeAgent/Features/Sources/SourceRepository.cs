@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore;
 
 namespace KnowledgeAgent.Features.Sources;
 
-// Reads return detached entities and writes clear the change tracker, so callers can pass an entity
-// back to UpdateAsync later, from this scope or another one.
 internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate, TimeProvider timeProvider) : ISourceRepository
 {
     public async Task<Source> AddAsync(Source source, SourceContent? content = null, CancellationToken cancellationToken = default)
@@ -103,7 +101,6 @@ internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate
             })
             .ToListAsync(cancellationToken);
 
-        // Statuses count what the library lists, so a website counts once; what is searchable includes its pages.
         var byStatus = rows.Where(row => !row.IsPage).GroupBy(row => row.Status).ToDictionary(group => group.Key, group => group.Sum(row => row.Count));
         var ready = rows.Where(row => row.Status == SourceStatus.Ready).ToList();
         return new SourceStats(
@@ -115,7 +112,6 @@ internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate
                 .ToDictionary(group => group.Key, group => group.Sum(row => row.Count), StringComparer.Ordinal));
     }
 
-    // Every filter of the query except its paging.
     private IQueryable<Source> Matching(IQueryable<Source> sources, SourceQuery query)
     {
         if (query.Type is { } type)
@@ -158,7 +154,6 @@ internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate
         {
             if (npgsql)
             {
-                // ILIKE can use the trigram GIN indexes.
                 var pattern = "%" + LikeSearch.Escape(term) + "%";
                 sources = sources.Where(source =>
                     EF.Functions.ILike(source.Title, pattern, LikeSearch.EscapeCharacter)
@@ -235,7 +230,6 @@ internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate
             var entry = db.Entry(source);
             entry.State = EntityState.Modified;
 
-            // Ingestion saves an entity it loaded minutes earlier, which must not undo a move made in the meantime.
             entry.Property(item => item.FolderId).IsModified = false;
             await db.SaveChangesAsync(cancellationToken);
         }
@@ -249,7 +243,6 @@ internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate
         }
     }
 
-    // Pages follow their website, so they stay in the folder it is in.
     public async Task<int> MoveToFolderAsync(IReadOnlyCollection<Guid> ids, Guid? folderId, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(ids);
@@ -354,7 +347,6 @@ internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate
             return await sources.ExecuteUpdateAsync(setters => setters.SetProperty(source => source.FolderId, folderId), cancellationToken);
         }
 
-        // Non-relational providers have no ExecuteUpdate.
         try
         {
             var matched = await sources.ToListAsync(cancellationToken);
@@ -419,7 +411,6 @@ internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate
             }
             else
             {
-                // Writes only the supplied columns without loading the stored payload, which can be large.
                 var entry = db.SourceContents.Attach(new SourceContent { SourceId = sourceId, ExtractedText = extractedText, RawBytes = rawBytes });
                 entry.Property(content => content.ExtractedText).IsModified = extractedText is not null;
                 entry.Property(content => content.RawBytes).IsModified = rawBytes is not null;
@@ -439,11 +430,9 @@ internal sealed class SourceRepository(KnowledgeDbContext db, DbContextGate gate
 
         if (db.Database.IsRelational())
         {
-            // ON DELETE CASCADE removes the content row.
             return await db.Sources.Where(source => source.Id == id).ExecuteDeleteAsync(cancellationToken) > 0;
         }
 
-        // Non-relational providers have neither ExecuteDelete nor store-side cascades.
         try
         {
             var source = await db.Sources.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);

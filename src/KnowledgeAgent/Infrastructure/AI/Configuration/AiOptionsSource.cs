@@ -10,7 +10,6 @@ internal sealed partial class AiOptionsSource(
     ProviderApiKeyProtector protector,
     ILogger<AiOptionsSource> logger) : IAiOptionsSource
 {
-    // Not cached: a key saved in the portal must apply to the very next request.
     public async Task<AiOptions> GetCurrentAsync(CancellationToken cancellationToken = default) =>
         Apply(optionsMonitor.CurrentValue, await LoadSettingsAsync(cancellationToken), protector);
 
@@ -51,7 +50,6 @@ internal sealed partial class AiOptionsSource(
 
         foreach (var entry in settings)
         {
-            // The portal edits configured providers, it does not create them.
             if (string.IsNullOrWhiteSpace(entry.Key) || !effective.Providers.TryGetValue(entry.Key.Trim(), out var provider))
             {
                 continue;

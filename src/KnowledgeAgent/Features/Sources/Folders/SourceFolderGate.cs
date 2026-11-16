@@ -1,6 +1,5 @@
 namespace KnowledgeAgent.Features.Sources.Folders;
 
-// Folder changes are checked against the whole tree before they are written, so they run one at a time.
 internal sealed class SourceFolderGate : IDisposable
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);

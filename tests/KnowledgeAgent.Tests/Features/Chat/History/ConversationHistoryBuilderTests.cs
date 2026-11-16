@@ -217,7 +217,6 @@ internal static class HistoryFixtures
         return conversation;
     }
 
-    // A question, thinking and parallel tool calls in one round, then thinking and the answer.
     public static ConversationTurn SearchTurn(int n, int searchesPerTurn = 1)
     {
         var messages = new List<ChatMessage> { new(ChatRole.User, $"Question {n}") };

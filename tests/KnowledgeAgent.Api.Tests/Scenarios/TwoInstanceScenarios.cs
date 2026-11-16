@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KnowledgeAgent.Api.Tests.Scenarios;
 
-// Two API instances on one database, as behind a load balancer.
 public sealed class TwoInstanceScenarios
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;
@@ -52,7 +51,6 @@ public sealed class TwoInstanceScenarios
             },
             Ct);
 
-        // B starts listening in the background, so A repeats an update until one gets through.
         SseEvent? probe = null;
         while (probe is null)
         {
@@ -89,7 +87,6 @@ public sealed class TwoInstanceScenarios
         await scope.ServiceProvider.GetRequiredService<ConversationTimeline>().SetStatusAsync(conversationId, status, Ct);
     }
 
-    // Null when nothing arrived in time.
     private static async Task<SseEvent?> NextAsync(ChannelReader<SseEvent> events, TimeSpan within)
     {
         using var timeout = CancellationTokenSource.CreateLinkedTokenSource(Ct);

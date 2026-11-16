@@ -68,7 +68,6 @@ internal static class HandoverEndpoints
         {
             if (userId == StaffClaims.Id(user))
             {
-                // Taking it oneself works even before the portal recorded the sign-in.
                 await staff.SeenAsync(user, cancellationToken);
                 assignee = StaffClaims.Ref(user);
             }

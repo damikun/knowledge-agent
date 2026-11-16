@@ -108,7 +108,6 @@ internal sealed class KnowledgeTestContext : IAsyncDisposable
         return SeedAsync(source, new SourceContent { SourceId = source.Id, ExtractedText = text });
     }
 
-    // Sources queued to run now; a delayed retry fails the check, so tests assert those through Queue.Drain().
     public List<Guid> DrainQueue()
     {
         var queued = Queue.Drain();

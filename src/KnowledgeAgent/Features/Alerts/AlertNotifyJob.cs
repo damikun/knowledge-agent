@@ -5,7 +5,6 @@ using MimeKit;
 
 namespace KnowledgeAgent.Features.Alerts;
 
-// At most one message per kind per hour.
 internal sealed partial class AlertNotifyJob(
     AlertEvaluator evaluator,
     IAlertRepository repository,
@@ -77,7 +76,6 @@ internal sealed partial class AlertNotifyJob(
                     continue;
                 }
 
-                // Left unsent when every channel failed, so the next run tries again.
                 if (await SendAsync(alert, targets, cancellationToken))
                 {
                     state.NotifiedAt = now;
@@ -155,7 +153,6 @@ internal sealed partial class AlertNotifyJob(
         return message;
     }
 
-    // Without the portal address the link cannot be absolute, and Slack would not open a bare path.
     private static string? Link(Alert alert, string? portalUrl) =>
         string.IsNullOrWhiteSpace(portalUrl) ? null : portalUrl.TrimEnd('/') + alert.Link;
 

@@ -51,7 +51,6 @@ internal static class AgentTelemetry
         public const string HistoryEstimatedTokens = "knowledge_agent.history.estimated_tokens";
     }
 
-    // Callers must clear Activity.Current first: StartActivity parents to it even when parentContext is default.
     public static Activity? StartChatTurn(Activity? previous, string agentName, string userMessage)
     {
         ActivityLink[]? links = previous is null ? null : [new ActivityLink(previous.Context)];

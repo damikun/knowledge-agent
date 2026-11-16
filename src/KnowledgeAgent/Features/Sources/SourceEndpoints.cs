@@ -106,7 +106,6 @@ internal static class SourceEndpoints
         return group;
     }
 
-    // Query values are bound as strings so malformed ones produce field errors instead of a bare 400.
     private static async Task<Results<Ok<SourcePageDto>, ValidationProblem>> ListAsync(
         [FromQuery] string? query,
         [FromQuery] string? type,
@@ -161,7 +160,6 @@ internal static class SourceEndpoints
             return errors.ToResult();
         }
 
-        // A citation links to a page by its id, so ids alone also find pages.
         var parentFilter = sourceIds.Count > 0 && string.IsNullOrWhiteSpace(parent) ? null : ParseParent(parent, errors);
         if (errors.HasErrors)
         {
@@ -191,7 +189,6 @@ internal static class SourceEndpoints
         return TypedResults.Ok(sites.Select(site => new SourceSiteDto(site.Site, site.Count)).ToArray());
     }
 
-    // The list, the site counts and bulk moves share these filters; prefix names the request field that holds them.
     internal static SourceQuery ParseFilters(
         string? query,
         string? type,
@@ -269,7 +266,6 @@ internal static class SourceEndpoints
         return new SourceQuery(text, sourceType, anyStatus ? null : statuses, Folder: folderFilter, Site: siteFilter);
     }
 
-    // Absent: the sources that are not pages of a website. A website id: its pages. "any": everything.
     internal static ParentFilter? ParseParent(string? parent, ValidationErrors errors)
     {
         if (string.IsNullOrWhiteSpace(parent))
@@ -487,7 +483,6 @@ internal static class SourceEndpoints
     private static IEnumerable<string> SplitList(IEnumerable<string?>? values) =>
         values?.SelectMany(value => (value ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)) ?? [];
 
-    // Not Enum.TryParse, which also accepts numbers and comma-separated flag lists.
     private static bool TryParseName<TEnum>(string text, out TEnum value) where TEnum : struct, Enum
     {
         foreach (var candidate in Enum.GetValues<TEnum>())

@@ -183,7 +183,6 @@ public sealed class UrlFetcherTests
             }
             catch (Exception)
             {
-                // The client hangs up without reading the body.
             }
         });
         await using var context = new KnowledgeTestContext(o => o.MaxDownloadBytes = 1024);
@@ -239,7 +238,6 @@ public sealed class UrlFetcherTests
             }
             catch (OperationCanceledException)
             {
-                // The client gave up.
             }
         });
         await using var context = new KnowledgeTestContext(o => o.FetchTimeoutSeconds = 5);

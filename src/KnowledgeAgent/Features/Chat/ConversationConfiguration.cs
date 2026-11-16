@@ -38,7 +38,6 @@ internal sealed class ConversationConfiguration(bool isNpgsql) : IEntityTypeConf
         builder.Property(conversation => conversation.ActiveAgentName).HasMaxLength(100);
         builder.Property(conversation => conversation.CreatedByName).HasMaxLength(200);
 
-        // Erasing the person deletes these explicitly, so the link only clears.
         builder.HasOne<Contact>().WithMany().HasForeignKey(conversation => conversation.ContactId).OnDelete(DeleteBehavior.SetNull);
         builder.HasIndex(conversation => new { conversation.ContactId, conversation.UpdatedAt });
         builder.HasIndex(conversation => conversation.CreatedById);
@@ -78,7 +77,6 @@ internal sealed class ConversationTurnConfiguration(bool isNpgsql) : IEntityType
             toolCalls.HasColumnType("jsonb");
             citations.HasColumnType("jsonb");
 
-            // Stored as text, not jsonb: the messages are replayed to the model and must round-trip byte for byte.
             builder.Property(turn => turn.ModelMessagesJson).HasColumnType("text");
         }
     }

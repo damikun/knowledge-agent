@@ -79,7 +79,6 @@ public static class KnowledgeAgentModule
     {
         ArgumentNullException.ThrowIfNull(endpoints);
         var configuration = endpoints.ServiceProvider.GetRequiredService<IConfiguration>();
-        // Everything needs a signed-in staff member unless it says otherwise; configuration needs the admin role.
         var api = endpoints.MapGroup("/api").RequireAuthorization(AuthPolicies.Staff);
 
         api.MapAuthEndpoints();
@@ -113,7 +112,6 @@ public static class KnowledgeAgentModule
         api.MapJobEndpoints().RequireAuthorization(AuthPolicies.Admin);
         if (endpoints.ServiceProvider.GetService<InngestJobEngine>() is not null)
         {
-            // Inngest signs its requests, and the SDK checks the signature outside dev mode.
             api.MapInngest(InngestJobEngine.EndpointPath).ExcludeFromDescription().AllowAnonymous();
         }
 

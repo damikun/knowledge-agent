@@ -290,7 +290,6 @@ internal sealed partial class IntegrationService(
 
     private static string? Trimmed(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
-    // Null keeps the saved secret and an empty string removes it.
     private static string? Secret(string? value, string? current) => value is null ? current : Trimmed(value);
 
     private static string? Host(string? value, string field, ValidationErrors errors)

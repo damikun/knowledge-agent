@@ -13,7 +13,6 @@ using KnowledgeAgent.TestKit;
 
 namespace KnowledgeAgent.Api.Tests.Scenarios;
 
-// Runs as the local admin of Auth:Mode=None (subject local-admin).
 public abstract class AssignmentScenarios(AppFixture fixture)
 {
     private const string Me = "local-admin";
@@ -26,7 +25,6 @@ public abstract class AssignmentScenarios(AppFixture fixture)
         await using var app = await fixture.CreateAppAsync();
         app.ChatModels.Reset();
 
-        // Signing in records the staff member, so conversations can be assigned to them.
         (await app.Client.GetJsonAsync<CurrentUserDto>("/api/auth/me")).Id.ShouldBe(Me);
         (await app.Client.GetJsonAsync<List<StaffMemberDto>>("/api/staff")).ShouldContain(member => member.Id == Me && member.Name == "Local admin");
 

@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace KnowledgeAgent.Features.Evaluations.Datasets;
 
-// Langfuse datasets can't be renamed or deleted through its API, so these live in PostgreSQL.
 public sealed class CustomDatasetRecord
 {
     public const int MaxNameLength = 100;
@@ -13,7 +12,6 @@ public sealed class CustomDatasetRecord
     public Guid Id { get; set; } = Guid.CreateVersion7();
     public string Name { get; set; } = string.Empty;
 
-    // The name lower-cased, so names are unique ignoring case in both stores.
     public string NormalizedName { get; set; } = string.Empty;
 
     public string? Description { get; set; }
@@ -41,11 +39,9 @@ public sealed class CustomDatasetItemRecord
     public bool Answerable { get; set; } = true;
     public List<string> Tags { get; set; } = [];
 
-    // No foreign keys: the question stays when retention deletes the conversation.
     public Guid? ConversationId { get; set; }
     public Guid? MessageId { get; set; }
 
-    // Null on older rows, read as manual or conversation from ConversationId.
     public string? Source { get; set; }
 
     public EvalItemHistory? History { get; set; }
@@ -75,7 +71,6 @@ public static class EvalTurnRoles
 
 public sealed record EvalTurn(string Role, string Content);
 
-// A class around the list so it maps to one JSON document column.
 public sealed class EvalItemHistory
 {
     public List<EvalTurn> Turns { get; set; } = [];

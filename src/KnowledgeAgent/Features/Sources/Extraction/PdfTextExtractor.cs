@@ -89,7 +89,6 @@ internal sealed partial class PdfTextExtractor(ILogger<PdfTextExtractor> logger)
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // One unreadable page must not fail the whole document.
             LogPageFailed(logger, ex, number);
             return string.Empty;
         }

@@ -149,7 +149,6 @@ public sealed class InngestDevServerTests(InngestDevServerFixture fixture) : ICl
         functions.ShouldContain($"{InngestDevServerFixture.AppId}-schedule-every-minute");
         functions.ShouldNotContain($"{InngestDevServerFixture.AppId}-schedule-paused");
 
-        // The trigger fires at the next full minute.
         var job = (await fixture.Recorder.WaitForAsync("every-minute", calls: 1, TimeSpan.FromSeconds(80), Ct))[0];
         job.Context.Kind.ShouldBe(InngestDevServerFixture.Kind);
         fixture.Recorder.Calls("paused").ShouldBeEmpty();
@@ -200,15 +199,12 @@ public sealed class InngestDevServerFixture : IAsyncLifetime
             return;
         }
 
-        // The server starts first because the app needs its address. Its fast timing syncs every second and retries
-        // failed runs after a second instead of the production backoff.
         _devServer = new InngestServerBuilder(ContainerImages.Inngest).Build();
         await _devServer.StartAsync();
 
         _app = BuildApp(_devServer);
         await _app.StartAsync();
 
-        // Events sent before the dev server knows the function would start no run.
         await _devServer.SyncAsync(new Uri(new Uri(_app.Urls.First()), "/api/inngest"));
     }
 
@@ -229,7 +225,6 @@ public sealed class InngestDevServerFixture : IAsyncLifetime
     private WebApplication BuildApp(InngestServerContainer devServer)
     {
         var builder = WebApplication.CreateBuilder(new WebApplicationOptions { EnvironmentName = "Testing" });
-        // All interfaces, not loopback: the container reaches the app through the Docker bridge on Linux.
         builder.WebHost.ConfigureKestrel(kestrel => kestrel.ListenAnyIP(0));
         builder.Logging.ClearProviders();
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?>

@@ -4,7 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KnowledgeAgent.Features.Sources.Ingestion;
 
-// Queues the sources that wait for an embedding model as soon as one resolves.
 internal sealed class WaitingSourcesQueuer(IEmbeddingService embeddings, IServiceScopeFactory scopeFactory) : IModelSettingsListener
 {
     public Task OnModelSettingsChangedAsync(CancellationToken cancellationToken) => QueueIfReadyAsync(cancellationToken);

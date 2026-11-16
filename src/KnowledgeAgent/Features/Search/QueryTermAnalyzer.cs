@@ -68,7 +68,6 @@ internal static partial class QueryTermAnalyzer
         return terms;
     }
 
-    // The stores match a term at the start of a word, so a stem only has to be a prefix of its inflections.
     internal static string Stem(string word)
     {
         static bool Keeps(string word, int cut, int minimum) => word.Length - cut >= minimum;

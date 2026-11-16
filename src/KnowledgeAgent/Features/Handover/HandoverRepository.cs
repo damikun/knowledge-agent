@@ -15,7 +15,6 @@ public interface IHandoverRepository
     Task<Handover?> FindBySlackThreadAsync(string channelId, string threadTs, CancellationToken cancellationToken = default);
     Task<Handover> AddAsync(Handover handover, CancellationToken cancellationToken = default);
 
-    // Status and delivery fields are saved separately so jobs and people never undo each other's changes.
     Task SaveStatusAsync(Handover handover, CancellationToken cancellationToken = default);
 
     Task SaveDeliveryAsync(Handover handover, CancellationToken cancellationToken = default);
@@ -106,7 +105,6 @@ internal sealed class HandoverRepository(KnowledgeDbContext db, DbContextGate ga
         var pending = db.Handovers.Where(item => item.Id == handover.Id && item.Status == HandoverStatus.Pending);
         if (db.Database.IsRelational())
         {
-            // One statement, so a person joining at the same moment either wins or finds the request ended.
             return await pending.ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(item => item.Status, handover.Status)
@@ -115,7 +113,6 @@ internal sealed class HandoverRepository(KnowledgeDbContext db, DbContextGate ga
                 cancellationToken) == 1;
         }
 
-        // Non-relational providers have no ExecuteUpdate.
         try
         {
             if (await pending.FirstOrDefaultAsync(cancellationToken) is not { } stored)
@@ -172,7 +169,6 @@ internal sealed class HandoverRepository(KnowledgeDbContext db, DbContextGate ga
         var conversation = db.Conversations.Where(item => item.Id == conversationId);
         if (db.Database.IsRelational())
         {
-            // Only the assignee: the list orders by activity, and an assignment is not activity.
             return await conversation.ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(item => item.AssigneeId, id)

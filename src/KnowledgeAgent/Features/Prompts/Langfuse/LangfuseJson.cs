@@ -131,7 +131,6 @@ internal static class LangfuseJson
         var messages = new List<PromptMessage>(array.Count);
         foreach (var entry in array.OfType<JsonObject>())
         {
-            // Placeholders are skipped because the application renders the whole conversation itself.
             if (string.Equals(GetString(entry, "type"), "placeholder", StringComparison.OrdinalIgnoreCase))
             {
                 continue;

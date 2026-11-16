@@ -13,7 +13,6 @@ using HandoverRequest = KnowledgeAgent.Features.Handover.Handover;
 
 namespace KnowledgeAgent.Tests.Features.Alerts;
 
-// The database is shared per class, so each test clears the tables it counts over.
 public abstract class AlertRepositoryContractTests<TFixture>
     where TFixture : PersistenceFixture
 {

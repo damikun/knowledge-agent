@@ -6,7 +6,6 @@ public sealed record EffectiveSchedule(string Name, string Kind, string Key, str
 
 public static class JobSchedules
 {
-    // The code default, changed by Jobs:Schedules:<name> in configuration.
     public static EffectiveSchedule Resolve(JobScheduleRegistration registration, JobsOptions options)
     {
         var configured = options.Schedules.GetValueOrDefault(registration.Name);

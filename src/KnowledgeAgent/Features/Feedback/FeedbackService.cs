@@ -38,7 +38,6 @@ public sealed record FeedbackAuthorRef(FeedbackAuthor Author, string Key);
 
 public interface IFeedbackRecorder
 {
-    // Null when the conversation already has as many notes from the assistant as allowed.
     Task<Feedback?> RecordFromAgentAsync(Guid conversationId, int sentiment, string comment, int maxPerConversation, CancellationToken cancellationToken = default);
 }
 

@@ -62,7 +62,6 @@ public abstract class LabelScenarios(AppFixture fixture)
             (await cleared.ReadJsonAsync<ConversationLabelDto[]>()).ShouldBeEmpty();
         }
 
-        // Both queued chats get the same answer, so the result does not depend on which job runs first.
         utility.FallbackText = $$"""{"labels": ["{{refunds.Id}}"]}""";
         var asked = utility.Requests.Count;
         int queued;

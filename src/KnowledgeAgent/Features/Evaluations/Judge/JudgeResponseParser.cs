@@ -10,7 +10,6 @@ public static class JudgeResponseParser
         criteria = [];
         problem = null;
 
-        // Models sometimes wrap the object in a code fence or prose.
         var start = text?.IndexOf('{') ?? -1;
         var end = text?.LastIndexOf('}') ?? -1;
         if (start < 0 || end <= start)

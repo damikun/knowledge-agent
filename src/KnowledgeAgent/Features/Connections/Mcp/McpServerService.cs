@@ -29,7 +29,6 @@ internal sealed partial class McpServerService(
     TimeProvider timeProvider,
     ILogger<McpServerService> logger) : IMcpServerService
 {
-    // Headers the transport sets itself, or that would change how the request is read.
     private static readonly HashSet<string> ReservedHeaders = new(StringComparer.OrdinalIgnoreCase)
     {
         "Host", "Content-Length", "Content-Type", "Content-Encoding", "Transfer-Encoding", "Connection", "Accept", "Accept-Encoding",
@@ -138,7 +137,6 @@ internal sealed partial class McpServerService(
         probe.DurationMs,
         timeProvider.GetUtcNow());
 
-    // A failed check keeps the tools of the last good one, so agents keep their choices while a server is down.
     private async Task<McpProbe> RecordProbeAsync(McpServer server, CancellationToken cancellationToken)
     {
         var probe = await pool.ProbeAsync(server, cancellationToken);
@@ -245,7 +243,6 @@ internal sealed partial class McpServerService(
         }
         else if (uri.Scheme == Uri.UriSchemeHttp && authType != McpAuthType.None && !allowPrivate)
         {
-            // A token sent over plain http can be read on the way.
             errors.Add("url", "Use an https address when the server needs a token.");
         }
         else if (!allowPrivate && (uri.IsLoopback || (IPAddress.TryParse(uri.IdnHost.Trim('[', ']'), out var address) && !NetworkAddressPolicy.IsPublic(address))))

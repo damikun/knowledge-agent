@@ -53,7 +53,6 @@ internal sealed class AlertRepository(KnowledgeDbContext db, DbContextGate gate)
     public async Task<SourceAlertFacts> GetSourceFactsAsync(CancellationToken cancellationToken = default)
     {
         using var _ = await gate.EnterAsync(cancellationToken);
-        // Counted in memory so both stores agree; the rows are few.
         var rows = await db.Sources.AsNoTracking()
             .Where(source => source.Status == SourceStatus.Failed || source.Status == SourceStatus.Waiting)
             .Select(source => new { source.Status, source.UpdatedAt })
@@ -107,8 +106,6 @@ internal sealed class AlertRepository(KnowledgeDbContext db, DbContextGate gate)
             })
             .ToListAsync(cancellationToken);
 
-        // A Slack request without a thread failed in Slack. Slack requests nobody took in time also go by email,
-        // so a missing EmailedAt there means email failed.
         var slack = rows.Where(row => row.Channel == WidgetChoices.HandoverSlack && row.SlackThreadTs == null).ToList();
         var email = rows.Where(row => row.EmailedAt == null
                 && (row.Channel == WidgetChoices.HandoverEmail || row.EscalatedAt != null || row.Status == HandoverStatus.Expired))
@@ -166,7 +163,6 @@ internal sealed class AlertRepository(KnowledgeDbContext db, DbContextGate gate)
         }
         catch (DbUpdateConcurrencyException)
         {
-            // Removed meanwhile by another run, which is what was wanted.
         }
         finally
         {
@@ -191,7 +187,6 @@ internal sealed class AlertRepository(KnowledgeDbContext db, DbContextGate gate)
         await UpsertAsync(db.AlertStates, states, item => item.Key, cancellationToken);
     }
 
-    // A concurrent insert of the same key fails the first try; the retry finds the row and updates it.
     private async Task UpsertAsync<T>(DbSet<T> set, IReadOnlyCollection<T> items, Func<T, string> key, CancellationToken cancellationToken)
         where T : class
     {

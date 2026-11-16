@@ -11,7 +11,6 @@ internal sealed partial class ConversationRepository(
     TimeProvider timeProvider,
     ILogger<ConversationRepository> logger) : IConversationRepository
 {
-    // Every lost race means another writer committed a turn, so N concurrent writers need at most N attempts.
     private const int MaxSequenceAttempts = 10;
 
     public async Task<Conversation> CreateAsync(Conversation conversation, CancellationToken cancellationToken = default)
@@ -48,7 +47,6 @@ internal sealed partial class ConversationRepository(
             return conversation;
         }
 
-        // Separate queries instead of Include, because a join would repeat the large system prompt on every row.
         conversation.Turns = await db.ConversationTurns.AsNoTracking()
             .Where(turn => turn.ConversationId == id)
             .OrderBy(turn => turn.Sequence)
@@ -88,6 +86,45 @@ internal sealed partial class ConversationRepository(
             .OrderByDescending(conversation => conversation.UpdatedAt)
             .Select(conversation => (Guid?)conversation.Id)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<VisitorConversationSummary>> ListForVisitorAsync(
+        Guid widgetId,
+        Guid visitorId,
+        Guid? contactId,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        using var _ = await gate.EnterAsync(cancellationToken);
+        var rows = await db.Conversations.AsNoTracking()
+            .Where(conversation => conversation.WidgetId == widgetId
+                && (conversation.VisitorId == visitorId || (contactId != null && conversation.ContactId == contactId)))
+            .OrderByDescending(conversation => conversation.UpdatedAt)
+            .Take(take)
+            .Select(conversation => new
+            {
+                conversation.Id,
+                conversation.Status,
+                conversation.UpdatedAt,
+                LastMessageId = db.ConversationMessages
+                    .Where(message => message.ConversationId == conversation.Id && !message.StaffOnly && message.Author != MessageAuthor.System)
+                    .OrderByDescending(message => message.Sequence)
+                    .Select(message => (Guid?)message.Id)
+                    .FirstOrDefault(),
+            })
+            .ToListAsync(cancellationToken);
+
+        var messageIds = rows.Where(row => row.LastMessageId is not null).Select(row => row.LastMessageId!.Value).ToList();
+        var messages = await db.ConversationMessages.AsNoTracking()
+            .Where(message => messageIds.Contains(message.Id))
+            .ToDictionaryAsync(message => message.Id, cancellationToken);
+        return rows
+            .Select(row => new VisitorConversationSummary(
+                row.Id,
+                row.Status,
+                row.UpdatedAt,
+                row.LastMessageId is { } id && messages.TryGetValue(id, out var last) ? last : null))
+            .ToList();
     }
 
     public async Task<int> DeleteWidgetConversationsAsync(Guid widgetId, DateTimeOffset updatedBefore, CancellationToken cancellationToken = default)
@@ -174,7 +211,6 @@ internal sealed partial class ConversationRepository(
             }
             catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || IsForeignKeyViolation(ex))
             {
-                // Deleted after the existence check: the UPDATE matched no row or the INSERT hit the foreign key.
                 throw new KeyNotFoundException($"Conversation '{turn.ConversationId}' does not exist.", ex);
             }
             finally
@@ -268,7 +304,6 @@ internal sealed partial class ConversationRepository(
 
         if (db.Database.IsRelational())
         {
-            // One statement, so a message written at the same moment cannot slip in between the check and the change.
             return await matching.ExecuteUpdateAsync(
                 setters => setters
                     .SetProperty(conversation => conversation.Status, status)
@@ -276,7 +311,6 @@ internal sealed partial class ConversationRepository(
                 cancellationToken) == 1;
         }
 
-        // Non-relational providers have no ExecuteUpdate.
         try
         {
             if (await matching.FirstOrDefaultAsync(cancellationToken) is not { } conversation)
@@ -302,7 +336,6 @@ internal sealed partial class ConversationRepository(
 
         try
         {
-            // UpdatedAt stays unchanged so renaming does not reorder the conversation list.
             var entry = db.Conversations.Attach(new Conversation { Id = id, Title = title });
             entry.Property(conversation => conversation.Title).IsModified = true;
             await db.SaveChangesAsync(cancellationToken);
@@ -395,7 +428,6 @@ internal sealed partial class ConversationRepository(
             return deleted;
         }
 
-        // Non-relational providers lack ExecuteDelete and store-side cascades, so delete through the change tracker.
         try
         {
             var conversation = await db.Conversations

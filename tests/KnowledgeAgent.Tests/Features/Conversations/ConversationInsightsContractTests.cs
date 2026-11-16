@@ -15,8 +15,6 @@ using HandoverRequest = KnowledgeAgent.Features.Handover.Handover;
 
 namespace KnowledgeAgent.Tests.Features.Conversations;
 
-// The database is shared per class: tests keep apart with unique words and widgets,
-// and each analytics test looks at a period of its own.
 public abstract class ConversationInsightsContractTests<TFixture>
     where TFixture : PersistenceFixture
 {
@@ -121,7 +119,6 @@ public abstract class ConversationInsightsContractTests<TFixture>
         var created = new List<(Guid Id, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt)>();
         for (var index = 0; index < 7; index++)
         {
-            // Pairs share a timestamp, so the id breaks the tie.
             var createdAt = Start.AddHours(-index / 2);
             var updatedAt = Start.AddMinutes(index % 3);
             created.Add((await AddAsync(widgetId: widget, createdAt: createdAt, updatedAt: updatedAt), createdAt, updatedAt));
@@ -154,7 +151,6 @@ public abstract class ConversationInsightsContractTests<TFixture>
         var created = new List<(Guid Id, DateTimeOffset UpdatedAt, bool Pinned)>();
         for (var index = 0; index < 9; index++)
         {
-            // Pairs share a timestamp, so the id breaks the tie; every third one is pinned.
             var updatedAt = Start.AddMinutes(-(index / 2));
             var id = await AddAsync(widgetId: widget, createdAt: Start.AddDays(-1), updatedAt: updatedAt);
             var pinned = index % 3 == 1;
@@ -259,12 +255,10 @@ public abstract class ConversationInsightsContractTests<TFixture>
     [Fact]
     public async Task Analytics_count_the_period_by_day_and_widget_and_group_the_questions_the_agent_could_not_answer()
     {
-        // A period of its own, so the other tests' data stays out.
         var now = new DateTimeOffset(2201, 5, 10, 15, 0, 0, TimeSpan.Zero);
         var widget = Guid.NewGuid();
         var other = Guid.NewGuid();
 
-        // New messages bump a conversation's last activity to the clock, which must not fall before the period.
         if (Fixture.Time.GetUtcNow() < now.AddDays(-3))
         {
             Fixture.Time.SetUtcNow(now.AddDays(-3));
@@ -274,7 +268,6 @@ public abstract class ConversationInsightsContractTests<TFixture>
         var cancelled = await AddAsync(widgetId: widget, createdAt: now.AddDays(-1), texts: ["can I pay by  INVOICE"]);
         var disliked = await AddAsync(widgetId: other, createdAt: now.AddDays(-1));
 
-        // A playground test with every signal, which counts nowhere.
         var tested = await AddAsync(widgetId: null, createdAt: now.AddHours(-3));
         var unsourced = await AddAsync(widgetId: widget, createdAt: now.AddDays(-2));
         await AddAsync(widgetId: widget, createdAt: now.AddDays(-9));
@@ -514,7 +507,6 @@ public sealed class PostgresConversationInsightsTests(PostgresPersistenceFixture
         await using var dataSource = NpgsqlDataSource.Create(Fixture.ConnectionString);
         await using var connection = await dataSource.OpenConnectionAsync(TestContext.Current.CancellationToken);
 
-        // Sequential scans are off so the plan does not depend on the table's size.
         await using (var disable = new NpgsqlCommand("SET enable_seqscan = off", connection))
         {
             await disable.ExecuteNonQueryAsync(TestContext.Current.CancellationToken);

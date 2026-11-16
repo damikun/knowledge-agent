@@ -69,7 +69,6 @@ internal sealed class CustomDatasetService(
             dataset.Description ??= original.Description;
         }
 
-        // A microsecond apart, the precision PostgreSQL keeps, so copied questions keep their order.
         var items = copied.Select((item, index) => new CustomDatasetItemRecord
             {
                 Question = item.Question,
@@ -208,7 +207,6 @@ internal sealed class CustomDatasetService(
                 continue;
             }
 
-            // Distinct timestamps keep the rows in file order (a microsecond apart, the precision PostgreSQL keeps).
             var item = new CustomDatasetItemRecord { DatasetId = id, CreatedAt = now.AddTicks(index * TimeSpan.TicksPerMicrosecond) };
             if (!TryApply(item, row with { Source = row.Source ?? CustomDatasetItemSources.Upload }, now, prefix, errors))
             {
@@ -332,7 +330,6 @@ internal sealed class CustomDatasetService(
         CustomDatasetItemSources.Of(item),
         item.History?.Turns ?? []);
 
-    // The item id is the record's, so Langfuse keeps one item per question across renames of its text.
     private static EvalDataset ToEvalDataset(CustomDatasetRecord record, IReadOnlyList<CustomDatasetItemRecord> items) => new()
     {
         Name = record.Name,
@@ -399,7 +396,6 @@ internal sealed class CustomDatasetService(
             throw new ValidationFailedException("name", "Use letters, digits, spaces, dashes, underscores and dots.");
         }
 
-        // Runs and Langfuse know a dataset by its name, so it must not be that of a built-in one.
         if (catalog.Find(trimmed) is not null)
         {
             throw new ValidationFailedException("name", $"'{trimmed}' is the name of a built-in dataset. Choose another one.");

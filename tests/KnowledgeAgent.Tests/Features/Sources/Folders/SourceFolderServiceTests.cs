@@ -8,7 +8,6 @@ using Microsoft.Extensions.Time.Testing;
 
 namespace KnowledgeAgent.Tests.Features.Sources.Folders;
 
-// The service runs against the EF Core in-memory store, so the rules are checked with the real repositories.
 public sealed class SourceFolderServiceTests : IAsyncLifetime
 {
     private readonly FakeTimeProvider _time = new(new DateTimeOffset(2026, 10, 28, 9, 0, 0, TimeSpan.Zero));
@@ -287,7 +286,6 @@ public sealed class SourceFolderServiceTests : IAsyncLifetime
             .ShouldBe(["The Internal folder is built in and cannot be deleted."]);
         (await ErrorAsync(service => service.CreateAsync("internal", cancellationToken: Ct))).Errors.ShouldContainKey("name");
 
-        // Inside it, folders and sources behave like anywhere else.
         var hr = await CreateAsync("HR", internalFolder.Id);
         var moved = await FoldersAsync(service => service.MoveAsync(other.Id, internalFolder.Id, Ct));
         var source = await AddSourceAsync("Salary bands");

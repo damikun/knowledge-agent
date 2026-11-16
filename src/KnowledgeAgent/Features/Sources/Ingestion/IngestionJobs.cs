@@ -35,8 +35,6 @@ internal sealed partial class IngestSourceJob(
     public Task HandleAsync(JobContext context, CancellationToken cancellationToken) =>
         Guid.TryParse(context.Key, out var sourceId) ? pipeline.ProcessAsync(sourceId, context.JobId, cancellationToken) : Task.CompletedTask;
 
-    // The pipeline records its own failures; this covers the job failing around it (the database was unreachable when
-    // it started or finished), which would otherwise leave the source Pending or Processing with nothing queued.
     public async Task OnFailureAsync(JobFailure failure, CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(failure.Key, out var sourceId)
@@ -65,8 +63,6 @@ internal sealed partial class RefreshWebSourcesJob(
 {
     public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
     {
-        // Collected first: re-ingesting moves sources out of the Ready filter and would shift later pages. A website's
-        // pages are left to its crawl.
         var pages = await CollectAsync(new SourceQuery(Type: SourceType.Url, Statuses: [SourceStatus.Ready], Parent: ParentFilter.TopLevel), cancellationToken);
         var websites = await CollectAsync(new SourceQuery(Type: SourceType.Website, Statuses: [SourceStatus.Ready, SourceStatus.Failed]), cancellationToken);
 

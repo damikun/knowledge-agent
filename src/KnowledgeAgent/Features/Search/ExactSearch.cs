@@ -23,12 +23,10 @@ public sealed record ExactSearchPage<T>(IReadOnlyList<T> Items, int Offset, int?
 
 public sealed record ExactSearchSource(Guid SourceId, string Title, string? Url, long Passages);
 
-// Literal matching: ranks nothing and needs no query embedding, so it also finds chunks embedded with another model.
 internal sealed class ExactSearch(IVectorStore vectorStore, ISourceRepository repository) : IExactSearch
 {
     public const int MaxLimit = 100;
 
-    // Exact matches have no similarity to report, so every hit gets the top score.
     private const double ExactScore = 1d;
 
     public async Task<ExactSearchPage<KnowledgeSearchHit>> FindPassagesAsync(ExactSearchRequest request, CancellationToken cancellationToken = default)
@@ -86,7 +84,6 @@ internal sealed class ExactSearch(IVectorStore vectorStore, ISourceRepository re
             Math.Clamp(request.Limit, 1, MaxLimit));
     }
 
-    // Counts the rows the store returned, so a page that lost hits of deleted sources still continues after them.
     private static int? NextOffset(TextSearchQuery query, int returned, long total) =>
         query.Skip + returned < total ? query.Skip + returned : null;
 

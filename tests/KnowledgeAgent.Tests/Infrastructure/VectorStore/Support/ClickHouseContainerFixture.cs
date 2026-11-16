@@ -5,7 +5,6 @@ using Testcontainers.ClickHouse;
 
 namespace KnowledgeAgent.Tests.Infrastructure.VectorStore.Support;
 
-// Started lazily by the first test that needs it, so in-memory-only runs never touch Docker.
 public sealed class ClickHouseContainerFixture : IAsyncLifetime
 {
     private readonly Lock _gate = new();
@@ -18,7 +17,6 @@ public sealed class ClickHouseContainerFixture : IAsyncLifetime
         Task<ClickHouseContainer> start;
         lock (_gate)
         {
-            // Not tied to one test's token: the container is shared by all tests.
             start = _container ??= StartContainerAsync();
         }
 
@@ -47,7 +45,6 @@ public sealed class ClickHouseContainerFixture : IAsyncLifetime
         }
         catch (Exception) when (start.IsFaulted || start.IsCanceled)
         {
-            // The failed start already disposed the container and reported the error to the tests.
         }
     }
 

@@ -36,14 +36,12 @@ public interface IAiProvider
 
     bool EndpointRequired => false;
 
-    /// <summary>Checks credentials and connectivity without generating tokens.</summary>
     Task<ProviderConnectionTest> TestConnectionAsync(AiProviderOptions options, CancellationToken cancellationToken = default) =>
         Task.FromResult(new ProviderConnectionTest(true, "This provider needs no connection.", []));
 }
 
 public static class AiProviderCapabilities
 {
-    // Chat models can serve rerank profiles by rating passages.
     public static bool Supports(this IAiProvider provider, ModelKind kind) => kind switch
     {
         ModelKind.Embedding => provider.SupportsEmbeddings,
@@ -56,6 +54,5 @@ public sealed record ProviderConnectionTest(bool Ok, string Message, IReadOnlyLi
 
 public interface IReranker
 {
-    /// <summary>Returns one relevance score per document in input order, higher meaning more relevant.</summary>
     Task<IReadOnlyList<double>> RerankAsync(string query, IReadOnlyList<string> documents, CancellationToken cancellationToken = default);
 }

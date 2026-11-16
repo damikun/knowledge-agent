@@ -166,7 +166,6 @@ internal static class EvalCli
         var langfuseOptions = configuration.GetSection(LangfuseOptions.SectionName).Get<LangfuseOptions>() ?? new LangfuseOptions();
         var useLangfuse = langfuseOptions.IsConfigured && !arguments.NoLangfuse;
 
-        // No hosted services run here, so the CLI creates its own tracer provider.
         using var tracer = useLangfuse
             ? LangfuseTracing.CreateTracerProvider(configuration, ServiceName, [new KeyValuePair<string, object>("langfuse.environment", environment)])
             : null;
@@ -314,7 +313,6 @@ internal static class EvalCli
         builder.AddInMemoryCollection(overrides);
         var configuration = builder.Build();
 
-        // Without Langfuse the embedded prompts apply anyway. Selecting them avoids a warning per fetch.
         var langfuse = configuration.GetSection(LangfuseOptions.SectionName).Get<LangfuseOptions>();
         if (langfuse?.IsConfigured != true && !arguments.Settings.ContainsKey("Prompts:Store"))
         {

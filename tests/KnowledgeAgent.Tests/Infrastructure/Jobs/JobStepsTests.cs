@@ -43,7 +43,6 @@ public sealed class JobStepsTests
         runs.ShouldBe(3);
         clock.Elapsed.ShouldBeGreaterThan(TimeSpan.Zero);
 
-        // Like a replay on Inngest, a later call reports the failure without running the step again.
         await Should.ThrowAsync<JobStepFailedException>(() => steps.RunAsync("flaky", _ => Task.FromResult(++runs)));
         runs.ShouldBe(3);
     }

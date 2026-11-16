@@ -94,7 +94,6 @@ internal static class FeedbackEndpoints
         return TypedResults.Ok(await feedback.SubmitAsync(conversation, request, author, cancellationToken));
     }
 
-    // The email when Keycloak sends one, so a person's ratings stay theirs across sessions.
     internal static string StaffKey(ClaimsPrincipal user) =>
         user.FindFirst(ClaimTypes.Email)?.Value ?? user.FindFirst("email")?.Value ?? user.FindFirst("sub")?.Value ?? user.Identity?.Name ?? "staff";
 }

@@ -32,7 +32,6 @@ public abstract class ConversationInsightsScenarios(AppFixture fixture)
         await PostAsVisitorAsync(app, widget.PublicKey, asked, $"conversations/{asked.ConversationId}/feedback", new SubmitFeedbackRequest(2));
         (await app.ChatAsync(new ChatRequestDto(null, $"What is the {word} policy?"))).Errors.ShouldBeEmpty();
 
-        // The portal conversation is a playground test, which search leaves out unless asked for.
         (await app.Client.GetJsonAsync<ConversationSearchPageDto>($"/api/conversations/search?q={word}")).Items.ShouldHaveSingleItem().Test.ShouldBeFalse();
         var found = await app.Client.GetJsonAsync<ConversationSearchPageDto>($"/api/conversations/search?q={word}&includeTests=true");
         found.Items.Count.ShouldBe(2);

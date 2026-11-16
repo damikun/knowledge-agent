@@ -7,7 +7,6 @@ using KnowledgeAgent.TestKit;
 
 namespace KnowledgeAgent.Api.Tests.Scenarios;
 
-// Each test uses a dedicated app because it changes Langfuse state.
 public abstract class LangfuseScenarios(AppFixture fixture)
 {
     private static readonly TimeSpan SeedTimeout = TimeSpan.FromSeconds(20);
@@ -74,7 +73,6 @@ public abstract class LangfuseScenarios(AppFixture fixture)
         detail.Origin.ShouldBe("local");
         (detail.Text ?? string.Join('\n', detail.Messages.Select(m => m.Content))).ShouldNotBeNullOrWhiteSpace();
 
-        // No local copy exists for this name, so with Langfuse down the store is unavailable.
         using (var unavailable = await app.Client.GetAsync($"/api/prompts/e2e-langfuse-only-{Guid.NewGuid():N}", TestContext.Current.CancellationToken))
         {
             (await unavailable.ReadProblemAsync(HttpStatusCode.ServiceUnavailable)).Title.ShouldBe("Prompt store unavailable");
@@ -103,7 +101,6 @@ public abstract class LangfuseScenarios(AppFixture fixture)
         var stream = await app.ChatAsync(new ChatRequestDto(null, "Please create a trace."));
         stream.Errors.ShouldBeEmpty(stream.Describe());
 
-        // The OTLP exporter batches every 5 seconds by default, and stopping the host flushes what is pending.
         if (!await ApiClient.EventuallyAsync(() => app.Langfuse.TraceExportCount > 0, TimeSpan.FromSeconds(12)))
         {
             await app.StopAsync();

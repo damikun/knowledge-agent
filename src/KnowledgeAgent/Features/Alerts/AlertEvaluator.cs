@@ -23,7 +23,6 @@ public static class AlertRules
 
     public const int CriticalWaitFactor = 3;
 
-    // Slack reconnects on its own after a short drop, so only a longer one is an alert.
     public static readonly TimeSpan SlackGrace = TimeSpan.FromMinutes(2);
 
     public const int BaselineDays = 7;
@@ -37,7 +36,6 @@ public static class AlertRules
     public const int MinUnansweredToday = 5;
     public const double UnansweredFactor = 2;
 
-    // Quality needs several queries over a week of data; it changes slowly, so it is worked out at most this often.
     public static readonly TimeSpan QualityCacheLifetime = TimeSpan.FromMinutes(5);
 }
 
@@ -175,7 +173,6 @@ internal sealed partial class AlertEvaluator(
                 "/models#providers"));
         }
 
-        // A key saved after the rejection may well work, so the rejection waits for the next call to tell.
         var saved = (await providerSettings.ListAsync(cancellationToken)).ToDictionary(item => item.Key, item => item.UpdatedAt, StringComparer.OrdinalIgnoreCase);
         foreach (var rejection in providerErrors.ListRejections(now - AlertRules.RecentWindow))
         {
@@ -323,7 +320,6 @@ internal sealed partial class AlertEvaluator(
         return alerts;
     }
 
-    // Analytics counts by UTC day, so today so far is compared with the average day of the week before.
     private async Task<Alert?> UnansweredSpikeAsync(DateTimeOffset now, Func<string, DateTimeOffset?, DateTimeOffset> since, CancellationToken cancellationToken)
     {
         var today = await analytics.GetAsync(now, 1, cancellationToken);
@@ -375,7 +371,6 @@ internal sealed partial class AlertEvaluator(
 
     private static string Percent(double share) => (share * 100).ToString("0", CultureInfo.InvariantCulture) + "%";
 
-    // Provider keys come from configuration; the alert key keeps to letters, digits, dashes and underscores for URLs.
     internal static string KeyPart(string value) => UnsafeKeyCharacters().Replace(value.ToLowerInvariant(), "-");
 
     [GeneratedRegex("[^a-z0-9_-]")]

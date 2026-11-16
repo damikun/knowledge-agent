@@ -9,7 +9,6 @@ using OpenTelemetry.Trace;
 
 namespace KnowledgeAgent.Infrastructure.Jobs;
 
-// One Inngest function per job kind, triggered by one event per job, plus a cron function per enabled schedule.
 internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions settings)
 {
     public const string EndpointPath = "/inngest";
@@ -36,7 +35,6 @@ internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions sett
         services.AddSingleton(engine);
         services.TryAddSingleton<IJobQueue, InngestJobQueue>();
 
-        // Jobs and schedules registered before the engine get their functions here, later ones as they are registered.
         var registered = services.Select(descriptor => descriptor.ImplementationInstance).ToList();
         foreach (var registration in registered.OfType<JobRegistration>())
         {
@@ -59,7 +57,6 @@ internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions sett
             return configured;
         }
 
-        // The SDK reads these words as flags and anything else as the dev server's address.
         var dev = configuration["INNGEST_DEV"]?.Trim() ?? "";
         var flag = dev.ToLowerInvariant();
         if (flag is not ("" or "0" or "false" or "off" or "no"))
@@ -76,7 +73,6 @@ internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions sett
             (context, cancellationToken) => RunAsync(registration, context, cancellationToken),
             registration.HandlesFailure ? (context, cancellationToken) => OnFailureAsync(registration, context, cancellationToken) : null);
 
-    // The cron expression and the enabled flag are read here, so changing a schedule takes a restart.
     public void AddSchedule(JobScheduleRegistration registration)
     {
         var schedule = JobSchedules.Resolve(registration, settings);
@@ -86,7 +82,6 @@ internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions sett
         }
     }
 
-    // JobPolicy as Inngest flow control; must match what InProcessJobRunner does.
     internal static FunctionOptions CreateOptions(JobRegistration registration)
     {
         var policy = registration.Policy;
@@ -95,14 +90,10 @@ internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions sett
             Id = FunctionId(registration.Kind),
             Name = registration.Kind,
             Triggers = [Trigger.Event(EventName(registration.Kind))],
-            // One run per key at a time, so a source is never ingested twice at once.
             Concurrency = [new ConcurrencyLimit(Math.Max(1, policy.MaxConcurrency)), new ConcurrencyLimit(1) { Key = KeyExpression }],
             Retries = Math.Max(0, policy.MaxAttempts - 1),
-            // A key starts one run per 24 hours; Inngest drops later events for it.
             Idempotency = policy.Idempotent ? KeyExpression : null,
-            // An event for a key that runs starts no run.
             Singleton = policy.Overlap == JobOverlap.Skip ? new Singleton(SingletonMode.Skip) { Key = KeyExpression } : null,
-            // Inngest's shortest debounce period is one second.
             Debounce = policy.Debounce is { } period && period > TimeSpan.Zero
                 ? new Debounce(period < MinDebounce ? MinDebounce : period) { Key = KeyExpression }
                 : null,
@@ -117,7 +108,6 @@ internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions sett
         Concurrency = [new ConcurrencyLimit(1)],
     };
 
-    // The cron run only queues the job, so it runs in its kind's function with that function's limits, like Run now.
     private static async Task<object?> QueueScheduledJobAsync(EffectiveSchedule schedule, FunctionContext<JsonElement> context)
     {
         await context.Step.SendEventAsync("queue-job", new InngestEvent(EventName(schedule.Kind), new JobEvent(schedule.Key)));
@@ -141,8 +131,6 @@ internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions sett
         return null;
     }
 
-    // Inngest runs this once the run has failed for good, as a function of its own triggered by inngest/function.failed;
-    // the failed run's event carries the key.
     private static async Task OnFailureAsync(JobRegistration registration, FunctionContext<FunctionFailure> context, CancellationToken cancellationToken)
     {
         var failure = context.Event.Data;
@@ -171,8 +159,6 @@ internal sealed class InngestJobEngine(IInngestBuilder inngest, JobsOptions sett
 
 internal sealed record JobEvent(string Key);
 
-// Inngest memoizes each step by its id and retries it on its own; a step that failed for good surfaces as
-// StepFailedException at its call site.
 internal sealed class InngestJobSteps(IStepTools step) : IJobSteps
 {
     public async Task<T> RunAsync<T>(string id, Func<CancellationToken, Task<T>> handler)

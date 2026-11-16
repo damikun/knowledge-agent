@@ -30,7 +30,6 @@ internal sealed record FetchOptions
     public string? IfModifiedSince { get; init; }
     public string? Accept { get; init; }
 
-    // Runs before every request, redirects included, such as to wait for the host's turn.
     public Func<Uri, CancellationToken, ValueTask>? BeforeRequest { get; init; }
 }
 
@@ -49,7 +48,6 @@ internal sealed partial class UrlFetcher(
     public Task<FetchedContent> FetchAsync(Uri url, CancellationToken cancellationToken = default) =>
         FetchAsync(url, FetchOptions.Default, cancellationToken);
 
-    // A 304 answer to a conditional request comes back with NotModified set and no content.
     public async Task<FetchedContent> FetchAsync(Uri url, FetchOptions fetchOptions, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(url);
@@ -153,7 +151,6 @@ internal sealed partial class UrlFetcher(
         }
         catch (IOException ex)
         {
-            // HttpIOException: the connection dropped while the body was being read.
             throw new IngestionException($"The connection to '{current.IdnHost}' was interrupted.", isPermanent: false, ex);
         }
     }
@@ -163,9 +160,7 @@ internal sealed partial class UrlFetcher(
         var connectTimeout = TimeSpan.FromSeconds(Math.Clamp(options.CurrentValue.FetchTimeoutSeconds, 1, 120));
         return new SocketsHttpHandler
         {
-            // FetchAsync follows redirects itself to cap them and check the scheme of every hop.
             AllowAutoRedirect = false,
-            // A proxy would open the connections instead of SafeConnector and bypass the address check.
             UseProxy = false,
             UseCookies = false,
             AutomaticDecompression = DecompressionMethods.All,
@@ -187,8 +182,6 @@ internal sealed partial class UrlFetcher(
         }
     }
 
-    // Caught before connecting, so a crawled link or redirect to an address literal is never requested. Host names are
-    // checked by SafeConnector once they resolve.
     private static bool IsBlockedLiteral(Uri uri)
     {
         var host = uri.Host.Length > 2 && uri.Host[0] == '[' && uri.Host[^1] == ']' ? uri.Host[1..^1] : uri.Host;
@@ -207,7 +200,6 @@ internal sealed partial class UrlFetcher(
 
         var code = (int)response.StatusCode;
 
-        // Client errors will not change on retry, except timeouts, "too early" and rate limiting.
         var permanent = code is >= 400 and < 500 and not 408 and not 425 and not 429;
         throw new IngestionException(
             string.Create(CultureInfo.InvariantCulture, $"The server responded with HTTP {code} ({response.StatusCode})."),

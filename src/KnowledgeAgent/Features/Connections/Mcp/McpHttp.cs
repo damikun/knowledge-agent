@@ -26,8 +26,6 @@ public sealed class McpOptions
     public int MaxConfirmationsPerTurn { get; set; } = 1;
 }
 
-// Same private-network rule as source fetching, with no redirects and no proxy so the address check can't be
-// bypassed (SSRF), and a cap on response size.
 internal static class McpHttp
 {
     public static HttpClient Create(bool allowPrivateNetworks, McpOptions options, ILogger logger)
@@ -44,7 +42,6 @@ internal static class McpHttp
             ConnectCallback = (context, cancellationToken) => SafeConnector.ConnectAsync(context, allowPrivateNetworks, logger, cancellationToken),
         };
 
-        // Calls are limited by their cancellation tokens; a response may be a stream of events.
         return new HttpClient(new SizeLimitHandler(Math.Max(64 * 1024, options.MaxResponseBytes)) { InnerHandler = handler })
         {
             Timeout = Timeout.InfiniteTimeSpan,

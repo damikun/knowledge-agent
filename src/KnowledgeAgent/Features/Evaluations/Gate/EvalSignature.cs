@@ -9,7 +9,6 @@ public static partial class EvalSignature
     {
         ArgumentNullException.ThrowIfNull(settings);
 
-        // The search mode is deliberately left out, so turning hybrid search off shows up as a regression.
         var parts = new List<string>
         {
             Slug(settings.EmbeddingModel ?? "no-embeddings"),

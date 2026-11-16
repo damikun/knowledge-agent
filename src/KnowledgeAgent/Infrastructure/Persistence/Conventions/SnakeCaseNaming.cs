@@ -23,7 +23,6 @@ internal static class SnakeCaseNaming
             }
         }
 
-        // Constraint and index default names derive from table and column names, so they are renamed afterwards.
         foreach (var entityType in entityTypes)
         {
             foreach (var key in entityType.GetKeys())
@@ -43,7 +42,6 @@ internal static class SnakeCaseNaming
         }
     }
 
-    // "HTMLParser" becomes "html_parser" and "PK_sources" becomes "pk_sources".
     public static string ToSnakeCase(string name)
     {
         var builder = new StringBuilder(name.Length + 8);

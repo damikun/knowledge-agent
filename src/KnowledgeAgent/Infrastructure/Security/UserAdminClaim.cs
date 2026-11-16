@@ -4,15 +4,12 @@ using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 
 namespace KnowledgeAgent.Infrastructure.Security;
 
-// Whether the user may manage users in Keycloak's admin console. Runs at sign-in and at every session check.
 internal sealed class UserAdminClaim() : ClaimAction(Name, ClaimValueTypes.Boolean)
 {
     public const string Name = "ka_user_admin";
 
-    // The claim name of the mapper in docker/keycloak/knowledge-agent-realm.json.
     public const string KeycloakClaim = "realm_management_roles";
 
-    // view-users opens the console's user list; realm-admin includes both.
     private static readonly HashSet<string> UserAdminRoles = new(StringComparer.Ordinal) { "manage-users", "view-users", "realm-admin" };
 
     public static bool IsUserAdmin(ClaimsPrincipal user) =>

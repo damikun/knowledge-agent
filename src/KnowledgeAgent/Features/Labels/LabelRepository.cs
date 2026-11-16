@@ -106,7 +106,6 @@ internal sealed class LabelRepository(KnowledgeDbContext db, DbContextGate gate)
         {
             if (!db.Database.IsRelational() && await db.Labels.AnyAsync(other => other.NormalizedName == label.NormalizedName, cancellationToken))
             {
-                // The in-memory store does not enforce unique indexes.
                 throw new LabelNameTakenException(label.Name);
             }
 
@@ -252,7 +251,6 @@ internal sealed class LabelRepository(KnowledgeDbContext db, DbContextGate gate)
         }
         catch (DbUpdateException ex) when (IsForeignKeyViolation(ex))
         {
-            // The conversation or a label was deleted meanwhile.
             throw new KeyNotFoundException($"Conversation '{conversationId}' or one of its labels does not exist.", ex);
         }
         finally
@@ -292,7 +290,6 @@ internal sealed class LabelRepository(KnowledgeDbContext db, DbContextGate gate)
         }
         catch (DbUpdateException ex) when (ex is DbUpdateConcurrencyException || IsForeignKeyViolation(ex) || IsUniqueViolation(ex))
         {
-            // Deleted meanwhile, or staff set labels at the same moment: their choice stands.
             return false;
         }
         finally
@@ -346,7 +343,6 @@ internal sealed class LabelRepository(KnowledgeDbContext db, DbContextGate gate)
         exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation };
 }
 
-// Shared with the conversation lists and search, which call it while holding the context's gate.
 internal static class ConversationLabelQueries
 {
     public static async Task<IReadOnlyDictionary<Guid, IReadOnlyList<ConversationLabelDto>>> LoadAsync(

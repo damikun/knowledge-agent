@@ -93,7 +93,6 @@ public interface IEvalRunObserver
 {
     Task OnRunStartedAsync(EvalRunPlan plan, EvalRunSettings settings, int totalItems, CancellationToken cancellationToken) => Task.CompletedTask;
 
-    /// <summary>Called once per item, possibly concurrently for different items.</summary>
     Task OnItemCompletedAsync(EvalRunPlan plan, EvalItemOutcome outcome, CancellationToken cancellationToken) => Task.CompletedTask;
 
     Task OnRunCompletedAsync(EvalRunResult result, CancellationToken cancellationToken) => Task.CompletedTask;

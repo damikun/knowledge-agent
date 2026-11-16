@@ -477,7 +477,6 @@ public sealed class SourceServiceTests
         clamped.Select(c => c.ChunkIndex).ShouldBe([0]);
     }
 
-    // Leaves the embedding service failing, as it does while no embedding model is configured.
     private static async Task<Source> WaitingSourceAsync(KnowledgeTestContext context, string title)
     {
         context.Embeddings.AlwaysFail = true;

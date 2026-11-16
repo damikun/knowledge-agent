@@ -4,7 +4,6 @@ using KnowledgeAgent.Infrastructure.Telemetry;
 
 namespace KnowledgeAgent.Features.Chat.Agents;
 
-// Blocked or suspicious events around untrusted content, as span tags and events plus one counter.
 internal static class GuardTelemetry
 {
     public const string EventName = "knowledge_agent.guard";
@@ -48,7 +47,6 @@ internal static class GuardTelemetry
         activity.AddEvent(new ActivityEvent(EventName, tags: tags));
     }
 
-    // How much untrusted content the model had seen when it called the tool.
     public static void SetContext(Activity? activity, int untrustedResults)
     {
         activity?.SetTag(Tags.AfterUntrusted, untrustedResults > 0);

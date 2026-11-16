@@ -101,7 +101,6 @@ internal sealed partial class HandoverService(
         "Nobody has been asked yet: the visitor now sees a button to talk to a person from the team. In one short sentence, "
         + "tell them to press it if they want a colleague to take over. Keep helping them meanwhile.";
 
-    // How far back a visitor's request picks up the summary of the agent's offer.
     internal const int OfferLookbackTurns = 3;
 
     public async Task<HandoverOutcome> OfferAsync(Guid conversationId, CancellationToken cancellationToken = default)
@@ -385,7 +384,6 @@ internal sealed partial class HandoverService(
 
     public async Task<bool> CloseIdleAsync(Guid conversationId, ConversationStatus status, DateTimeOffset idleSince, CancellationToken cancellationToken = default)
     {
-        // Checked and closed in one step, so a message that arrives meanwhile keeps the conversation open.
         if (!await timeline.TrySetStatusAsync(conversationId, status, ConversationStatus.Closed, idleSince, cancellationToken))
         {
             return false;
@@ -439,7 +437,6 @@ internal sealed partial class HandoverService(
         return new HandoverOutcome(true, instruction, Simulated: true);
     }
 
-    // The summary the agent wrote when it offered a person, so the team gets context with the visitor's request.
     private async Task<string?> OfferedSummaryAsync(Guid conversationId, CancellationToken cancellationToken)
     {
         var conversation = await conversations.GetAsync(conversationId, includeTurns: true, cancellationToken);

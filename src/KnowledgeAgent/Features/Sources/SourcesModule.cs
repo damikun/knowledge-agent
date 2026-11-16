@@ -43,13 +43,11 @@ public static class SourcesModule
         services.TryAddSingleton<HostRateLimiter>();
 
         services.TryAddSingleton<IIngestionQueue, IngestionQueue>();
-        // Read from configuration here because the job's concurrency is fixed when the job is registered.
         var maxParallelism = ingestionSection.Get<IngestionOptions>()?.MaxParallelism ?? new IngestionOptions().MaxParallelism;
         services.AddJob<IngestSourceJob>(IngestionJobs.IngestSource, new JobPolicy
         {
             MaxConcurrency = Math.Clamp(maxParallelism, 1, IngestionJobs.MaxConcurrency),
             MaxAttempts = 3,
-            // Two quick Re-ingest clicks, or an edit right after an upload, cost one run.
             Debounce = IngestionJobs.Debounce,
         });
         services.AddJob<CrawlWebsiteJob>(IngestionJobs.CrawlWebsite, new JobPolicy
@@ -79,7 +77,6 @@ public static class SourcesModule
         return services;
     }
 
-    // Folders only organize the library view; ingestion and search work without them.
     internal static IServiceCollection AddSourceFolders(this IServiceCollection services)
     {
         services.TryAddSingleton(TimeProvider.System);

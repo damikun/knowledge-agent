@@ -26,7 +26,6 @@ public sealed class McpServer
 
     public Guid Id { get; set; }
 
-    // Part of the tool names the model sees (mcp_<key>__<tool>), so it never changes once created.
     public string Key { get; set; } = string.Empty;
 
     public string Name { get; set; } = string.Empty;
@@ -37,14 +36,12 @@ public sealed class McpServer
 
     public string? HeaderName { get; set; }
 
-    // The bearer token or header value, encrypted with Data Protection; never returned by the API.
     public string? ProtectedSecret { get; set; }
 
     public string? SecretHint { get; set; }
 
     public bool Enabled { get; set; } = true;
 
-    // Sends who the call is for in each tool call's _meta, so the server can limit data to a verified user.
     public bool SendIdentity { get; set; }
 
     public DateTimeOffset? LastCheckedAt { get; set; }
@@ -75,7 +72,6 @@ public sealed class McpToolInfo
     public bool? IdempotentHint { get; set; }
     public bool? OpenWorldHint { get; set; }
 
-    // A tool that may change something unless the server says it only reads. The MCP default for destructiveHint is true.
     [JsonIgnore]
     public bool MayChangeThings => ReadOnlyHint != true;
 }

@@ -84,7 +84,6 @@ public abstract class PersistenceFixture : IAsyncLifetime
 {
     private IHost? host;
 
-    // Starts after the real "now" so bumped timestamps always move forward.
     public FakeTimeProvider Time { get; } = new(new DateTimeOffset(2030, 1, 1, 0, 0, 0, TimeSpan.Zero));
 
     public virtual IServiceProvider Services =>
@@ -114,7 +113,6 @@ public abstract class PersistenceFixture : IAsyncLifetime
         }
     }
 
-    /// <summary>Returns the host configuration, or null when the database cannot be provided.</summary>
     protected abstract Task<IReadOnlyDictionary<string, string?>?> StartDatabaseAsync();
 }
 
@@ -133,7 +131,6 @@ public sealed class PostgresPersistenceFixture : PersistenceFixture
     private PostgreSqlContainer? container;
     private string connectionString = string.Empty;
 
-    // Every entry point skips the calling test when Docker is unavailable.
     public override IServiceProvider Services
     {
         get

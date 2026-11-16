@@ -8,7 +8,6 @@ using KnowledgeAgent.Infrastructure.Langfuse;
 
 namespace KnowledgeAgent.Features.Evaluations.Langfuse;
 
-// Langfuse v4 has no API to create experiments: it derives them from span attributes on the item traces.
 public sealed class LangfuseEvalClient(HttpClient httpClient)
 {
     internal const int PageSize = 100;
@@ -144,7 +143,6 @@ public sealed class LangfuseEvalClient(HttpClient httpClient)
         using var response = await SendAsync(HttpMethod.Post, path, body, cancellationToken);
         await EnsureSuccessAsync(response, HttpMethod.Post, path, cancellationToken);
 
-        // Langfuse answers 202 when every score was accepted and 207 with per-score errors otherwise.
         if (response.StatusCode != HttpStatusCode.MultiStatus)
         {
             return new LangfuseScoreBatchResult(scores.Count, 0, []);
@@ -167,7 +165,6 @@ public sealed class LangfuseEvalClient(HttpClient httpClient)
         await EnsureSuccessAsync(response, HttpMethod.Get, path, cancellationToken);
         var json = await ReadJsonAsync(response, cancellationToken);
 
-        // Project-scoped API keys see exactly one project.
         return (json?["data"] as JsonArray)?.OfType<JsonObject>().Select(project => project["id"]?.GetValue<string>()).FirstOrDefault(id => !string.IsNullOrEmpty(id));
     }
 

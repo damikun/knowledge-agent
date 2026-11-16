@@ -11,7 +11,6 @@ public abstract class PromptEditScenarios(AppFixture fixture)
     [Fact(Timeout = TestTimeouts.Default)]
     public async Task A_draft_stays_unused_until_published_and_a_roll_back_brings_the_old_version_back_at_once()
     {
-        // A long cache, so the renders below prove that publishing clears it.
         await using var app = await fixture.CreateAppAsync(options => options.Settings["Prompts:CacheTtlSeconds"] = "3600");
         var name = $"e2e-edit-{ApiClient.UniqueWord()}";
         app.Langfuse.SetTextPrompt(name, "Hello {{name}}.");

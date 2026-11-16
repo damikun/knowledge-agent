@@ -54,7 +54,6 @@ public sealed record ConversationSearchQuery
 
     public bool ThumbsDown { get; init; }
 
-    // From inclusive, To exclusive.
     public DateTimeOffset? From { get; init; }
     public DateTimeOffset? To { get; init; }
 

@@ -20,7 +20,6 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace KnowledgeAgent.Tests.Infrastructure.Persistence;
 
-// Tests share one database per class, so they isolate themselves with unique ids and timestamps.
 public abstract class RepositoryContractTests<TFixture>
     where TFixture : PersistenceFixture
 {
@@ -28,7 +27,6 @@ public abstract class RepositoryContractTests<TFixture>
 
     protected RepositoryContractTests(TFixture fixture)
     {
-        // Skip here when the database is unavailable, before Should.ThrowAsync can mistake the skip for a failure.
         _ = fixture.Services;
         Fixture = fixture;
     }
@@ -553,7 +551,6 @@ public abstract class RepositoryContractTests<TFixture>
         var conversationId = await AddWidgetConversationAsync(Guid.CreateVersion7(), ConversationStatus.HandoverPending, BaseTime, MessageAuthor.System);
         var added = await InScopeAsync((IHandoverRepository handovers) => handovers.AddAsync(NewHandover(conversationId, HandoverStatus.Pending, BaseTime), Ct));
 
-        // A job posting the request to Slack and a person taking it both loaded it while it was pending.
         var posting = (await InScopeAsync((IHandoverRepository handovers) => handovers.GetAsync(added.Id, Ct))).ShouldNotBeNull();
         var taking = (await InScopeAsync((IHandoverRepository handovers) => handovers.GetAsync(added.Id, Ct))).ShouldNotBeNull();
         taking.Status = HandoverStatus.Active;
@@ -700,7 +697,6 @@ public abstract class RepositoryContractTests<TFixture>
         (await InScopeAsync((ILabelRepository labels) => labels.ListRowsAsync(conversation.Id, Ct)))
             .Single(row => row.LabelId == problem.Id).Removed.ShouldBeTrue("the job must not put it back");
 
-        // A second run replaces the auto labels but never brings back a removed one or takes over a manual one.
         await InScopeAsync((ILabelRepository labels) => labels.ApplyAutoAsync(conversation.Id, [problem.Id, billing.Id], BaseTime.AddHours(1), Ct));
         (await LabelsOfAsync(conversation.Id)).ShouldBe([($"{token} billing", "manual")]);
 
@@ -735,7 +731,6 @@ public abstract class RepositoryContractTests<TFixture>
     [Fact]
     public async Task ResetAutoLabeled_marks_recent_conversations_with_messages_most_recent_first()
     {
-        // Far ahead of the other tests' conversations, so only these are recent enough; deleted at the end.
         var since = new DateTimeOffset(2300, 1, 1, 0, 0, 0, TimeSpan.Zero);
         var widgetId = Guid.NewGuid();
         var older = await AddWidgetConversationAsync(widgetId, ConversationStatus.Closed, since.AddHours(1), MessageAuthor.Assistant);
@@ -754,7 +749,6 @@ public abstract class RepositoryContractTests<TFixture>
         (await GetConversationAsync(older)).AutoLabeledAt.ShouldBeNull();
         (await GetConversationAsync(stale)).AutoLabeledAt.ShouldBe(BaseTime);
 
-        // The other tests list the most recent conversations, so these go.
         foreach (var id in new[] { older, newer, empty.Id, stale })
         {
             await InScopeAsync((IConversationRepository conversations) => conversations.DeleteAsync(id, Ct));
@@ -781,7 +775,6 @@ public abstract class RepositoryContractTests<TFixture>
     [Fact]
     public async Task ModelMessagesJson_round_trips_byte_for_byte()
     {
-        // Key order, duplicate keys, whitespace, escapes and number formatting would all be normalized by jsonb.
         const string modelMessages = """
             [
               {"role":"assistant",   "contents":[{"$type":"reasoning","text":"Let me think…","protectedData":"EuYBCkQIBhgCIkB/+=="},
@@ -1093,7 +1086,6 @@ public abstract class RepositoryContractTests<TFixture>
     [Fact]
     public async Task Repositories_sharing_a_scope_can_be_called_concurrently()
     {
-        // Agent tools running in parallel within one request share that scope's DbContext.
         await using var scope = Fixture.Services.CreateAsyncScope();
         var sources = scope.ServiceProvider.GetRequiredService<ISourceRepository>();
         var conversations = scope.ServiceProvider.GetRequiredService<IConversationRepository>();
@@ -1251,7 +1243,6 @@ public abstract class RepositoryContractTests<TFixture>
         var viewer = "kc-" + Guid.NewGuid().ToString("N");
         await InScopeAsync((IStaffDirectory staff) => staff.SeenAsync(StaffPrincipal(viewer, "Dana Novak", AuthRoles.Support), Ct));
 
-        // From before the viewer first signed in: never unread to them.
         var old = Fixture.Time.GetUtcNow().AddDays(-1);
         var slack = await AddWidgetConversationAsync(widgetId, ConversationStatus.Human, old, MessageAuthor.Visitor);
         var closed = await AddWidgetConversationAsync(widgetId, ConversationStatus.Closed, old, MessageAuthor.Visitor);

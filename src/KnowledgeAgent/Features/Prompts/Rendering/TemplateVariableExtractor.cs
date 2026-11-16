@@ -38,8 +38,8 @@ internal static class TemplateVariableExtractor
 
             switch (tag[0])
             {
-                case '!': // comment
-                case '>': // partial
+                case '!':
+                case '>':
                     return;
                 case '#':
                     OpenBlock(tag[1..].Trim());
@@ -65,7 +65,6 @@ internal static class TemplateVariableExtractor
 
         private void OpenBlock(string content)
         {
-            // Partial blocks {{#> layout}} and decorator blocks {{#* inline}} only need to be balanced.
             if (content.StartsWith('>') || content.StartsWith('*'))
             {
                 _scopes.Push(new Scope(false));
@@ -86,7 +85,6 @@ internal static class TemplateVariableExtractor
                 return;
             }
 
-            // A mustache section such as {{#items}} iterates or enters the value, so it changes the context.
             VisitPath(head.Text);
             _scopes.Push(new Scope(true));
         }
@@ -95,7 +93,7 @@ internal static class TemplateVariableExtractor
         {
             if (content.Length == 0)
             {
-                Else([]); // {{^}} is an alias of {{else}}.
+                Else([]);
                 return;
             }
 
@@ -130,7 +128,7 @@ internal static class TemplateVariableExtractor
             {
                 if (tokens[0] is PathToken single && TemplateHelpers.AllHelperNames.Contains(single.Text))
                 {
-                    return; // A helper without arguments, such as {{date}}.
+                    return;
                 }
 
                 Visit(tokens[0]);
@@ -145,7 +143,6 @@ internal static class TemplateVariableExtractor
             VisitAll(tokens.Skip(1));
         }
 
-        // {{else}} renders in the enclosing context, even for #each and #with. A chained {{else each x}} enters a new one.
         private void Else(IReadOnlyList<Token> rest)
         {
             if (_scopes.TryPeek(out var current))
@@ -203,7 +200,6 @@ internal static class TemplateVariableExtractor
 
             if (path[0] == '@')
             {
-                // Data variables such as @index are skipped, but @root.x reads the top-level x.
                 if (path.StartsWith("@root.", StringComparison.Ordinal) || path.StartsWith("@root/", StringComparison.Ordinal))
                 {
                     AddFirstSegment(path[6..]);
@@ -234,7 +230,6 @@ internal static class TemplateVariableExtractor
                 rest = rest[2..];
             }
 
-            // Inside blocks that change the context, such as #each, names refer to the current item.
             if (ContextDepth - levelsUp <= 0)
             {
                 AddFirstSegment(rest);

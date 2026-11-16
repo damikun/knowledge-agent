@@ -17,6 +17,5 @@ public static class RecordedRequests
     public static IEnumerable<T> ContentsOf<T>(this IEnumerable<ChatMessage> messages) where T : AIContent =>
         messages.SelectMany(m => m.Contents).OfType<T>();
 
-    // Not synchronized with the client, so call it only when no request is in flight.
     public static IReadOnlyList<RecordedChatRequest> Snapshot(this RuleBasedChatClient client) => client.Requests.ToList();
 }

@@ -38,7 +38,6 @@ public sealed class WebsiteCrawlTests
         server.Hits("docs/b").ShouldBe(1);
         pages.Single(page => page.Url!.EndsWith("/docs/a", StringComparison.Ordinal)).Title.ShouldBe("Page A");
 
-        // Citations point at the page the text came from.
         foreach (var page in pages)
         {
             harness.Context.VectorStore.ForSource(page.Id).ShouldNotBeEmpty();
@@ -135,7 +134,6 @@ public sealed class WebsiteCrawlTests
         server.Hits("docs/private/keys").ShouldBe(0);
         (await harness.PagesAsync(website.Id)).Count.ShouldBe(2);
 
-        // robots.txt and sitemap.xml at one second, then the pages at the two-second crawl delay.
         var requests = server.Requests.Count;
         requests.ShouldBe(4);
         harness.Clock.Elapsed.ShouldBeGreaterThanOrEqualTo(TimeSpan.FromSeconds(1 + 2 + 2));
@@ -240,7 +238,6 @@ public sealed class WebsiteCrawlTests
         harness.Context.VectorStore.ForSource(first["/docs/gone"].Id).ShouldBeEmpty();
         harness.Context.VectorStore.ForSource(first["/docs/unlinked"].Id).ShouldBeEmpty();
 
-        // Only the home page (its links changed), the changed page and the new page were embedded again.
         (harness.Context.Embeddings.Calls.Count - embedded).ShouldBe(3);
         harness.Website(website.Id).Status.ShouldBe(SourceStatus.Ready);
     }

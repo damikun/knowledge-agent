@@ -69,7 +69,6 @@ public sealed class SerializationTests
         var json = ChatJson.SerializeMessages(messages, dropped.Add);
         var restored = ChatJson.DeserializeMessages(json);
 
-        // M.E.AI cannot serialize unknown AIContent subclasses, so they are dropped and the rest is kept.
         dropped.Count.ShouldBe(2);
         dropped.ShouldAllBe(name => name.EndsWith(nameof(ProviderSpecificContent)));
         restored.Count.ShouldBe(1, "a message left without contents is dropped");

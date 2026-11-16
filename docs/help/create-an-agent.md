@@ -29,4 +29,4 @@ The [Playground](/playground) tests your own agents, the first one unless you pi
 
 ## Duplicate or delete an agent
 
-Use the menu on the agent's page. An agent that a widget uses cannot be deleted; move the widget to another agent first ([Widgets](/widgets)).
+Use the menu on the agent's page. An agent that a widget uses cannot be deleted; move the widget to another agent first ([Widgets](/widgets)). The last agent cannot be deleted either, since the Playground and evaluations need one.

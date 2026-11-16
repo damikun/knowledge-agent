@@ -75,7 +75,6 @@ internal sealed class CustomDatasetRepository(KnowledgeDbContext db, DbContextGa
         using var _ = await gate.EnterAsync(cancellationToken);
         try
         {
-            // The in-memory store has no unique indexes.
             if (!db.Database.IsRelational() && await db.EvalDatasets.AnyAsync(other => other.NormalizedName == dataset.NormalizedName, cancellationToken))
             {
                 return false;
@@ -141,7 +140,6 @@ internal sealed class CustomDatasetRepository(KnowledgeDbContext db, DbContextGa
             return await db.EvalDatasets.Where(dataset => dataset.Id == id).ExecuteDeleteAsync(cancellationToken) > 0;
         }
 
-        // Non-relational providers lack ExecuteDelete and store-side cascades.
         try
         {
             var dataset = await db.EvalDatasets.FirstOrDefaultAsync(item => item.Id == id, cancellationToken);
@@ -209,7 +207,6 @@ internal sealed class CustomDatasetRepository(KnowledgeDbContext db, DbContextGa
         using var _ = await gate.EnterAsync(cancellationToken);
         try
         {
-            // One SaveChanges is one transaction, so a failed batch leaves nothing behind.
             foreach (var item in items)
             {
                 item.DatasetId = datasetId;

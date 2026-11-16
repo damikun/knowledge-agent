@@ -19,7 +19,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Features.Chat;
 
-// StaffId is the signed-in subject, or "apikey:<id>" on the API and MCP channels.
 public sealed record ChatCaller(
     ConversationChannel Channel,
     string? Name = null,
@@ -37,7 +36,6 @@ public sealed record ChatCaller(
 
     public bool IsApi => Channel is ConversationChannel.Api or ConversationChannel.Mcp;
 
-    // Staff are signed in to the portal, so a playground test counts as a verified visitor.
     public bool IsVerified => Channel == ConversationChannel.Portal || Verified;
 }
 
@@ -69,7 +67,6 @@ internal sealed class ChatTurnExecutor(
         Activity? activity = null;
         try
         {
-            // Each turn starts a new trace, linked to the request span instead of parented to it.
             Activity.Current = null;
             activity = AgentTelemetry.StartChatTurn(previousActivity, catalog.Orchestrator.Name, message);
             if (activity is null)
@@ -159,7 +156,6 @@ internal sealed class ChatTurnExecutor(
             agent = await agents.ResolveAsync(conversation.AgentId, fallbackKey: null, cancellationToken);
             if ((conversation.Channel != ConversationChannel.Portal || conversation.WidgetId is not null) && agent.Id != conversation.AgentId)
             {
-                // A visitor, or a test of what one gets, must never end up with the built-in agent, which may search every source.
                 writer.TryWrite(new ErrorEvent("The agent of this conversation no longer exists.", ChatErrorCodes.NotFound));
                 return;
             }
@@ -185,7 +181,6 @@ internal sealed class ChatTurnExecutor(
         AgentLog.TurnStarted(logger, turnId, conversation.Id, isNew, profile);
         writer.TryWrite(new ConversationEvent(conversation.Id, conversation.Title, isNew));
 
-        // On the timeline at once, so other views see the question before the answer is written.
         await timeline.AddAsync(
             new ConversationMessage
             {
@@ -203,7 +198,6 @@ internal sealed class ChatTurnExecutor(
             ? Task.Run(() => titleGenerator.GenerateAsync(message, cancellationToken), CancellationToken.None)
             : null;
 
-        // Built only from stored turns, so every turn starts with the same prefix and the prompt cache keeps working.
         var replayed = historyBuilder.Build(conversation);
         var history = replayed.Messages;
         AgentTelemetry.SetHistory(activity, replayed.Mode.ToString().ToLowerInvariant(), replayed.Turns, replayed.StubbedResults, replayed.EstimatedTokens);
@@ -229,7 +223,6 @@ internal sealed class ChatTurnExecutor(
             history.Add(new ChatMessage(ChatRole.User, prompt));
             await RunTeamAsync(new TeamTurn(conversation, request, caller, agent, current, orchestrator, profile, history, turn, activity, outcome), cancellationToken);
 
-            // The visitor saw that text, so an empty last step must not leave them without an answer.
             if (outcome.Error is null && string.IsNullOrWhiteSpace(outcome.Answer) && outcome.LastInterimText is { } interim)
             {
                 AgentLog.AnswerFromInterim(logger, turnId, conversation.Id);
@@ -276,7 +269,6 @@ internal sealed class ChatTurnExecutor(
                 CreatedAt = timeProvider.GetUtcNow(),
             };
 
-            // Saved even when the client has gone: the turn runs apart from its request.
             await conversations.AddTurnAsync(record, CancellationToken.None);
             await AddAnswerToTimelineAsync(conversation, turnId, outcome, citations);
         }
@@ -310,14 +302,12 @@ internal sealed class ChatTurnExecutor(
         writer.TryWrite(new DoneEvent(conversation.Id, turnId, outcome.FinishReason));
         AgentLog.TurnCompleted(logger, turnId, conversation.Id, outcome.FinishReason, outcome.Iterations, durationMs);
 
-        // After the done event, so queueing never delays the answer.
         if (isNew && outcome.Error is null && !outcome.Stopped && persistError is null)
         {
             await RunFirstAnswerHooksAsync(conversation);
         }
     }
 
-    // A refusal is left out, so the request that caused it is not sent to the model again.
     private static List<ChatMessage> MessagesToKeep(TurnOutcome outcome, List<ChatMessage> appended, ToolCallLog toolCalls) => outcome switch
     {
         { FinishReason: ChatFinishReasons.Refusal } => [],
@@ -383,7 +373,7 @@ internal sealed class ChatTurnExecutor(
         var orchestrator = catalog.Orchestrator;
         var extra = new List<IAgentTool>();
 
-        foreach (var source in agent.IsBuiltIn ? [] : toolSources)
+        foreach (var source in toolSources)
         {
             extra.AddRange(await source.ResolveAsync(agent, caller, cancellationToken));
         }
@@ -393,8 +383,7 @@ internal sealed class ChatTurnExecutor(
             ToolNames = orchestrator.ToolNames
                 .Where(tool => tool switch
                 {
-                    ToolNames.RequestHumanHandover => !agent.IsBuiltIn && agent.HandoverPolicy != HandoverPolicy.Never && caller.HandoverAvailable,
-                    // Hosts without the feedback feature, such as an isolated eval run, would only offer a tool that fails.
+                    ToolNames.RequestHumanHandover => agent.HandoverPolicy != HandoverPolicy.Never && caller.HandoverAvailable,
                     ToolNames.RecordFeedback => agent.Tools.Contains(tool) && caller.FeedbackAvailable && feedbackRecorders.Any(),
                     _ => agent.Tools.Contains(tool),
                 })
@@ -403,7 +392,6 @@ internal sealed class ChatTurnExecutor(
         };
     }
 
-    // Hand-offs in one turn: to a specialist, back, and to another specialist. Each agent's own limits still apply.
     internal const int MaxHandoffsPerTurn = 3;
 
     private async Task<AgentDefinition> AgentForTurnAsync(AgentConfig front, AgentConfig current, ChatCaller caller, bool allowHandoff, CancellationToken cancellationToken)
@@ -411,12 +399,12 @@ internal sealed class ChatTurnExecutor(
         var definition = await AgentForAsync(current, caller, cancellationToken);
         var isFront = current == front;
         var handoffs = new List<IAgentTool>();
-        if (allowHandoff && isFront && !front.IsBuiltIn)
+        if (allowHandoff && isFront)
         {
             var choices = new List<SpecialistChoice>();
             foreach (var specialist in front.Specialists)
             {
-                if (specialist.AgentId != front.Id && await agents.FindAsync(specialist.AgentId, cancellationToken) is { IsBuiltIn: false } found)
+                if (specialist.AgentId != front.Id && await agents.FindAsync(specialist.AgentId, cancellationToken) is { } found)
                 {
                     choices.Add(new SpecialistChoice(found, specialist.WhenToUse));
                 }
@@ -446,8 +434,8 @@ internal sealed class ChatTurnExecutor(
             return front;
         }
 
-        if (!front.IsBuiltIn && front.Specialists.Any(specialist => specialist.AgentId == activeId)
-            && await agents.FindAsync(activeId, cancellationToken) is { IsBuiltIn: false } specialist)
+        if (front.Specialists.Any(specialist => specialist.AgentId == activeId)
+            && await agents.FindAsync(activeId, cancellationToken) is { } specialist)
         {
             return specialist;
         }
@@ -482,7 +470,6 @@ internal sealed class ChatTurnExecutor(
         {
             var variables = await BuildSystemPromptVariablesAsync(request, current, definition, caller, conversation.SourceIds, cancellationToken);
 
-            // Rendered on every turn, so the date is the conversation's, like the front agent's frozen prompt; today's date would change the cached prefix daily.
             variables["today"] = conversation.CreatedAt.UtcDateTime.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
             variables["frontAgentName"] = front.Name;
             variables["handBackEnabled"] = definition.HandoffTools.Any(tool => tool.Name == ToolNames.TransferBack);
@@ -576,7 +563,6 @@ internal sealed class ChatTurnExecutor(
                     (true, false) => $"Handed back to {target.Name}. The visitor does not see this.",
                 },
 
-                // Not tied to the turn: a visitor sees a notice of a turn as a failure.
                 StaffOnly = !shown,
                 CreatedAt = timeProvider.GetUtcNow(),
             },
@@ -604,7 +590,6 @@ internal sealed class ChatTurnExecutor(
             : null;
     }
 
-    // Marked answered before it runs, so a repeated Confirm can never run it twice.
     private async Task<string> AnswerConfirmationAsync(
         PendingConfirmation pending,
         bool approved,
@@ -647,7 +632,6 @@ internal sealed class ChatTurnExecutor(
         TurnOutcome outcome,
         CancellationToken cancellationToken)
     {
-        // The prompt text is frozen per conversation, but model settings follow the prompt's current config.
         var promptPatch = await GetPromptPatchAsync(conversation, profile, cancellationToken);
 
         ChatModelHandle model;
@@ -687,24 +671,14 @@ internal sealed class ChatTurnExecutor(
             Minus(usage.TotalTokens, before.TotalTokens)));
         sink.Emit(new AgentCompletedEvent(result.FinishReason, result.Iterations));
 
-        if (!_options.AnswerIsFinalStep)
+        if (result.FinalText.Length > 0 || result.Error is not null)
         {
-            outcome.Answer = outcome.Answer.Length > 0 && result.FullText.Length > 0
-                ? outcome.Answer + "\n\n" + result.FullText
-                : outcome.Answer + result.FullText;
+            outcome.Answer = result.FinalText;
         }
-        else
-        {
-            // The answer is the last step of the agent that answered; after a hand-off the specialist's replaces the front agent's.
-            if (result.FinalText.Length > 0 || result.Error is not null)
-            {
-                outcome.Answer = result.FinalText;
-            }
 
-            if (result.Steps.LastOrDefault(step => step.Interim && !string.IsNullOrWhiteSpace(step.Text)) is { } interim)
-            {
-                outcome.LastInterimText = interim.Text;
-            }
+        if (result.Steps.LastOrDefault(step => step.Interim && !string.IsNullOrWhiteSpace(step.Text)) is { } interim)
+        {
+            outcome.LastInterimText = interim.Text;
         }
 
         outcome.Iterations += result.Iterations;
@@ -729,7 +703,6 @@ internal sealed class ChatTurnExecutor(
         var scope = await ExistingSourceIdsAsync(requestedScope, cancellationToken);
         if (requestedScope.Count > 0 && scope.Count == 0)
         {
-            // Searching everything instead would silently widen what the user asked for.
             writer.TryWrite(new ErrorEvent(ChatService.ScopeNotFoundMessage, ChatErrorCodes.NotFound));
             return null;
         }
@@ -774,7 +747,6 @@ internal sealed class ChatTurnExecutor(
         return await conversations.CreateAsync(conversation, cancellationToken);
     }
 
-    // The creator columns hold 200 characters; an identity provider may send longer names.
     private static string? Shortened(string? value) => value is { Length: > 200 } ? value[..200] : value;
 
     private async Task<List<Guid>> ExistingSourceIdsAsync(IReadOnlyList<Guid> requested, CancellationToken cancellationToken)
@@ -797,8 +769,6 @@ internal sealed class ChatTurnExecutor(
         IReadOnlyList<Guid> scope,
         CancellationToken cancellationToken)
     {
-        // Totals only, so the prompt does not grow with the number of sources. A scoped agent describes only
-        // what it may search, so visitors don't learn what else is stored.
         var agentScope = await agents.ResolveScopeAsync(agent, [], cancellationToken);
         var stats = agentScope is null ? await sources.GetStatsAsync(cancellationToken) : await StatsOfAsync(agentScope, cancellationToken);
         var sourceTypes = stats.ReadyCountByType
@@ -854,7 +824,6 @@ internal sealed class ChatTurnExecutor(
             variables["specialistsEnabled"] = true;
         }
 
-        // Only for the visitor's own conversations.
         if (caller.Channel == ConversationChannel.Widget && caller.ContactId is { } contactId)
         {
             var facts = new List<object?>();
@@ -914,7 +883,6 @@ internal sealed class ChatTurnExecutor(
         {
             var template = await prompts.GetTemplateAsync(promptName, selector: null, cancellationToken);
 
-            // A config written for another profile must not override a profile the user picked explicitly.
             var configProfile = PromptConfig.ParseProfile(template.Config);
             return configProfile is not null && !string.Equals(configProfile, profile, StringComparison.OrdinalIgnoreCase)
                 ? null

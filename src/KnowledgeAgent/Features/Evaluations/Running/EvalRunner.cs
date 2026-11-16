@@ -139,7 +139,6 @@ public sealed class EvalRunner(ILogger logger, TimeProvider? timeProvider = null
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
-            // Not fatal: the chat turn reports prompt problems itself.
         }
 
         ResolvedModelProfile chat;

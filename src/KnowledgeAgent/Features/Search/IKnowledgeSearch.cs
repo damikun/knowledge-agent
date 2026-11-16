@@ -25,7 +25,6 @@ public sealed record KnowledgeSearchHit(
     public double? RerankScore { get; init; }
 }
 
-// Degraded lists the parts that failed and were skipped, so callers can tell a weaker search from an empty one.
 public sealed record KnowledgeSearchResult(IReadOnlyList<KnowledgeSearchHit> Hits, IReadOnlyList<string> Degraded)
 {
     public bool IsDegraded => Degraded.Count > 0;

@@ -4,7 +4,6 @@ using System.Text.RegularExpressions;
 
 namespace KnowledgeAgent.Features.Connections.Mcp;
 
-// The names the model sees: mcp_<server key>__<tool>, within the 64 letters, digits, _ and - that model providers allow.
 public static partial class McpToolNames
 {
     public const string Prefix = "mcp_";
@@ -20,7 +19,6 @@ public static partial class McpToolNames
             return start + tool;
         }
 
-        // Shortened or changed names get a hash of the original, so two tools never end up with the same name.
         var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(toolName)))[..6];
         var room = Math.Max(1, MaxLength - start.Length - hash.Length - 1);
         return start + (tool.Length > room ? tool[..room] : tool) + "_" + hash;

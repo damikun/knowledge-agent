@@ -28,7 +28,6 @@ internal sealed class LangfuseHealthCheck(LangfuseClient client, IOptions<Langfu
         }
         catch (Exception ex) when (!cancellationToken.IsCancellationRequested)
         {
-            // Degraded rather than unhealthy: the app keeps working with cached or local prompts.
             var reason = timeout.IsCancellationRequested ? $"no answer within {Timeout.TotalSeconds:0} s" : ex.Message;
             return HealthCheckResult.Degraded($"configured but unreachable: {reason}", ex);
         }

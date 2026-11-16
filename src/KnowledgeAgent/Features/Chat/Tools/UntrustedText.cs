@@ -5,8 +5,6 @@ using Microsoft.Extensions.AI;
 
 namespace KnowledgeAgent.Features.Chat.Tools;
 
-// Text from sources and other systems goes to the model between tags with a random key per turn,
-// so a passage cannot close the block and pass itself off as instructions.
 internal static class UntrustedText
 {
     public const string TagPrefix = "untrusted-";
@@ -28,13 +26,11 @@ internal static class UntrustedText
             .ToString();
     }
 
-    // What the wrapping adds, so the wrapped result still fits the tool-result limit.
     public const int Overhead = 200;
 
     public static bool IsWrapped(string? text) =>
         text is not null && text.StartsWith(Notice, StringComparison.Ordinal) && text.Contains("</" + TagPrefix, StringComparison.Ordinal);
 
-    // Telemetry only. Replayed and shortened results keep the block, but may come back as JSON rather than a string.
     public static int CountIn(IEnumerable<ChatMessage> messages) =>
         messages.SelectMany(message => message.Contents).Count(content => content switch
         {
@@ -45,8 +41,6 @@ internal static class UntrustedText
             _ => false,
         });
 
-    // Removes the turn's key and anything that looks like one of these tags, plus invisible characters
-    // that can hide text from people but not from the model.
     internal static string Neutralize(string text, string key)
     {
         var cleaned = StripInvisible(text);
@@ -100,11 +94,9 @@ internal static class UntrustedText
         return false;
     }
 
-    // Zero-width characters and bidi controls.
     internal static bool IsInvisible(char c) => c is '​' or '‌' or '‍' or '‎' or '‏' or '⁠' or '⁡'
         or '⁢' or '⁣' or '⁤' or '﻿' or '᠎' or (>= '‪' and <= '‮') or (>= '⁦' and <= '⁩');
 
-    // Unicode tags (U+E0000 to U+E007F) mirror ASCII and are invisible; they can smuggle whole sentences.
     internal static bool IsTagCharacter(string text, int index) =>
         text[index] == '\uDB40' && index + 1 < text.Length && text[index + 1] is >= '\uDC00' and <= '\uDC7F';
 }

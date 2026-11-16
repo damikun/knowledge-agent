@@ -27,7 +27,7 @@ internal sealed class HandlebarsPromptRenderer : IPromptTemplateRenderer
             FormatProvider = CultureInfo.InvariantCulture,
         };
         configuration.FormatterProviders.Add(new InvariantValueFormatterProvider());
-        configuration.UseCollectionMemberAliasProvider(); // Supports {{items.length}} as in JavaScript.
+        configuration.UseCollectionMemberAliasProvider();
 
         _handlebars = Handlebars.Create(configuration);
         new TemplateHelpers(timeProvider).Register(_handlebars);
@@ -68,7 +68,6 @@ internal sealed class HandlebarsPromptRenderer : IPromptTemplateRenderer
 
     public IReadOnlyList<string> ExtractVariables(string template) => TemplateVariableExtractor.Extract(template);
 
-    // Compiles without rendering, so helpers that need values do not fail a template that is fine.
     public void Validate(string template)
     {
         ArgumentNullException.ThrowIfNull(template);
@@ -97,7 +96,6 @@ internal sealed class HandlebarsPromptRenderer : IPromptTemplateRenderer
         }
         catch (Exception ex)
         {
-            // Handlebars.Net reports some malformed expressions, such as "{{#if}}", as bare LINQ errors.
             var reason = ex is HandlebarsException
                 ? Describe(ex)
                 : "the template contains an incomplete expression (for example a block helper without arguments)";

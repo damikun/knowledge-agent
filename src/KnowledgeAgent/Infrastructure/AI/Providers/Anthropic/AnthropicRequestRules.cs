@@ -2,7 +2,6 @@ using Microsoft.Extensions.AI;
 
 namespace KnowledgeAgent.Infrastructure.AI.Providers.Anthropic;
 
-// Current Claude models reject these settings with HTTP 400, so they are corrected with a one-time warning instead.
 internal static class AnthropicRequestRules
 {
     public static void Apply(ChatOptions options, AnthropicThinkingMode thinkingMode, bool defaultEffort, OneTimeWarnings warnings)
@@ -49,7 +48,6 @@ internal static class AnthropicRequestRules
             effort = ReasoningEffort.Medium;
         }
 
-        // New instance because the caller's ReasoningOptions may be shared with other ChatOptions clones.
         options.Reasoning = effort is null && output is null ? null : new ReasoningOptions { Effort = effort, Output = output };
     }
 

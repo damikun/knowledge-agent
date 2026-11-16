@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace KnowledgeAgent.Infrastructure.Persistence.Conventions;
 
-// Npgsql only accepts UTC values for timestamptz, and converting to UTC keeps the instant.
 internal sealed class UtcDateTimeOffsetConverter() : ValueConverter<DateTimeOffset, DateTimeOffset>(
     value => value.ToUniversalTime(),
     value => value);
@@ -49,7 +48,6 @@ internal static class JsonColumns
         value => value.Aggregate(0, (hash, item) => HashCode.Combine(hash, StringComparer.Ordinal.GetHashCode(item))),
         value => value.ToList());
 
-    // A settings object stored as one JSON document; compared by content so changes inside lists are saved.
     public static ValueConverter<T, string> Document<T>() where T : class, new() => new(
         value => SerializeDocument(value),
         json => DeserializeDocument<T>(json));
@@ -119,7 +117,6 @@ internal static class JsonColumns
         return true;
     }
 
-    // XOR keeps the hash order-independent, matching dictionary equality.
     private static int DictionaryHashCode(Dictionary<string, string> value)
     {
         var hash = 0;

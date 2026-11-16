@@ -10,7 +10,6 @@ internal sealed partial class HtmlTextExtractor(ILogger<HtmlTextExtractor> logge
 {
     internal const int MinReadableLength = 200;
 
-    // SmartReader recurses per nesting level and slows down sharply on deep documents. Real pages stay far below.
     internal const int MaxReadabilityDepth = 200;
 
     private const int MaxTitleLength = 300;
@@ -52,8 +51,6 @@ internal sealed partial class HtmlTextExtractor(ILogger<HtmlTextExtractor> logge
     {
         try
         {
-            // SmartReader mutates the document, so it gets its own copy. Given a parsed document,
-            // it never makes network requests itself.
             using var document = parser.ParseDocument(html);
             using var reader = new Reader(address.AbsoluteUri, document);
             var article = reader.GetArticle();
@@ -75,7 +72,6 @@ internal sealed partial class HtmlTextExtractor(ILogger<HtmlTextExtractor> logge
         }
     }
 
-    // Readability drops the heading that repeats the title, so the title is put back as the first line.
     private static string PrependTitle(string text, string? title) =>
         string.IsNullOrEmpty(title) || text.StartsWith(title, StringComparison.OrdinalIgnoreCase)
             ? text

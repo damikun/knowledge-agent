@@ -7,7 +7,6 @@ namespace KnowledgeAgent.Infrastructure.AI;
 
 public sealed record ProviderRejection(string ProviderKey, int Status, DateTimeOffset At);
 
-// The last rejected key per provider, in memory per instance; a later successful call clears it.
 public interface IProviderErrorLog
 {
     void RecordFailure(string providerKey, Exception exception);
@@ -31,7 +30,6 @@ internal sealed class ProviderErrorLog(TimeProvider timeProvider) : IProviderErr
 
     public void RecordSuccess(string providerKey)
     {
-        // Most calls succeed, so the common path is a lookup without a write.
         if (!_rejections.IsEmpty)
         {
             _rejections.TryRemove(providerKey, out _);
@@ -41,7 +39,6 @@ internal sealed class ProviderErrorLog(TimeProvider timeProvider) : IProviderErr
     public IReadOnlyList<ProviderRejection> ListRejections(DateTimeOffset since) =>
         _rejections.Values.Where(item => item.At >= since).OrderBy(item => item.ProviderKey, StringComparer.Ordinal).ToList();
 
-    // The provider SDKs throw their own exception types; each carries the HTTP status as StatusCode or Status.
     internal static int? RejectedStatus(Exception exception)
     {
         for (var current = exception; current is not null; current = current.InnerException)
@@ -78,7 +75,6 @@ internal sealed class ProviderErrorLog(TimeProvider timeProvider) : IProviderErr
     }
 }
 
-// Innermost in the chat pipeline: sees the provider's own exceptions before anything wraps them.
 internal sealed class ProviderErrorChatClient(IChatClient innerClient, IProviderErrorLog log, string providerKey) : DelegatingChatClient(innerClient)
 {
     public override async Task<ChatResponse> GetResponseAsync(
@@ -109,7 +105,6 @@ internal sealed class ProviderErrorChatClient(IChatClient innerClient, IProvider
             var first = true;
             while (true)
             {
-                // The filter only looks at the exception, so nothing is caught and yield can stay outside the try.
                 try
                 {
                     if (!await enumerator.MoveNextAsync())

@@ -45,7 +45,6 @@ public static class DockerAvailability
     }
 }
 
-// Keep in sync with docker-compose.yml.
 public static class ContainerImages
 {
     public const string Postgres = "postgres:17-alpine";

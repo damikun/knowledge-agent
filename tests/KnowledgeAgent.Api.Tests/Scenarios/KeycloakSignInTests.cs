@@ -17,7 +17,6 @@ using Testcontainers.Keycloak;
 
 namespace KnowledgeAgent.Api.Tests.Scenarios;
 
-// Runs Keycloak with the stack's realm file; two HttpClients play the browser against the API and Keycloak.
 public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixture keycloak, InMemoryAppFixture fixture)
     : IClassFixture<KeycloakSignInTests.KeycloakFixture>, IClassFixture<InMemoryAppFixture>
 {
@@ -26,7 +25,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
     private const string KeycloakAdminUser = "admin";
     private const string KeycloakAdminPassword = "test-keycloak-admin";
 
-    // Short, so the tests see sessions checked again.
     private static readonly TimeSpan CheckInterval = TimeSpan.FromSeconds(1);
 
     private static string RealmFile => Path.Combine(AppContext.BaseDirectory, "keycloak", "knowledge-agent-realm.json");
@@ -119,7 +117,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
         using var started = app.Factory.CreateClient(new() { AllowAutoRedirect = false });
         var callback = await SignInAtKeycloakAsync(started, browser, "admin@knowledge-agent.local", returnUrl: "/widgets");
 
-        // This client lacks the sign-in's correlation cookie, like a browser whose sign-in page stayed open past it.
         using var api = app.Factory.CreateClient(new() { AllowAutoRedirect = false });
         using var stale = await api.GetAsync(callback.PathAndQuery, Ct);
         stale.StatusCode.ShouldBe(HttpStatusCode.Redirect);
@@ -142,7 +139,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
         using var stale = await retrying.GetAsync(callback.PathAndQuery, Ct);
         var second = await ReturnFromKeycloakAsync(browser, stale.Headers.Location!);
 
-        // The second return goes stale as well, so the portal explains instead of starting over forever.
         using var api = app.Factory.CreateClient(new() { AllowAutoRedirect = false });
         using var failed = await api.GetAsync(second.PathAndQuery, Ct);
 
@@ -338,7 +334,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
             conversationId = (await conversations.CreateAsync(new Conversation { Title = "Followed" }, Ct)).Id;
         }
 
-        // The view closes by itself, and the reconnect runs the check.
         using (var view = await FollowAsync(api, conversationId))
         {
             view.StatusCode.ShouldBe(HttpStatusCode.OK);
@@ -392,7 +387,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
         var authorize = login.Headers.Location!;
         authorize.AbsoluteUri.ShouldStartWith(keycloak.Authority + "/protocol/openid-connect/auth");
 
-        // Keycloak uses pushed authorization requests, so the browser only carries a request_uri.
         authorize.Query.ShouldContain("request_uri=");
 
         var form = await GetLoginFormAsync(browser, authorize);
@@ -427,7 +421,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
 
     private static async Task<Uri> GetLoginFormAsync(HttpClient browser, Uri authorize)
     {
-        // Keycloak first redirects to its own login step, as it does for a browser.
         var page = await browser.GetAsync(authorize, Ct);
         for (var hops = 0; page.StatusCode == HttpStatusCode.Redirect && hops < 5; hops++)
         {
@@ -469,7 +462,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
             set => _unreachable = value;
         }
 
-        // Holds refreshes back, so requests sent together find the check still running.
         public TimeSpan RefreshDelay { get; init; }
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -520,7 +512,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
 
         public async Task SetEnabledAsync(KeycloakUser user, bool enabled)
         {
-            // The whole representation goes back, so nothing else of the user changes.
             using var read = await SendAsync(HttpMethod.Get, $"users/{user.Id}");
             var representation = JsonNode.Parse(await read.Content.ReadAsStringAsync(Ct))!.AsObject();
             representation["enabled"] = enabled;
@@ -571,7 +562,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
             return await _http.SendAsync(request, Ct);
         }
 
-        // Admin tokens of the master realm last a minute, so each call gets a fresh one.
         private async Task<string> GetTokenAsync()
         {
             using var form = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -626,8 +616,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
 
         private Uri BaseAddress { get; set; } = new("http://localhost/");
 
-        // Keycloak keeps its login session in cookies marked Secure even on http. Browsers send those to localhost;
-        // CookieContainer does not, so the test browser keeps its own jar.
         public HttpClient CreateBrowser() =>
             new(new BrowserCookies { InnerHandler = new HttpClientHandler { AllowAutoRedirect = false, UseCookies = false } });
 
@@ -643,7 +631,6 @@ public sealed partial class KeycloakSignInTests(KeycloakSignInTests.KeycloakFixt
             _container = new KeycloakBuilder(ContainerImages.Keycloak)
                 .WithUsername(KeycloakAdminUser)
                 .WithPassword(KeycloakAdminPassword)
-                // Keycloak only imports a file named after its realm.
                 .WithRealm(RealmFile)
                 .WithEnvironment("KA_PORTAL_CLIENT_SECRET", ClientSecret)
                 .WithEnvironment("KA_PORTAL_URL", "http://localhost")

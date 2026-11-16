@@ -15,7 +15,6 @@ public sealed class InngestJobsOptions
 {
     public string AppId { get; set; } = "knowledge-agent";
 
-    // Where the portal links to the Inngest dashboard; derived from INNGEST_DEV or INNGEST_BASE_URL when empty.
     public string? DashboardUrl { get; set; }
 }
 

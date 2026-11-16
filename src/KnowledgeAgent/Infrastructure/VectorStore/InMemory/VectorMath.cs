@@ -29,7 +29,6 @@ internal static class VectorMath
         return sum;
     }
 
-    // sqrt(s * s) == s in IEEE double arithmetic, so identical vectors score exactly 1.
     public static double CosineSimilarity(ReadOnlySpan<float> left, double leftSumOfSquares, ReadOnlySpan<float> right, double rightSumOfSquares)
     {
         if (leftSumOfSquares <= 0d || rightSumOfSquares <= 0d)

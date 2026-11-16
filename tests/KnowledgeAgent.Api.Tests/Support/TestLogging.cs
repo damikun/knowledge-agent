@@ -58,7 +58,6 @@ public sealed class TestLoggerProvider(TestLogSink sink) : ILoggerProvider
             }
             catch (Exception)
             {
-                // The test that started the app may have finished already, and the sink still has the line.
             }
         }
 

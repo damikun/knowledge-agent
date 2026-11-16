@@ -9,7 +9,6 @@ public abstract class VectorStoreContractTests : IAsyncDisposable
 {
     private const double ScoreTolerance = 1e-5;
 
-    // Targets a few seconds for 1,000 chunks of 384 dimensions, with headroom for a busy CI machine.
     private static readonly TimeSpan PerformanceBudget = TimeSpan.FromSeconds(10);
 
     private readonly List<IVectorStore> _stores = [];
@@ -274,7 +273,6 @@ public abstract class VectorStoreContractTests : IAsyncDisposable
     {
         var store = await CreateStoreAsync();
         var sourceId = Guid.NewGuid();
-        // Similarity decreases with the chunk index.
         await store.InsertAsync([.. Enumerable.Range(0, 120).Select(i => Chunk(sourceId, i, [1, i / 100f, 0, 0]))], Ct);
 
         async Task<int[]> SearchIndexes(int topK) =>
@@ -468,7 +466,6 @@ public abstract class VectorStoreContractTests : IAsyncDisposable
 
         var hits = await store.KeywordSearchAsync(new KeywordSearchQuery(["vacation", "approv"], ModelA, 10), Ct);
 
-        // "staycation" and "Disapproval" match only mid-word, and the ModelB chunk belongs to another model.
         hits.Select(hit => hit.ChunkId).ShouldBe([chunks[1].ChunkId, chunks[0].ChunkId]);
         var expected = Bm25(contents, ["vacation", "approv"]);
         hits[0].Score.ShouldBe(expected[1], 1e-6);
@@ -573,7 +570,6 @@ public abstract class VectorStoreContractTests : IAsyncDisposable
 
         var page = await store.FindTextAsync(new TextSearchQuery("vacation"), Ct);
 
-        // "staycation" matches only inside a word, and the ModelB copy of chunk 2 counts once.
         (page.TotalChunks, page.TotalSources).ShouldBe((3L, 2L));
         page.Items.Select(hit => (hit.SourceId, hit.ChunkIndex)).ShouldBe([(handbook, 0), (handbook, 2), (other, 0)], ignoreOrder: true);
         page.Items.Zip(page.Items.Skip(1)).Count(pair => pair.First.SourceId != pair.Second.SourceId).ShouldBe(1);
@@ -693,7 +689,6 @@ public abstract class VectorStoreContractTests : IAsyncDisposable
         (counts.TotalChunks, counts.TotalSources).ShouldBe((3L, 2L));
     }
 
-    // Reference BM25 (k1 = 1.2, b = 0.75) over word-start matches, independent of the store implementations.
     private static double[] Bm25(IReadOnlyList<string> contents, IReadOnlyList<string> terms)
     {
         var lengths = contents.Select(content => content.EnumerateRunes().Count()).ToArray();

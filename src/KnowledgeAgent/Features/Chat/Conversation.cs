@@ -26,10 +26,8 @@ public sealed class Conversation
     public string Title { get; set; } = "New conversation";
     public string AgentName { get; set; } = "orchestrator";
 
-    // Null for conversations from before agents were configurable.
     public Guid? AgentId { get; set; }
 
-    // The name is kept for when the specialist is deleted.
     public Guid? ActiveAgentId { get; set; }
     public string? ActiveAgentName { get; set; }
 
@@ -39,7 +37,6 @@ public sealed class Conversation
     public Guid? WidgetId { get; set; }
     public Guid? VisitorId { get; set; }
 
-    // Denormalized so filters and erasure need no join.
     public Guid? ContactId { get; set; }
 
     public string? CreatedById { get; set; }

@@ -10,7 +10,6 @@ public sealed record EmbeddingResult(string ModelKey, int Dimensions, IReadOnlyL
 
 public interface IEmbeddingService
 {
-    /// <summary>Whether the embedding profile resolves to a model; embeds nothing.</summary>
     Task<bool> IsAvailableAsync(CancellationToken cancellationToken = default);
 
     Task<EmbeddingResult> EmbedAsync(

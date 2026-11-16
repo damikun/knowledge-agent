@@ -7,6 +7,5 @@ public enum SourceType
     Text,
     Markdown,
 
-    // Crawls a site; each page it finds becomes a Url source with this one as its parent.
     Website,
 }

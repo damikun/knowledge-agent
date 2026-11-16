@@ -47,7 +47,6 @@ public sealed class FinalAnswerTests
         host.Conversations.Get(conversationId).Messages.Where(message => message.Author == MessageAuthor.Assistant).Select(message => message.Text)
             .ShouldBe([Answer]);
 
-        // The model still sees what it wrote.
         turn.ModelMessages().First(message => message.Role == ChatRole.Assistant).Text.ShouldBe(Note);
     }
 
@@ -119,23 +118,6 @@ public sealed class FinalAnswerTests
 
         events.Done().FinishReason.ShouldBe(ChatFinishReasons.Stop);
         host.SingleTurn(events.ConversationId()).AssistantMessage.ShouldBe(Answer);
-    }
-
-    [Fact]
-    public async Task With_answer_text_all_every_step_is_joined_as_before()
-    {
-        using var host = new AgentTestHost(new Dictionary<string, string?> { ["Agents:AnswerText"] = "all" });
-        AddPricing(host);
-        host.ChatClients.Script("orchestrator")
-            .ThenTextAndToolCall(Note, ToolNames.SearchKnowledgeBase, new { query = "pro plan price" })
-            .ThenText(Answer);
-
-        var events = await host.ChatAsync("How much is the Pro plan?", cancellationToken: Ct);
-
-        events.OfType<StepFinishedEvent>().ShouldBeEmpty();
-        var turn = host.SingleTurn(events.ConversationId());
-        turn.AssistantMessage.ShouldBe($"{Note}\n\n{Answer}");
-        turn.ToolCalls().ShouldHaveSingleItem().Preamble.ShouldBe(Note);
     }
 
     [Fact]

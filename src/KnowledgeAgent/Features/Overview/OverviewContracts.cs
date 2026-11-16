@@ -8,7 +8,6 @@ public sealed record OverviewDto(
 
     int PreviousConversations,
 
-    // Nobody asked for a person, or the visitor went back to the assistant before anyone joined.
     int AnsweredByAi,
     int HandedToPerson,
 

@@ -23,7 +23,6 @@ internal sealed class LabelService(ILabelRepository labels, IJobQueue jobs, Time
     public const int MaxLabelsPerConversation = 20;
     public const int MaxRelabelDays = 90;
 
-    // A re-label costs a model call per conversation, so one request queues at most this many.
     public const int MaxRelabel = 500;
 
     public Task<IReadOnlyList<LabelDto>> ListAsync(CancellationToken cancellationToken = default) => labels.ListAsync(cancellationToken);

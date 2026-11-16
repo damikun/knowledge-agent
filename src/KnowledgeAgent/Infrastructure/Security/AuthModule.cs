@@ -19,10 +19,8 @@ public static class AuthModule
     public const string CallbackPath = "/api/auth/callback";
     public const string SignedOutCallbackPath = "/api/auth/signed-out";
 
-    // Matches the realm's 8 hour login timeout; with the default 15 minutes a sign-in page left open would fail on return.
     private static readonly TimeSpan SignInTimeout = TimeSpan.FromHours(8);
 
-    // Marks a sign-in that started over once, so a failure that repeats ends on the portal's error screen.
     private const string RetriedItem = "ka.retried";
 
     public static IHostApplicationBuilder AddAuth(this IHostApplicationBuilder builder)
@@ -59,7 +57,6 @@ public static class AuthModule
         return app;
     }
 
-    // A wrong setting fails at startup with the fix, rather than at the first sign-in.
     private static void Validate(AuthOptions auth, IHostEnvironment environment)
     {
         if (auth.Mode == AuthMode.None)
@@ -104,7 +101,6 @@ public static class AuthModule
             {
                 options.DefaultScheme = AuthSchemes.Cookie;
 
-                // The cookie challenge answers API calls with 401 instead of sending them to Keycloak.
                 options.DefaultChallengeScheme = AuthSchemes.Cookie;
             })
             .AddCookie(AuthSchemes.Cookie, cookie =>
@@ -135,8 +131,6 @@ public static class AuthModule
                 oidc.ResponseType = OpenIdConnectResponseType.Code;
                 oidc.UsePkce = true;
 
-                // The code comes back on a top-level GET, so Lax cookies carry the state check. The default form post
-                // would need SameSite=None cookies, which browsers drop on plain http such as http://localhost.
                 oidc.ResponseMode = OpenIdConnectResponseMode.Query;
                 oidc.CorrelationCookie.SameSite = SameSiteMode.Lax;
                 oidc.NonceCookie.SameSite = SameSiteMode.Lax;
@@ -144,7 +138,6 @@ public static class AuthModule
                 oidc.CorrelationCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
                 oidc.NonceCookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
 
-                // The state check and the nonce stay valid as long as the sign-in page does.
                 oidc.RemoteAuthenticationTimeout = SignInTimeout;
                 oidc.ProtocolValidator.NonceLifetime = SignInTimeout;
                 oidc.MapInboundClaims = false;
@@ -159,10 +152,8 @@ public static class AuthModule
                 oidc.TokenValidationParameters.RoleClaimType = "roles";
                 oidc.TokenValidationParameters.ValidIssuer = auth.Authority!.TrimEnd('/');
 
-                // Turns the realm-management roles of the ID token into ka_user_admin, at sign-in and at each check.
                 oidc.ClaimActions.Add(new UserAdminClaim());
 
-                // The session keeps the ID token and the refresh token; see SessionCheck.Start.
                 oidc.SaveTokens = true;
                 oidc.Events.OnTokenValidated = context =>
                 {
@@ -183,7 +174,6 @@ public static class AuthModule
                 {
                     if (PublicUrl(auth, CallbackPath) is { } callback)
                     {
-                        // The handler keeps this address with the state and redeems the code with it.
                         context.ProtocolMessage.RedirectUri = callback;
                     }
 
@@ -215,8 +205,6 @@ public static class AuthModule
     private static string? PublicUrl(AuthOptions auth, string path) =>
         string.IsNullOrWhiteSpace(auth.PublicOrigin) ? null : auth.PublicOrigin.TrimEnd('/') + path;
 
-    // Keycloak signed the user in but our side went stale (expired correlation cookie, callback reopened from history).
-    // One retry passes Keycloak's session without the password; errors Keycloak reports would only repeat.
     private static AuthenticationProperties? RetryOf(RemoteFailureContext context)
     {
         if (context.Properties is not { } failed
@@ -239,7 +227,6 @@ public static class AuthModule
         }
         else
         {
-            // Pages outside the API, such as the API reference, send the browser to sign in first.
             context.Response.Redirect(context.RedirectUri);
         }
 

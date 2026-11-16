@@ -14,7 +14,6 @@ internal sealed class AgentTurnContext(
     public Guid ConversationId { get; } = conversationId;
     public Guid TurnId { get; } = turnId;
 
-    // Null means every source; empty means none (folders that hold no sources yet).
     public IReadOnlyList<Guid>? ScopeSourceIds { get; set; } = scopeSourceIds;
 
     public bool HasNoSources => ScopeSourceIds is { Count: 0 };
@@ -26,7 +25,6 @@ internal sealed class AgentTurnContext(
 
     public ChatCaller Caller { get; init; } = ChatCaller.Portal;
 
-    // Shared with sub-agents, which run on the same turn.
     public string UntrustedKey { get; } = UntrustedText.NewKey();
 
     private readonly ConcurrentDictionary<string, int> _budget = new(StringComparer.Ordinal);
@@ -35,10 +33,8 @@ internal sealed class AgentTurnContext(
 
     private int _steps;
 
-    // Model calls are numbered across the turn, so a hand-off or a sub-agent never reuses a number.
     public int NextStep() => Interlocked.Increment(ref _steps);
 
-    // Tools run in parallel, so the count is taken atomically.
     public bool TryTakeBudget(string kind, int max)
     {
         while (true)

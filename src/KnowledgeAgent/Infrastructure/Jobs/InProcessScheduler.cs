@@ -4,7 +4,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Infrastructure.Jobs;
 
-// Used when Inngest does not run the schedules. Occurrences missed while the process was down are not made up.
 internal sealed partial class InProcessScheduler(
     IEnumerable<JobScheduleRegistration> schedules,
     IJobQueue queue,

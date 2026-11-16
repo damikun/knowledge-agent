@@ -46,7 +46,6 @@ public static partial class AnswerText
             .Any(alternative => ContainsOnBoundaries(text, alternative));
     }
 
-    // Whether the answer says the knowledge base does not answer the question, in the usual ways models phrase it.
     public static bool Declines(string? answer) =>
         !string.IsNullOrWhiteSpace(answer) && DeclinePatterns().Any(pattern => pattern.IsMatch(Normalize(answer)));
 
@@ -143,7 +142,6 @@ public static partial class AnswerText
         var builder = new StringBuilder(value.Length);
         foreach (var character in value.Normalize(NormalizationForm.FormKC))
         {
-            // Markdown emphasis, so "**27** days" reads as "27 days".
             if (character == '*')
             {
                 continue;

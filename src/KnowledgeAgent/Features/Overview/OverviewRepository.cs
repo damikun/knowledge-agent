@@ -37,7 +37,6 @@ internal sealed class OverviewRepository(KnowledgeDbContext db, DbContextGate ga
         var ratingCount = await ratings.CountAsync(cancellationToken);
         var averageRating = ratingCount == 0 ? null : await ratings.AverageAsync(item => (double?)item.Rating, cancellationToken);
 
-        // One query: each widget's numbers are subqueries served by the (widget_id, updated_at) index.
         var widgets = await db.Widgets.AsNoTracking()
             .Select(widget => new WidgetActivityDto(
                 widget.Id,
@@ -64,8 +63,6 @@ internal sealed class OverviewRepository(KnowledgeDbContext db, DbContextGate ga
             widgets);
     }
 
-    // UpdatedAt is never before CreatedAt, so the UpdatedAt index narrows each count to the conversations active since then.
-    // Portal conversations are playground tests and do not count.
     private IQueryable<Conversation> StartedSince(DateTimeOffset since) =>
         db.Conversations.AsNoTracking().Where(conversation =>
             conversation.UpdatedAt >= since && conversation.CreatedAt >= since && conversation.Channel != ConversationChannel.Portal);

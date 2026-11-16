@@ -46,14 +46,10 @@ public static class PromptsModule
 
         services.AddHttpClient<LangfuseClient>((serviceProvider, client) =>
                 LangfuseClient.ConfigureHttpClient(client, serviceProvider.GetRequiredService<IOptions<LangfuseOptions>>().Value))
-            // The typed client is held by singletons, so DNS changes are picked up by recycling pooled
-            // connections rather than handlers.
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(2) })
             .SetHandlerLifetime(Timeout.InfiniteTimeSpan)
             .AddStandardResilienceHandler(ConfigureResilience);
 
-        // Langfuse is often unreachable while it boots and the fallback already warns;
-        // without this Polly logs every failed attempt with a stack trace.
         services.ConfigureAll<TelemetryOptions>(options =>
         {
             var inner = options.SeverityProvider;
@@ -77,7 +73,6 @@ public static class PromptsModule
         return builder;
     }
 
-    // Short timeouts and quick retries: prompt fetches sit on the chat path and fall back to cached or local prompts.
     internal static void ConfigureResilience(HttpStandardResilienceOptions options)
     {
         options.AttemptTimeout.Timeout = TimeSpan.FromSeconds(5);
@@ -87,7 +82,6 @@ public static class PromptsModule
         options.Retry.BackoffType = DelayBackoffType.Exponential;
         options.Retry.UseJitter = true;
 
-        // A retried POST could make seeding create duplicate prompt versions.
         options.Retry.DisableForUnsafeHttpMethods();
 
         options.CircuitBreaker.SamplingDuration = TimeSpan.FromSeconds(30);

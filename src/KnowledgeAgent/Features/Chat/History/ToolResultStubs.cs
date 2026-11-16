@@ -8,10 +8,8 @@ using KnowledgeAgent.Features.Connections.Mcp;
 
 namespace KnowledgeAgent.Features.Chat.History;
 
-// The stub text is part of the cached prompt prefix: any change to it re-sends every open conversation once.
 internal sealed partial class ToolResultStubs(ConversationTurn turn, HistoryOptions options)
 {
-    // Short results, errors and confirmation requests included, are cheaper kept than described.
     public const int KeepWholeChars = 500;
 
     private const int LineChars = 300;
@@ -35,7 +33,6 @@ internal sealed partial class ToolResultStubs(ConversationTurn turn, HistoryOpti
             : toolName is not null && McpToolNames.IsMcp(toolName) ? Mcp(toolName, inner)
             : Excerpt(inner, options.OtherExcerptChars);
 
-        // Content from sources or other systems stays inside the block it came in.
         var stub = header + "\n" + (wrapped ? UntrustedText.Wrap(body, key) : body);
         return stub.Length < text.Length ? stub : text;
     }
@@ -94,7 +91,6 @@ internal sealed partial class ToolResultStubs(ConversationTurn turn, HistoryOpti
     private static string Shortened(int length) =>
         string.Create(CultureInfo.InvariantCulture, $"(Earlier result, shortened from {length:N0} characters.");
 
-    // The runner wraps untrusted content in a tag keyed per turn; the key is reused so the stub stays a pure function of the stored text.
     internal static bool TryUnwrap(string text, out string inner, out string key)
     {
         inner = text;

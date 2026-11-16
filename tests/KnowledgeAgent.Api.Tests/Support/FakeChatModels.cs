@@ -4,7 +4,6 @@ using Microsoft.Extensions.AI;
 
 namespace KnowledgeAgent.Api.Tests.Support;
 
-// Each chat profile gets its own model because the app caches chat clients per provider and model.
 public static class FakeModels
 {
     public const string ProviderKey = "fake";
@@ -54,7 +53,6 @@ public sealed class FakeChatModels
     }
 }
 
-// Resolves the current fake on every call, so tests can swap clients after the app cached this one.
 public sealed class SwitchableChatClient(FakeChatModels models, ResolvedModelProfile profile) : IChatClient
 {
     public ResolvedModelProfile Profile { get; } = profile;

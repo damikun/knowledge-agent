@@ -13,8 +13,6 @@ using JsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 
 namespace KnowledgeAgent.Features.Chat.Live;
 
-// SSE events: "message" (id = sequence, so Last-Event-ID resumes), "turn" and "conversation".
-// A comment every 15 s keeps proxies from closing idle streams. Staff streams end at their next session check.
 internal sealed record ConversationEventView(Func<ConversationMessageDto, object?> Message, Func<ChatStreamEvent, ChatStreamEvent?> Turn)
 {
     public static readonly ConversationEventView Staff = new(message => message, turn => turn);
@@ -44,7 +42,6 @@ internal sealed partial class ConversationEventStreamResult(
         var response = httpContext.Response;
         var cancellationToken = httpContext.RequestAborted;
 
-        // Subscribed before reading the stored messages, so nothing stored in between is missed.
         using var subscription = hub.Subscribe(conversationId);
         try
         {

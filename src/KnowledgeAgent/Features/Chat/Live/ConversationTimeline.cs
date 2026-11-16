@@ -44,8 +44,6 @@ public sealed partial class ConversationTimeline(
         await PublishAsync(new StatusChanged(conversationId, status));
     }
 
-    // The change is stored already: a missed update only delays other instances' views until they reconnect,
-    // so it never fails the write, and the caller giving up does not stop it.
     private async Task PublishAsync(LiveMessage message)
     {
         try

@@ -37,7 +37,6 @@ public static class QualityGate
                 failedItems == 0 ? "No item failed." : $"{failedItems} item(s) failed (agent errors), so their scores are incomplete."),
         };
 
-        // A subset (--max-items, --tag) may hold no item a metric applies to, so there a missing metric is only noted.
         var subset = evaluatedItems is { } measured && datasetItems is { } all && measured < all;
         foreach (var metric in config.RequiredFor(judged).Where(metric => !metrics.ContainsKey(metric)).OrderBy(Order))
         {
@@ -50,7 +49,6 @@ public static class QualityGate
 
         foreach (var (metric, minimum) in config.Minimums.OrderBy(entry => Order(entry.Key)))
         {
-            // Required metrics that are missing were reported above; the others may simply not apply to this run.
             if (!metrics.TryGetValue(metric, out var value))
             {
                 continue;
@@ -68,7 +66,6 @@ public static class QualityGate
 
         if (baseline is not null && evaluatedItems is { } evaluated && datasetItems is { } total && evaluated < total)
         {
-            // Means over a subset of the items are not comparable with the whole-set baseline.
             checks.Add(new EvalGateCheckDto(BaselineCheck, KindRegression, evaluated, total, true,
                 $"Not compared with the baseline: the run evaluated {evaluated} of {total} items."));
             baseline = null;
@@ -88,7 +85,6 @@ public static class QualityGate
                 var tolerance = config.ToleranceFor(metric);
                 var expected = Math.Max(0, baseline.Metrics[metric] - tolerance);
 
-                // A metric the baseline has but the run lacks fails: something stopped working.
                 if (!metrics.TryGetValue(metric, out var value))
                 {
                     checks.Add(new EvalGateCheckDto(metric, KindRegression, null, expected, false,

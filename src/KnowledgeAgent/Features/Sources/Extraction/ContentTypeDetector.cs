@@ -6,7 +6,6 @@ internal static class ContentTypeDetector
 {
     private const int SniffLength = 2048;
 
-    // PDF readers accept junk before the %PDF- header within the first 1024 bytes.
     public static bool LooksLikePdf(ReadOnlySpan<byte> content) =>
         content[..Math.Min(content.Length, 1024)].IndexOf("%PDF-"u8) >= 0;
 
@@ -31,14 +30,12 @@ internal static class ContentTypeDetector
         switch (FromMediaType(mediaType))
         {
             case ContentKind.Pdf:
-                // Trusted even without a PDF header so that the PDF reader reports a clear "invalid PDF" error.
                 return ContentKind.Pdf;
             case ContentKind.Html:
                 return ContentKind.Html;
             case ContentKind.Markdown:
                 return ContentKind.Markdown;
             case ContentKind.PlainText:
-                // Raw file hosts serve markdown and HTML files as text/plain.
                 return fromExtension is ContentKind.Markdown or ContentKind.Html ? fromExtension : ContentKind.PlainText;
         }
 

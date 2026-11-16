@@ -49,7 +49,6 @@ internal static class AiOptionsPostConfigure
         }
     }
 
-    // Keeps a vendor's API key from being sent to an unrelated compatible server configured under another key.
     public static bool AllowsApiKeyFallback(string providerKey, AiProviderOptions provider) =>
         string.Equals(providerKey.Trim(), provider.Type.Trim(), StringComparison.OrdinalIgnoreCase)
         || string.IsNullOrWhiteSpace(provider.Endpoint);

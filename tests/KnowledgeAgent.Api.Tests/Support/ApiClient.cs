@@ -31,7 +31,6 @@ public sealed record ProblemDocument(
     Dictionary<string, string[]>? Errors,
     string? Code = null)
 {
-    // Case-insensitive because modules may report "url" or "Url".
     public Dictionary<string, string[]> FieldErrors =>
         Errors is null
             ? new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
@@ -171,7 +170,6 @@ public static class ApiClient
         return true;
     }
 
-    // Letters and digits only, so the fake embeddings treat it as a single token.
     public static string UniqueWord(string prefix = "zq") => prefix + Guid.NewGuid().ToString("N")[..10];
 }
 

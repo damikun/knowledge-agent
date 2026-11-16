@@ -21,7 +21,6 @@ public sealed class ConversationMessage
     public Guid Id { get; set; }
     public Guid ConversationId { get; set; }
 
-    // Unique and increasing within the conversation; live streams resume after it.
     public int Sequence { get; set; }
 
     public MessageAuthor Author { get; set; }
@@ -52,7 +51,6 @@ internal sealed class ConversationMessageConfiguration(bool isNpgsql) : IEntityT
         {
             builder.Property(message => message.CitationsJson).HasColumnType("jsonb");
 
-            // Backs the search over what was said (ILIKE '%term%'), in any language, without a text search configuration.
             builder.HasIndex(message => message.Text).HasMethod("gin").HasOperators("gin_trgm_ops");
         }
     }

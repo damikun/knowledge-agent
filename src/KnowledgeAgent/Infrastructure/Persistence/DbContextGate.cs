@@ -1,6 +1,5 @@
 namespace KnowledgeAgent.Infrastructure.Persistence;
 
-// DbContext does not support concurrent operations, so the stores of one scope serialize their calls through this gate.
 internal sealed class DbContextGate : IDisposable
 {
     private readonly SemaphoreSlim _semaphore = new(1, 1);

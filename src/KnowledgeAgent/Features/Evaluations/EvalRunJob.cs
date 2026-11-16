@@ -19,7 +19,6 @@ internal sealed class EvalRunJob(
 
         if (run.Status == EvalRunStatuses.Running)
         {
-            // A previous attempt stopped with the process; a run cannot resume halfway, so it ends as failed.
             run.Status = EvalRunStatuses.Failed;
             run.Error = InterruptedError;
             run.CompletedAt = timeProvider.GetUtcNow();

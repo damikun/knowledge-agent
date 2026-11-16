@@ -7,7 +7,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Api.Tests.Support;
 
-// Lets a scenario act as a user with given roles: X-Test-Roles lists them, and no header means not signed in.
 internal static class TestUsers
 {
     public const string Scheme = "test";

@@ -47,7 +47,6 @@ public sealed record ModelProfileState(
 
 public interface IModelProfileResolver
 {
-    /// <summary>Precedence: request patch, then prompt patch, then database override, then configuration.</summary>
     Task<ResolvedModelProfile> ResolveAsync(
         string profileName,
         ModelProfilePatch? promptPatch = null,

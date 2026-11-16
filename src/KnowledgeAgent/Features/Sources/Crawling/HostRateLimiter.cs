@@ -2,8 +2,6 @@ using System.Collections.Concurrent;
 
 namespace KnowledgeAgent.Features.Sources.Crawling;
 
-// Spaces requests to each host across every crawl in the process. A caller holds the host's turn while it waits,
-// so concurrent crawls of one host queue up instead of bursting.
 internal sealed class HostRateLimiter(TimeProvider timeProvider)
 {
     private readonly ConcurrentDictionary<string, HostTurn> _hosts = new(StringComparer.OrdinalIgnoreCase);

@@ -12,7 +12,6 @@ using HandoverRequest = KnowledgeAgent.Features.Handover.Handover;
 
 namespace KnowledgeAgent.Tests.Features.Overview;
 
-// The API scenarios run the same queries on PostgreSQL.
 public sealed class OverviewRepositoryTests : IAsyncLifetime
 {
     private const int Days = 7;
@@ -45,7 +44,6 @@ public sealed class OverviewRepositoryTests : IAsyncLifetime
     {
         var shop = NewWidget("Shop help");
         var docs = NewWidget("Docs help");
-        // A playground test, which counts nowhere.
         var portal = NewConversation(null, startedDaysAgo: 1);
         var resolved = NewConversation(shop, startedDaysAgo: 2);
         var cancelled = NewConversation(shop, startedDaysAgo: 3);

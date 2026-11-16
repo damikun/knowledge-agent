@@ -2,7 +2,6 @@ namespace KnowledgeAgent.Infrastructure.Persistence;
 
 internal static class LikeSearch
 {
-    // The escape character of the patterns Escape builds; pass it to EF.Functions.ILike.
     public const string EscapeCharacter = "\\";
     private const int MaxTerms = 8;
     private const int MaxTermLength = 100;

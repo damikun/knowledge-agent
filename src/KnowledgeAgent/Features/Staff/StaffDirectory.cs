@@ -19,12 +19,10 @@ public interface IStaffDirectory
 
 internal sealed class StaffDirectory(KnowledgeDbContext db, DbContextGate gate, TimeProvider timeProvider) : IStaffDirectory, ISignedInUserHook
 {
-    // The portal asks who is signed in on every load; an unchanged row is written at most this often.
     internal static readonly TimeSpan SeenInterval = TimeSpan.FromMinutes(5);
 
     public async Task SeenAsync(ClaimsPrincipal user, CancellationToken cancellationToken = default)
     {
-        // Only staff can be assigned conversations; a signed-in user without a role is not one.
         if (user.Identity?.IsAuthenticated != true
             || StaffClaims.Id(user) is not { } id
             || !user.FindAll("roles").Any(claim => claim.Value is AuthRoles.Admin or AuthRoles.Support))
@@ -60,7 +58,6 @@ internal sealed class StaffDirectory(KnowledgeDbContext db, DbContextGate gate, 
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            // Two first requests of a new user at once: the other one added the row.
         }
         finally
         {

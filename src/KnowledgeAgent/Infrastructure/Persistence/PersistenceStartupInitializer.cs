@@ -62,7 +62,6 @@ internal sealed partial class PersistenceStartupInitializer(
 
     internal static bool IsTransient(Exception exception) => exception switch
     {
-        // PostgresException decides by SQL state, so 57P03 "the database system is starting up" counts as transient.
         NpgsqlException npgsql => npgsql.IsTransient,
         SocketException or TimeoutException or IOException => true,
         _ => exception.InnerException is { } inner && IsTransient(inner),

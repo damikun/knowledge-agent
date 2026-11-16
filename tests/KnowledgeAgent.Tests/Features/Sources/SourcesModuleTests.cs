@@ -39,7 +39,6 @@ public sealed class SourcesModuleTests
         services.GetRequiredService<IIngestionQueue>().ShouldBeOfType<IngestionQueue>();
         using (var scope = services.CreateScope())
         {
-            // Persistence adds a scoped initializer, so the list resolves from a scope.
             scope.ServiceProvider.GetServices<IStartupInitializer>().OfType<IngestionRecoveryInitializer>().ShouldHaveSingleItem();
         }
 
@@ -183,7 +182,6 @@ public sealed class SourcesModuleTests
         builder.AddSearch();
         builder.Services.RemoveAll<IRerankService>();
 
-        // The repository is scoped like the EF Core implementation.
         var repository = new InMemorySourceRepository();
         var vectorStore = new InMemoryVectorStore();
         builder.Services.Replace(ServiceDescriptor.Scoped<ISourceRepository>(_ => repository));

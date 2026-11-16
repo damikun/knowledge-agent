@@ -132,7 +132,6 @@ internal static partial class PromptEndpoints
             }
             catch (PromptRenderException exception)
             {
-                // A broken stored template is still shown so it can be fixed, just without a variable list.
                 LogVariablesUnavailable(logger, template.Name, exception.Message);
             }
         }

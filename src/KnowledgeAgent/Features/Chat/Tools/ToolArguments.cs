@@ -12,7 +12,6 @@ internal sealed class ToolArguments
 
     private readonly Dictionary<string, object?> _values = new(StringComparer.OrdinalIgnoreCase);
 
-    // Collected and reported together, so the model can fix every problem in one retry.
     private readonly List<string> _errors = [];
 
     public ToolArguments(IDictionary<string, object?>? values)

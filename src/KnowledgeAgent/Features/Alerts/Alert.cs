@@ -61,7 +61,6 @@ public sealed class AlertSnooze
         (Until is null || Until > now) && alert.Count <= Count && alert.Severity <= Severity;
 }
 
-// NotifiedAt survives resolution so the per-kind rate limit still sees it.
 public sealed class AlertState
 {
     public string Key { get; set; } = string.Empty;

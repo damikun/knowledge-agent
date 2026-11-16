@@ -121,7 +121,6 @@ internal sealed class ConversationSearchRepository(KnowledgeDbContext db, DbCont
         {
             var (value, id) = (after.Value, after.Id);
 
-            // Pinned ones come first, so after a pinned conversation the rest of the pinned ones and every unpinned one follow.
             conversations = after.Pinned == true
                 ? conversations.Where(conversation => !conversation.Pinned
                     || conversation.UpdatedAt < value
@@ -202,7 +201,6 @@ internal sealed class ConversationSearchRepository(KnowledgeDbContext db, DbCont
             next);
     }
 
-    // Must run inside the gate.
     private async Task<(IQueryable<Conversation> Conversations, DateTimeOffset? Since)> ForViewerAsync(
         IQueryable<Conversation> conversations,
         ConversationSearchQuery query,
@@ -300,7 +298,6 @@ internal sealed class ConversationSearchRepository(KnowledgeDbContext db, DbCont
             messages = messages.Where(message => message.Text.ToLower().Contains(lowered));
         }
 
-        // At most a page of conversations; picking the first per conversation here works the same in both stores.
         var found = await messages
             .OrderBy(message => message.Sequence)
             .Select(message => new { message.ConversationId, message.Text })
@@ -401,7 +398,6 @@ internal sealed class ConversationSearchRepository(KnowledgeDbContext db, DbCont
 
         if (query.From is { } from)
         {
-            // UpdatedAt is never before CreatedAt, so its index narrows the scan to conversations active since then.
             conversations = conversations.Where(conversation => conversation.CreatedAt >= from && conversation.UpdatedAt >= from);
         }
 
@@ -414,8 +410,6 @@ internal sealed class ConversationSearchRepository(KnowledgeDbContext db, DbCont
         {
             if (npgsql)
             {
-                // One IN (... UNION ALL ...) so each side is read through its trigram index; an OR of the title and a
-                // subquery would make PostgreSQL scan every conversation.
                 var pattern = "%" + LikeSearch.Escape(term) + "%";
                 var matching = db.Conversations
                     .Where(conversation => EF.Functions.ILike(conversation.Title, pattern, LikeSearch.EscapeCharacter))

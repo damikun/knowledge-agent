@@ -45,7 +45,6 @@ internal sealed class HtmlToText
         "sr", "visually",
     };
 
-    // Exempt from the class and id heuristic because body classes such as "has-sidebar" are common.
     private static readonly HashSet<string> StructuralTags = new(StringComparer.OrdinalIgnoreCase)
     {
         "html", "body", "main", "article",
@@ -68,7 +67,6 @@ internal sealed class HtmlToText
         return converter._builder.ToString();
     }
 
-    // Iterative so that deeply nested markup cannot overflow the stack.
     private void Walk()
     {
         var stack = new Stack<(INode Node, bool Exit)>();
@@ -208,14 +206,12 @@ internal sealed class HtmlToText
             return true;
         }
 
-        // A match that holds most of the page text is the page itself: ASP.NET WebForms wraps whole pages in a <form>.
         var heuristic = name == "form" || (!StructuralTags.Contains(name) && HasBoilerplateMarker(element));
         return heuristic && TextLength(element) <= RootTextLength / 2;
     }
 
     private int RootTextLength => _rootTextLength ??= TextLength(_root);
 
-    // Not TextContent, which recurses and can overflow the stack on deeply nested documents.
     internal static int TextLength(INode node)
     {
         var length = 0;

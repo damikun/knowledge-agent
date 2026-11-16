@@ -46,11 +46,8 @@ internal sealed partial class ClaudeChatClient(
         var prepared = options?.Clone() ?? new ChatOptions();
         AnthropicRequestRules.Apply(prepared, Settings.ThinkingMode, defaultEffort: false, warnings);
 
-        // A caller-supplied factory owns the raw request shape and is left alone.
         if (prepared.RawRepresentationFactory is null && (Settings.UsesBetaEndpoint || Settings.PromptCaching))
         {
-            // The SDK adapter fills in messages, tools and thinking on top of these parameters but takes model and
-            // max_tokens from them, so they are built per call from the request options.
             var model = string.IsNullOrWhiteSpace(prepared.ModelId) ? defaultModel : prepared.ModelId;
             long maxTokens = prepared.MaxOutputTokens is > 0 ? prepared.MaxOutputTokens.Value : defaultMaxOutputTokens;
             var reasoning = prepared.Reasoning;
@@ -74,7 +71,6 @@ internal sealed partial class ClaudeChatClient(
 
         if (Settings.RefusalFallback == RefusalFallbackMode.Models)
         {
-            // The array form is gated by the earlier beta header of the series.
             parameters = parameters with
             {
                 Betas = [AnthropicBeta.ServerSideFallback2026_06_01],
@@ -86,7 +82,6 @@ internal sealed partial class ClaudeChatClient(
             parameters = parameters with { Betas = [AnthropicBeta.ServerSideFallback2026_07_01], Fallbacks = new Beta.Default() };
         }
 
-        // Only set when enabled: assigning null would serialize an explicit "cache_control": null.
         if (Settings.PromptCaching)
         {
             parameters = parameters with
@@ -98,8 +93,6 @@ internal sealed partial class ClaudeChatClient(
         return parameters;
     }
 
-    // The adapter only fills in thinking and effort when the parameters carry no thinking, so with block binding both
-    // are set here the way the adapter would set them.
     internal Beta.MessageCreateParams WithBlockBinding(Beta.MessageCreateParams parameters, ReasoningOptions? reasoning, bool explicitMaxTokens)
     {
         if (Settings.ThinkingMismatch == ThinkingMismatchMode.Off || reasoning?.Effort is not { } effort || effort == ReasoningEffort.None)
@@ -121,7 +114,6 @@ internal sealed partial class ClaudeChatClient(
         var maxTokens = parameters.MaxTokens;
         if (maxTokens <= budget)
         {
-            // The budget must stay below max_tokens: a default limit grows, a configured one caps the budget.
             if (explicitMaxTokens)
             {
                 budget = maxTokens - 1;

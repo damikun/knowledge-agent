@@ -3,7 +3,6 @@ using System.Text;
 
 namespace KnowledgeAgent.Infrastructure.AI.Providers;
 
-// The API key and the settings are hashed so that secrets never end up in the cache key.
 internal static class ClientCacheKey
 {
     public static string Create(string providerKey, string providerType, string model, AiProviderOptions options, params string?[] extra)

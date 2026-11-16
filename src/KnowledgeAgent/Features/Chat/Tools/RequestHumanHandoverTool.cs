@@ -7,8 +7,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Features.Chat.Tools;
 
-// Only offers a person: the widget shows its own button, and the visitor's press starts the request.
-// The reason and summary stay in the tool call, where the request picks the summary up for the team.
 internal sealed class RequestHumanHandoverTool : IAgentTool
 {
     public string Name => ToolNames.RequestHumanHandover;

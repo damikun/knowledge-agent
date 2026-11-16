@@ -22,7 +22,6 @@ internal sealed class AiProviderRegistry(IEnumerable<IAiProvider> providers)
             return null;
         }
 
-        // Searched from the end so the last registration wins and hosts can replace the built-in providers.
         var trimmed = type.Trim();
         for (var i = _providers.Length - 1; i >= 0; i--)
         {

@@ -76,7 +76,7 @@ public sealed class PromptSeedingTests : IAsyncLifetime
         _server.Versions(PromptNames.OrchestratorSystem).ShouldBe([1]);
         _server.Versions(PromptNames.ResearcherSystem).ShouldBe([1]);
         (await harness.Client.GetPromptAsync(PromptNames.OrchestratorSystem, cancellationToken: Ct))!.Text.ShouldBe("Edited in Langfuse");
-        (await harness.Client.GetPromptAsync(PromptNames.ResearcherSystem, cancellationToken: Ct)).ShouldBeNull(); // still no production version
+        (await harness.Client.GetPromptAsync(PromptNames.ResearcherSystem, cancellationToken: Ct)).ShouldBeNull();
     }
 
     [Fact]
@@ -112,7 +112,6 @@ public sealed class PromptSeedingTests : IAsyncLifetime
         _server.SetCommittedTextPrompt(PromptNames.ResearcherSystem, "Seeded", PromptSeeder.CommitMessage);
         _server.SetCommittedTextPrompt(PromptNames.ResearcherSystem, "Shorter reports", null);
 
-        // Production points at the seeded version, but a newer one exists: someone is trying something out.
         _server.SetCommittedTextPrompt(PromptNames.ConversationTitle, "Seeded", PromptSeeder.CommitMessage);
         _server.SetTextPrompt(PromptNames.ConversationTitle, "Experiment", null, "staging");
         var harness = Harness();

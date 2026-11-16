@@ -64,11 +64,9 @@ internal sealed class SourceFolderRepository(KnowledgeDbContext db, DbContextGat
 
         if (db.Database.IsRelational())
         {
-            // The foreign keys delete the subfolders and set folder_id to NULL on their sources.
             return await db.SourceFolders.Where(folder => folder.Id == id).ExecuteDeleteAsync(cancellationToken) > 0;
         }
 
-        // Non-relational providers have no store-side foreign keys, so the cascade happens here.
         try
         {
             var folders = await db.SourceFolders.ToListAsync(cancellationToken);

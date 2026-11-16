@@ -10,7 +10,6 @@ internal static class StaffEndpoints
 {
     public static RouteHandlerBuilder MapStaffEndpoints(this IEndpointRouteBuilder routes)
     {
-        // Settings > Team: admins only, unlike the staff list every staff member needs to assign conversations.
         routes.MapGet("/team", async Task<Ok<TeamDto>> (TeamService team, CancellationToken cancellationToken) =>
                 TypedResults.Ok(await team.GetAsync(cancellationToken)))
             .RequireAuthorization(AuthPolicies.Admin)

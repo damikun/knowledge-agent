@@ -16,7 +16,6 @@ internal static class TextNormalizer
 
         if (keepPageSeparators && text.Contains(PageSeparator))
         {
-            // Empty pages are kept so page numbers stay aligned.
             var pages = text.Split(PageSeparator);
             for (var i = 0; i < pages.Length; i++)
             {
@@ -74,25 +73,24 @@ internal static class TextNormalizer
 
                     break;
                 case '\n':
-                case '\u0085': // next line
-                case '\u2028': // line separator
+                case '\u0085':
+                case '\u2028':
                     builder.Append('\n');
                     break;
                 case PageSeparator:
                 case '\v':
-                case '\u2029': // paragraph separator
+                case '\u2029':
                     builder.Append("\n\n");
                     break;
                 case '\t':
                     builder.Append('\t');
                     break;
-                case '\u00AD': // soft hyphen
-                case '\u200B': // zero-width space
-                case '\u2060': // word joiner
-                case '\uFEFF': // byte order mark
+                case '\u00AD':
+                case '\u200B':
+                case '\u2060':
+                case '\uFEFF':
                     break;
                 case '\uDB40' when i + 1 < text.Length && text[i + 1] is >= '\uDC00' and <= '\uDC7F':
-                    // Unicode tags mirror ASCII invisibly and can hide whole sentences from readers.
                     i++;
                     break;
                 case var hidden when IsHidden(hidden):
@@ -118,7 +116,6 @@ internal static class TextNormalizer
         return builder.ToString();
     }
 
-    // Zero-width joiners and bidi controls: they hide or reorder text for readers but not for the model.
     private static bool IsHidden(char c) => c is '\u200C' or '\u200D' or '\u200E' or '\u200F' or '\u180E'
         or (>= '\u2061' and <= '\u2064') or (>= '\u202A' and <= '\u202E') or (>= '\u2066' and <= '\u2069');
 

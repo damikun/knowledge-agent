@@ -13,7 +13,6 @@ internal static class EvalTestHost
 {
     public const string JudgeModel = "fake-judge";
 
-    // Blanks the well-known key variables so a developer's real keys are never used.
     private static readonly Dictionary<string, string?> NoRealProviders = new(StringComparer.OrdinalIgnoreCase)
     {
         ["AI:Providers:anthropic:ApiKey"] = string.Empty,
@@ -35,7 +34,6 @@ internal static class EvalTestHost
             .AddInMemoryCollection(extra ?? new Dictionary<string, string?>())
             .Build();
 
-    // Deterministic embeddings and a rule-based chat client that quotes the first passage; embedded prompts, no reranking.
     public static Dictionary<string, string?> TestModelSettings() => new(StringComparer.OrdinalIgnoreCase)
     {
         ["AI:Providers:fake:Type"] = FakeAiProvider.TypeName,
@@ -61,7 +59,6 @@ internal static class EvalTestHost
         var settings = TestModelSettings();
         settings["AI:Profiles:judge:Provider"] = "fake";
 
-        // Chat clients are cached per provider and model, so a distinct model gives the judge its own client.
         settings["AI:Profiles:judge:Model"] = JudgeModel;
         foreach (var (key, value) in extra ?? new Dictionary<string, string?>())
         {

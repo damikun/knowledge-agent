@@ -5,7 +5,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Feedback;
 
-// A job, so Langfuse being down only delays the score.
 internal sealed partial class FeedbackScoreJob(
     IFeedbackRepository feedback,
     LangfuseEvalClient langfuse,

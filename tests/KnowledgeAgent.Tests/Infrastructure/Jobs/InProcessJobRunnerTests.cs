@@ -229,8 +229,6 @@ public sealed class InProcessJobRunnerTests
     [Fact]
     public async Task Stopping_after_the_host_was_disposed_does_not_throw()
     {
-        // The test host stops the app twice: WebApplicationFactory does, and so does the entry point's app.Run(),
-        // which then disposes it while the factory may still be stopping services.
         var host = await RunnerHost.StartAsync(new WorkProbe());
         var runner = host.Runner;
         await host.DisposeAsync();

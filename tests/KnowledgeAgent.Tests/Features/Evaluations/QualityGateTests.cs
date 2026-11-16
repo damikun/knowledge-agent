@@ -95,7 +95,6 @@ public sealed class QualityGateTests
     {
         var gate = EvalDatasetLoader.LoadEmbedded().Single(dataset => dataset.Name == "orbitwell-golden").Gate;
 
-        // What such an agent scores: no tag means no citation_validity at all.
         var result = QualityGate.Evaluate(gate, Metrics((EvalMetrics.AnsweredWithCitation, 0), (EvalMetrics.AnswerFactRecall, 0.9), (EvalMetrics.AnswerAbstained, 1)), 0, null);
 
         result.Passed.ShouldBeFalse();

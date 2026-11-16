@@ -36,5 +36,4 @@ public static class StaffClaims
     public static StaffRef? Ref(ClaimsPrincipal user) => Id(user) is { } id ? new StaffRef(id, DisplayName(user)) : null;
 }
 
-// Id is null for names from Slack or email, which have no portal account.
 public sealed record StaffRef(string? Id, string Name);

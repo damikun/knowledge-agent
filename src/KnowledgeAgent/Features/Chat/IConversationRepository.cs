@@ -10,6 +10,13 @@ public interface IConversationRepository
 
     Task<Guid?> FindLatestForContactAsync(Guid contactId, Guid widgetId, CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<VisitorConversationSummary>> ListForVisitorAsync(
+        Guid widgetId,
+        Guid visitorId,
+        Guid? contactId,
+        int take,
+        CancellationToken cancellationToken = default);
+
     Task<int> DeleteWidgetConversationsAsync(Guid widgetId, DateTimeOffset updatedBefore, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Guid>> ListIdleAsync(
@@ -47,3 +54,5 @@ public interface IConversationRepository
 
     Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default);
 }
+
+public sealed record VisitorConversationSummary(Guid Id, ConversationStatus Status, DateTimeOffset UpdatedAt, ConversationMessage? LastMessage);

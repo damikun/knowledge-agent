@@ -2,7 +2,6 @@ using KnowledgeAgent.Features.Sources;
 
 namespace KnowledgeAgent.Tests.Features.Chat.Fakes;
 
-// Mimics EF Core's DbContext, which rejects a second operation while one is still running.
 public sealed class SingleOperationSourceRepository(ISourceRepository inner) : ISourceRepository
 {
     private int _active;

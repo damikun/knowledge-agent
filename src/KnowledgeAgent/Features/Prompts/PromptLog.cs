@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Prompts;
 
-// Messages must never include API keys or credentials.
 internal static partial class PromptLog
 {
     [LoggerMessage(EventId = 2001, Level = LogLevel.Debug, Message = "Fetched prompt {PromptName} version {PromptVersion} from Langfuse ({Selector})")]

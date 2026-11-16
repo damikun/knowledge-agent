@@ -16,7 +16,6 @@ public static class ChunkMetadataKeys
             : null;
 }
 
-// Keyword search reads the context with the content; results and citations show only the content.
 public sealed record ChunkRecord(
     Guid ChunkId,
     Guid SourceId,

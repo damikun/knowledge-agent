@@ -111,14 +111,12 @@ public sealed class IsolatedEvalTarget : IEvalTarget
             ["Persistence:Provider"] = PersistenceModule.InMemoryProvider,
             ["Persistence:InMemoryDatabaseName"] = $"eval-{Guid.NewGuid():N}",
 
-            // The isolated knowledge base never hands its ingestion to the app's job engine.
             ["Jobs:Provider"] = JobEngines.InProcess,
             ["Live:Provider"] = LiveProviders.InProcess,
             ["VectorStore:Provider"] = "InMemory",
             ["VectorStore:EnsureSchemaOnStartup"] = "false",
             ["Prompts:SeedOnStartup"] = "false",
 
-            // Titles cost an extra model call per question and are discarded with the database anyway.
             ["Agents:GenerateTitles"] = "false",
         });
         if (options.Overrides is { Count: > 0 } overrides)
@@ -133,7 +131,6 @@ public sealed class IsolatedEvalTarget : IEvalTarget
 
         builder.AddPersistence();
 
-        // The host is never started, so no runner picks up the ingestion jobs and IngestAsync runs the pipeline itself.
         builder.AddJobs();
         builder.AddVectorStore();
         builder.AddPrompts();
@@ -144,8 +141,6 @@ public sealed class IsolatedEvalTarget : IEvalTarget
 
         if (options.Parent is { } parent)
         {
-            // The running app's AI and prompt services, so keys and overrides saved in the portal apply.
-            // Not disposed by this host.
             builder.Services.AddSingleton(parent.GetRequiredService<IChatClientFactory>());
             builder.Services.AddSingleton(parent.GetRequiredService<IEmbeddingService>());
             if (parent.GetService<IRerankService>() is { } reranker)

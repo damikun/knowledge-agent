@@ -37,7 +37,6 @@ public static class ChatModule
         services.TryAddSingleton<TitleGenerator>();
         services.TryAddSingleton<ConversationHistoryBuilder>();
 
-        // Tools and the title generator run concurrently with the turn, so they open their own scopes.
         services.TryAddScoped<IConversationRepository, ConversationRepository>();
         services.TryAddScoped<IChatService, ChatService>();
         services.TryAddScoped<ChatTurnExecutor>();
@@ -57,7 +56,6 @@ public static class ChatModule
         var section = builder.Configuration.GetSection(LiveOptions.SectionName);
         var provider = section.Get<LiveOptions>()?.Provider;
 
-        // AddPersistence runs first and registers the data source only for PostgreSQL.
         var hasDataSource = services.Any(descriptor => descriptor.ServiceType == typeof(NpgsqlDataSource));
         services.AddOptions<LiveOptions>().Bind(section).ValidateOnStart();
         services.TryAddEnumerable(ServiceDescriptor.Singleton<IValidateOptions<LiveOptions>>(new LiveOptionsValidator(hasDataSource)));

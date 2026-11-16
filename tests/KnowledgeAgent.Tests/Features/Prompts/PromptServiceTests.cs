@@ -121,7 +121,7 @@ public sealed class PromptServiceTests : IAsyncLifetime
         stale.Text.ShouldBe("v1");
         stale.Origin.ShouldBe(PromptOrigin.Langfuse);
         duringBackoff.Text.ShouldBe("v1");
-        PromptRequests("greeting").ShouldBe(2); // the second call during the backoff did not hit Langfuse
+        PromptRequests("greeting").ShouldBe(2);
         logs.Entries.ShouldContain(e => e.Level == LogLevel.Warning && e.Message.Contains("serving the cached copy"));
 
         _server.Unavailable = false;
@@ -171,7 +171,7 @@ public sealed class PromptServiceTests : IAsyncLifetime
         await service.GetTemplateAsync(PromptNames.OrchestratorSystem, cancellationToken: Ct);
 
         template.Origin.ShouldBe(PromptOrigin.Local);
-        PromptRequests(PromptNames.OrchestratorSystem).ShouldBe(1); // the failure is remembered for a short backoff
+        PromptRequests(PromptNames.OrchestratorSystem).ShouldBe(1);
 
         _server.Unavailable = false;
         _server.SetTextPrompt(PromptNames.OrchestratorSystem, "From Langfuse");
@@ -378,7 +378,7 @@ public sealed class PromptServiceTests : IAsyncLifetime
 
         _server.RequestLog.Count(r => r.StartsWith("GET /api/public/projects", StringComparison.Ordinal)).ShouldBe(1);
         await service.ListAsync(Ct);
-        _server.RequestLog.Count(r => r.StartsWith("GET /api/public/projects", StringComparison.Ordinal)).ShouldBe(1); // project id is cached
+        _server.RequestLog.Count(r => r.StartsWith("GET /api/public/projects", StringComparison.Ordinal)).ShouldBe(1);
     }
 
     [Fact]

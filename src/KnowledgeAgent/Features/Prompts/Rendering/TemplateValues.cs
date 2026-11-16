@@ -15,7 +15,6 @@ internal static class TemplateValues
 
     internal static readonly JsonSerializerOptions IndentedJson = new(CompactJson) { WriteIndented = true };
 
-    // Handlebars passes UndefinedBindingResult for missing variables.
     public static object? Unwrap(object? value) => value is UndefinedBindingResult ? null : value;
 
     public static bool IsTruthy(object? value) => HandlebarsUtils.IsTruthyOrNonEmpty(Unwrap(value));
@@ -85,7 +84,6 @@ internal static class TemplateValues
             return CompareNumbers(left, right);
         }
 
-        // A number and a numeric string compare numerically, as in JavaScript.
         if (IsNumber(left) && right is string rightText && TryParseNumber(rightText, out var rightNumber))
         {
             return ToDouble(left).CompareTo(rightNumber);
@@ -160,7 +158,6 @@ internal static class TemplateValues
         }
     }
 
-    // Tells date values such as 2026-10-22 apart from format strings such as "yyyy-MM-dd".
     private static bool LooksLikeDate(string text) => text.Length >= 8 && char.IsAsciiDigit(text[0]);
 
     private static bool TryParseNumber(string text, out double number) =>

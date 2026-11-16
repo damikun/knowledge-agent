@@ -166,7 +166,6 @@ internal sealed partial class PromptEditor(
             return new PublishPromptResponse(name, Label, target.Version, live.Version);
         }
 
-        // The version keeps its other labels; "latest" belongs to Langfuse.
         var labels = target.Labels
             .Where(label => !string.Equals(label, LatestLabel, StringComparison.Ordinal))
             .Append(Label)

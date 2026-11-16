@@ -19,7 +19,6 @@ internal sealed class TemplateHelpers(TimeProvider timeProvider)
         CustomHelperNames.Concat(["if", "unless", "each", "with", "lookup", "log"]),
         StringComparer.Ordinal);
 
-    // All are return helpers, so they also work in subexpressions such as {{#if (eq tone "formal")}}.
     public void Register(IHandlebars handlebars)
     {
         handlebars.RegisterHelper("eq", (context, arguments) => Binary(arguments, "eq", TemplateValues.AreEqual));
@@ -175,7 +174,6 @@ internal sealed class TemplateHelpers(TimeProvider timeProvider)
                     break;
                 }
 
-                // A lone string that is not a date is a format for the current time, as in {{date "yyyy-MM-dd"}}.
                 if (value is string text)
                 {
                     moment = timeProvider.GetUtcNow();

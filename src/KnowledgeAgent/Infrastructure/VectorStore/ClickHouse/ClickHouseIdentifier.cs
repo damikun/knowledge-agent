@@ -3,7 +3,6 @@ using System.Text.RegularExpressions;
 
 namespace KnowledgeAgent.Infrastructure.VectorStore.ClickHouse;
 
-// Identifiers cannot be query parameters, so names interpolated into SQL are restricted to this pattern and quoted.
 internal static partial class ClickHouseIdentifier
 {
     public const string PatternDescription = "^[A-Za-z_][A-Za-z0-9_]*$";
@@ -23,10 +22,8 @@ internal static partial class ClickHouseIdentifier
     public static string InvalidMessage(string? value, string settingName) =>
         $"{settingName} '{value}' is not a valid ClickHouse identifier (expected {PatternDescription}).";
 
-    // Only for identifiers that passed Validate.
     public static string Quote(string identifier) => $"`{identifier}`";
 
-    // \z instead of $: '$' would also accept a trailing newline.
     [GeneratedRegex(@"^[A-Za-z_][A-Za-z0-9_]*\z", RegexOptions.CultureInvariant)]
     private static partial Regex Pattern();
 }

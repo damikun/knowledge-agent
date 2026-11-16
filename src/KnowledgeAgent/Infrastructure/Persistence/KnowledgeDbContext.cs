@@ -77,7 +77,6 @@ public sealed class KnowledgeDbContext(DbContextOptions<KnowledgeDbContext> opti
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // EF caches one model per database provider, so provider-specific store types are safe here.
         var isNpgsql = Database.IsNpgsql();
         if (isNpgsql)
         {

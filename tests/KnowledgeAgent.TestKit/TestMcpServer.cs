@@ -10,8 +10,6 @@ using ModelContextProtocol.Server;
 
 namespace KnowledgeAgent.TestKit;
 
-// A real MCP server over Streamable HTTP, built with the official SDK. lookup_order reads, cancel_order writes,
-// report_problem returns an error and broken throws.
 public sealed class TestMcpServer : IAsyncDisposable
 {
     private readonly WebApplication _app;
@@ -28,19 +26,15 @@ public sealed class TestMcpServer : IAsyncDisposable
 
     public ConcurrentQueue<(string Tool, string Arguments)> Calls { get; } = new();
 
-    // The caller entry of each lookup_order call's _meta, as JSON ("null" without one).
     public ConcurrentQueue<string> LookupCaller { get; } = new();
 
-    // The idempotency key in each lookup_order and cancel_order call's _meta.
     public ConcurrentQueue<(string Tool, string? Key)> IdempotencyKeys { get; } = new();
 
     private int _rejectCalls;
     private int _dropResponses;
 
-    // The next tool calls are answered with HTTP 404 before the tool runs, as for an expired session.
     public void RejectNextCalls(int count) => Interlocked.Exchange(ref _rejectCalls, count);
 
-    // The next tool calls run, then the connection drops before the client gets the result.
     public void DropNextResponses(int count) => Interlocked.Exchange(ref _dropResponses, count);
 
     public static async Task<TestMcpServer> StartAsync()

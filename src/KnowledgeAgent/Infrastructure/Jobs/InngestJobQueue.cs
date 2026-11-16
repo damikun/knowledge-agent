@@ -13,7 +13,6 @@ internal sealed class InngestJobQueue(IInngestClient client, IEnumerable<JobRegi
             throw new InvalidOperationException($"No job handler is registered for '{kind}'.");
         }
 
-        // An event timestamp in the future makes Inngest start the run at that time.
         var due = runAt is { } requested && requested > timeProvider.GetUtcNow() ? requested : (DateTimeOffset?)null;
         await client.SendAsync(new InngestEvent(InngestJobEngine.EventName(kind), new JobEvent(key)) { Timestamp = due }, cancellationToken);
     }

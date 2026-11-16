@@ -10,10 +10,8 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Infrastructure.VectorStore.ClickHouse;
 
-// All operations share one ClickHouseClient, which is built for concurrent use and pools HTTP connections.
 internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
 {
-    // Query parameters travel in the URL and ClickHouse caps one value at 128 KiB, so larger filters are split.
     internal const int MaxSourceIdsPerQuery = 1000;
 
     private const string DbSystem = "clickhouse";
@@ -44,7 +42,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
         using var activity = StartOperation("ensure_schema");
         try
         {
-            // Columns are read first so that an existing table needs no CREATE privilege.
             var columns = await ReadColumnsAsync(cancellationToken);
             if (columns.Count == 0)
             {
@@ -87,7 +84,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
         var started = Stopwatch.GetTimestamp();
         try
         {
-            // A batch of up to 100k rows is sent as a single INSERT, which is atomic for MergeTree.
             var written = await _client.InsertBinaryAsync(
                 _sql.QualifiedTable,
                 ClickHouseSql.InsertColumns,
@@ -110,7 +106,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
             var existing = await CountCoreAsync(sourceId, cancellationToken);
             if (existing > 0)
             {
-                // lightweight_deletes_sync = 2 waits until the delete mask is applied, so later reads never see the rows.
                 await _client.ExecuteNonQueryAsync(
                     _sql.DeleteBySource,
                     SourceParameters(sourceId),
@@ -145,7 +140,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
             IReadOnlyList<VectorSearchHit> hits;
             if (search.SourceIds is { Length: > MaxSourceIdsPerQuery } sourceIds)
             {
-                // The top K of a union is the top K of the per-batch top Ks.
                 var merged = new List<VectorSearchHit>();
                 foreach (var batch in sourceIds.Chunk(MaxSourceIdsPerQuery))
                 {
@@ -192,7 +186,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
             IReadOnlyList<VectorSearchHit> hits;
             if (search.SourceIds is { Length: > MaxSourceIdsPerQuery } sourceIds)
             {
-                // Statistics are global, so scores from different batches are comparable and can be merged.
                 var merged = new List<VectorSearchHit>();
                 foreach (var batch in sourceIds.Chunk(MaxSourceIdsPerQuery))
                 {
@@ -233,7 +226,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
         var started = Stopwatch.GetTimestamp();
         try
         {
-            // Batches hold disjoint sources, so their totals add up and a page continues from one batch into the next.
             var items = new List<VectorSearchHit>(Math.Min(search.Take, 256));
             long totalChunks = 0, totalSources = 0;
             long skip = search.Skip;
@@ -275,7 +267,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
             TextSearchPage<SourceTextMatches> page;
             if (search.SourceIds is { Length: > MaxSourceIdsPerQuery } sourceIds)
             {
-                // A batch matches at most as many sources as it holds ids, so every count is fetched and paged here.
                 var merged = new List<SourceTextMatches>();
                 foreach (var batch in TextSearchBatches(sourceIds))
                 {
@@ -351,7 +342,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
         }
     }
 
-    // SELECT 1 rather than the HTTP /ping endpoint, because it also verifies the credentials.
     public async Task<bool> PingAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -395,7 +385,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
             var distance = Convert.ToDouble(reader.GetValue(5), CultureInfo.InvariantCulture);
             var score = VectorStoreGuard.NormalizeScore(1d - distance);
 
-            // The server compares Float32 distances, so the threshold is re-checked here to hold exactly.
             if (score < search.MinScore)
             {
                 continue;
@@ -437,7 +426,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
         return hits;
     }
 
-    // One unfiltered query, or the sorted source filter in batches, so paging across batches always sees the same order.
     private static IEnumerable<Guid[]?> TextSearchBatches(Guid[]? sourceIds)
     {
         if (sourceIds is null)
@@ -548,7 +536,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
         return columns;
     }
 
-    // CREATE TABLE IF NOT EXISTS leaves an existing table untouched, so its columns are verified here.
     private void EnsureCompatible(Dictionary<string, string> actual)
     {
         var problems = new List<string>();
@@ -600,7 +587,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
         score,
         ChunkMetadataSerializer.Deserialize(reader.GetString(4)));
 
-    // The driver needs arrays, so the backing array is reused when the memory spans all of it.
     private static float[] ToArray(ReadOnlyMemory<float> memory) =>
         MemoryMarshal.TryGetArray(memory, out var segment) && segment.Offset == 0 && segment.Count == segment.Array!.Length
             ? segment.Array
@@ -609,7 +595,6 @@ internal sealed partial class ClickHouseVectorStore : IVectorStore, IDisposable
     private Activity? StartOperation(string operation) =>
         VectorStoreTelemetry.StartOperation(operation, DbSystem, Database, Table);
 
-    // Exception filter that records the failure on the span and returns false so the exception is not caught.
     private static bool RecordFailure(Activity? activity, Exception exception)
     {
         activity.RecordException(exception);

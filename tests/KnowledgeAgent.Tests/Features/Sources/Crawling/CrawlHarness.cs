@@ -10,7 +10,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KnowledgeAgent.Tests.Features.Sources.Crawling;
 
-// A knowledge test context with the crawler on a jumping clock, so rate limits and step retries cost no real time.
 internal sealed class CrawlHarness : IAsyncDisposable
 {
     public CrawlHarness(Action<IngestionOptions>? configure = null, FakeWebHandler? web = null)

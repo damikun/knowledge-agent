@@ -8,7 +8,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Features.Models;
 
-// API keys are stored encrypted and never leave this class in plain text.
 internal sealed partial class ProviderSettingsService(
     IOptionsMonitor<AiOptions> optionsMonitor,
     AiOptionsSource optionsSource,
@@ -178,7 +177,6 @@ internal sealed partial class ProviderSettingsService(
         var provider = providers.Find(effective.Type);
         var usesApiKey = provider?.UsesApiKey ?? false;
 
-        // A saved key is active only if it decrypts, otherwise the configured key applies.
         var portalKey = saved?.ProtectedApiKey is { Length: > 0 } protectedKey ? protector.TryUnprotect(protectedKey, key) : null;
         var (source, hint) = !usesApiKey
             ? ("none", (string?)null)
@@ -314,7 +312,6 @@ internal sealed partial class ProviderSettingsService(
         return string.IsNullOrWhiteSpace(message) ? exception.GetType().Name : message.Trim();
     }
 
-    // Provider errors sometimes echo request details, so never let the key through.
     private static string Redact(string message, string? apiKey) =>
         string.IsNullOrWhiteSpace(apiKey) ? message : message.Replace(apiKey.Trim(), "***", StringComparison.Ordinal);
 

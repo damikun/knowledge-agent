@@ -4,7 +4,6 @@ using KnowledgeAgent.Infrastructure.Security;
 
 namespace KnowledgeAgent.Api.Tests.Scenarios;
 
-// Runs as the local admin of Auth:Mode=None.
 public abstract class TeamScenarios(AppFixture fixture)
 {
     private const string Me = "local-admin";

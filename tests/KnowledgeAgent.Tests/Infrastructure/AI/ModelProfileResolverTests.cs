@@ -382,7 +382,6 @@ public sealed class ModelProfileResolverTests
 
         var states = await host.Resolver.ListAsync(Ct);
 
-        // Configuration keys enumerate in sorted order, and overrides of unknown profiles are not listed.
         states.Select(s => s.Name).ShouldBe(["embedding", "orchestrator", "researcher", "utility"]);
 
         var orchestrator = states.Single(s => s.Name == "orchestrator");

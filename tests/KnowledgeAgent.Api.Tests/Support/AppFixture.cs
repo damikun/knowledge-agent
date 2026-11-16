@@ -2,7 +2,6 @@ using KnowledgeAgent.TestKit;
 
 namespace KnowledgeAgent.Api.Tests.Support;
 
-// Tests in a class run sequentially, so they can share one lazily started app.
 public abstract class AppFixture : IAsyncLifetime
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -33,7 +32,6 @@ public abstract class AppFixture : IAsyncLifetime
         return await StartAppAsync(options);
     }
 
-    // Kept for the fixture's lifetime so re-ingestion can fetch the pages again.
     public async Task<TestHttpServer> GetWebServerAsync()
     {
         await _gate.WaitAsync(TestContext.Current.CancellationToken);

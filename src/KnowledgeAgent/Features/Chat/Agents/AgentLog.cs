@@ -2,7 +2,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Chat.Agents;
 
-// Log messages never include prompt or answer text.
 internal static partial class AgentLog
 {
     [LoggerMessage(EventId = 1000, Level = LogLevel.Information,

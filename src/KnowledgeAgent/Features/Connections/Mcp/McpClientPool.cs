@@ -15,7 +15,6 @@ namespace KnowledgeAgent.Features.Connections.Mcp;
 
 internal sealed class McpSecretProtector(IDataProtectionProvider dataProtection)
 {
-    // Changing the purpose makes every saved secret undecryptable.
     private readonly IDataProtector _protector = dataProtection.CreateProtector("KnowledgeAgent.Connections.Mcp.Secrets.v1");
 
     public string Protect(string secret) => _protector.Protect(secret);
@@ -37,25 +36,20 @@ internal sealed class McpSecretProtector(IDataProtectionProvider dataProtection)
         }
     }
 
-    // Short secrets get no suffix so the hint never reveals a large part of them.
     public static string Hint(string secret) => secret.Length >= 12 ? "…" + secret[^4..] : "…";
 }
 
 internal sealed record McpProbe(bool Ok, string? Error, string? ServerName, string? ServerVersion, IReadOnlyList<McpToolInfo> Tools, long DurationMs);
 
-// A failure talking to an MCP server, in words that are safe to show: never a header, token or stack trace.
 internal sealed class McpConnectionException(string message, Exception? inner = null) : Exception(message, inner)
 {
-    // The request may have reached the server before the failure, so the tool may have run.
     public bool MayHaveRun { get; init; }
 }
 
 internal enum McpCallSafety
 {
-    // Sent again only when the first attempt surely never ran.
     SideEffects,
 
-    // Approved as read-only or idempotent, so running it twice changes nothing.
     RetrySafe,
 }
 
@@ -70,7 +64,6 @@ internal sealed partial class McpClientPool(
     private readonly ConcurrentDictionary<Guid, DateTimeOffset> _lastRefresh = new();
     private readonly ILogger _logger = loggerFactory.CreateLogger<McpClientPool>();
 
-    // Sent in _meta with every attempt of one call, so a server that deduplicates can drop a repeat.
     public const string IdempotencyMetaKey = "knowledge-agent/idempotency-key";
 
     public Task<CallToolResult> CallAsync(McpServer server, string toolName, IReadOnlyDictionary<string, object?> arguments, CancellationToken cancellationToken) =>
@@ -95,15 +88,12 @@ internal sealed partial class McpClientPool(
             }
             catch (McpProtocolException)
             {
-                // The server answered with an error; the connection itself is fine.
                 throw;
             }
             catch (Exception ex) when (IsConnectionFailure(ex) && !cancellationToken.IsCancellationRequested)
             {
                 await EvictAsync(server.Id, entry);
 
-                // A timeout or a dropped connection after sending can mean the tool already ran: running an action
-                // twice is worse than one error.
                 var notRun = NeverRan(ex);
                 if (attempt >= 2 || (safety != McpCallSafety.RetrySafe && !notRun))
                 {
@@ -135,8 +125,6 @@ internal sealed partial class McpClientPool(
         return new RequestOptions { Meta = meta };
     }
 
-    // True only when the server surely did not run the request: the connection was never made, or the server
-    // turned the request away with a client error (404 is how an expired MCP session is answered).
     internal static bool NeverRan(Exception exception)
     {
         for (var current = exception; current is not null; current = current.InnerException)
@@ -175,7 +163,6 @@ internal sealed partial class McpClientPool(
         }
     }
 
-    // At most once per server per interval, failures included, so a down server doesn't slow every turn.
     public async Task<IReadOnlyList<McpToolInfo>?> RefreshToolsAsync(McpServer server, CancellationToken cancellationToken)
     {
         var settings = options.CurrentValue;
@@ -274,7 +261,6 @@ internal sealed partial class McpClientPool(
             }
             catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
             {
-                // A failed connection is not kept, so the next call tries again.
                 _clients.TryRemove(new KeyValuePair<Guid, Lazy<Task<Entry>>>(server.Id, lazy));
                 LogConnectFailed(_logger, ex, server.Key);
                 throw new McpConnectionException(Describe(ex), ex);

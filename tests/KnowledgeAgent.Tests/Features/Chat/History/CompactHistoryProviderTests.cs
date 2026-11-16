@@ -9,7 +9,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Tests.Features.Chat.History;
 
-// The compact history goes through each provider's real adapter: no thinking is sent and every tool call keeps its result.
 public sealed class CompactHistoryProviderTests
 {
     private static CancellationToken Ct => TestContext.Current.CancellationToken;

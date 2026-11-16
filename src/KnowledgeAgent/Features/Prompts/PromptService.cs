@@ -55,7 +55,6 @@ internal sealed class PromptService : IPromptService, IDisposable
         _failureBackoff = _ttl < MaxFailureBackoff ? _ttl : MaxFailureBackoff;
         _defaultLabel = string.IsNullOrWhiteSpace(_options.Label) ? LangfuseClient.DefaultLabel : _options.Label.Trim();
 
-        // Captured so that fetches started after disposal see a cancelled token.
         _shutdownToken = _shutdown.Token;
     }
 
@@ -172,7 +171,6 @@ internal sealed class PromptService : IPromptService, IDisposable
         return _renderer.Render(template, variables);
     }
 
-    // Other instances pick it up when their cache expires (Prompts:CacheTtlSeconds).
     internal void Invalidate(string name)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -186,7 +184,6 @@ internal sealed class PromptService : IPromptService, IDisposable
 
     public void Dispose()
     {
-        // DI disposes this instance twice: as PromptService and through the IPromptService factory registration.
         if (Interlocked.Exchange(ref _disposed, 1) != 0)
         {
             return;
@@ -228,7 +225,6 @@ internal sealed class PromptService : IPromptService, IDisposable
             return cached;
         }
 
-        // A fetch that started before an invalidation may bring the old version, so it is not kept.
         var generation = Interlocked.Read(ref _generation);
         try
         {
@@ -246,7 +242,6 @@ internal sealed class PromptService : IPromptService, IDisposable
             var retryAt = _time.GetUtcNow() + _failureBackoff;
             if (cached is { IsFailure: false })
             {
-                // Stale-on-error: keep serving the last answer from Langfuse, which may also be "not found".
                 if (cached.Template is { } stale)
                 {
                     _logger.ServingStalePrompt(key.Name, key.Describe(), stale.Version, ex.Message);
@@ -311,14 +306,12 @@ internal sealed class PromptService : IPromptService, IDisposable
     {
         try
         {
-            // Not tied to a caller's token because other callers may be waiting for the same result.
             completion.TrySetResult(await FetchAsync(key, _shutdownToken).ConfigureAwait(false));
         }
         catch (Exception ex)
         {
             completion.TrySetException(ex);
 
-            // Observed here so that callers that gave up do not cause an UnobservedTaskException.
             _ = completion.Task.Exception;
         }
         finally

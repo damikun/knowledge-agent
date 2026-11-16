@@ -34,7 +34,6 @@ internal sealed class TextChunker
         var maxChars = sizeTokens * CharsPerToken;
         var overlapChars = overlapTokens * CharsPerToken;
 
-        // Pieces leave room for a full overlap, so any piece can follow the overlap of the previous chunk.
         var maxPiece = maxChars - overlapChars;
 
         var chunks = new List<TextChunk>();
@@ -191,7 +190,6 @@ internal sealed class TextChunker
 
             chunks.Add(new Range(chunkStart, chunkEnd));
 
-            // The window start keeps the new chunk [overlapStart, pieceEnd) within maxChars.
             var overlapStart = overlapChars > 0
                 ? FindOverlapStart(text, chunkStart, chunkEnd, Math.Max(chunkEnd - overlapChars, pieceEnd - maxChars), overlapChars)
                 : -1;
@@ -313,7 +311,6 @@ internal sealed class TextChunker
             return position;
         }
 
-        // A grapheme cluster longer than the limit is cut inside, keeping surrogate pairs intact.
         return char.IsLowSurrogate(text[limit]) && limit - 1 > start ? limit - 1 : limit;
     }
 

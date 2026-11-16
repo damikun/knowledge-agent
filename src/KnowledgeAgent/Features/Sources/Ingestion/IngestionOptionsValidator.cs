@@ -2,10 +2,8 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Features.Sources.Ingestion;
 
-// Rejects only nonsensical values. Values that are merely out of range are clamped where they are used.
 internal sealed class IngestionOptionsValidator : IValidateOptions<IngestionOptions>
 {
-    // Leaves room under Inngest's limit of 1,000 steps per run for the discovery and finishing steps.
     public const int MaxCrawlPagesLimit = 990;
 
     public const double MaxCrawlRequestsPerSecond = 2;

@@ -111,7 +111,6 @@ internal sealed class PromptSeeder : IDisposable
 
     public void Dispose() => _gate.Dispose();
 
-    // Replaces a version this seeder wrote, unless someone edited the prompt or rolled it back since.
     private async Task<bool> UpdateIfUntouchedAsync(PromptTemplate template, LangfusePromptListItem stored, CancellationToken cancellationToken)
     {
         if (stored.Versions.Count == 0)
@@ -145,7 +144,6 @@ internal sealed class PromptSeeder : IDisposable
 
     private static IReadOnlyList<string> LabelsFor(PromptTemplate template)
     {
-        // Langfuse maintains the "latest" label itself.
         var labels = template.Labels.Where(label => !string.Equals(label, "latest", StringComparison.Ordinal)).ToList();
         return labels.Count > 0 ? labels : SeedLabels;
     }

@@ -3,7 +3,6 @@ using KnowledgeAgent.TestKit;
 
 namespace KnowledgeAgent.Tests.Features.Sources.Fakes;
 
-// Returns copies, like a database would, so changes are only visible after UpdateAsync.
 internal sealed class InMemorySourceRepository : ISourceRepository
 {
     private readonly Lock _gate = new();
@@ -13,7 +12,6 @@ internal sealed class InMemorySourceRepository : ISourceRepository
 
     public Exception? GetFailure { get; set; }
 
-    // Runs outside the lock so tests can interleave repository calls.
     public Action<Source>? AfterUpdate { get; set; }
 
     public int Count
@@ -27,7 +25,6 @@ internal sealed class InMemorySourceRepository : ISourceRepository
         }
     }
 
-    // Status changes in order; progress updates that keep the status are left out.
     public IReadOnlyList<SourceStatus> StatusHistory(Guid sourceId)
     {
         lock (_gate)
@@ -191,7 +188,6 @@ internal sealed class InMemorySourceRepository : ISourceRepository
                 throw new InvalidOperationException($"Source {source.Id} does not exist (deleted concurrently).");
             }
 
-            // Like the EF Core repository, an update keeps the stored folder.
             var updated = Clone(source);
             updated.FolderId = stored.FolderId;
             _sources[source.Id] = updated;

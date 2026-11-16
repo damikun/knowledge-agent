@@ -169,7 +169,6 @@ public sealed class AlertsTests : IAsyncLifetime
         errors.RecordSuccess("anthropic");
         (await ListAsync(AlertAudience.Admin)).Alerts.ShouldBeEmpty();
 
-        // A key saved after the rejection is given the benefit of the doubt until the next call.
         errors.RecordFailure("anthropic", new HttpRequestException("Forbidden", null, HttpStatusCode.Forbidden));
         (await ListAsync(AlertAudience.Admin)).Alerts.Single().Key.ShouldBe("provider_rejected.anthropic");
         _time.Advance(TimeSpan.FromMinutes(1));

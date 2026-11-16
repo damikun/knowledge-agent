@@ -12,7 +12,6 @@ internal static partial class HandoverEmails
 {
     public const string MessageIdDomain = "knowledge-agent";
 
-    // box+ka-token@domain, or the plain mailbox, in which case the [KA-token] in the subject identifies the conversation.
     public static string ReplyAddress(EmailSettings settings, string token)
     {
         var mailbox = settings.ReplyAddress ?? settings.FromAddress!;
@@ -175,7 +174,6 @@ internal static partial class HandoverEmails
     [GeneratedRegex(@"ka-([a-z0-9]{12})-[0-9a-f]{32}@", RegexOptions.IgnoreCase)]
     private static partial Regex ThreadToken();
 
-    // "On Tue, 3 Nov 2026 at 10:00, Anna <a@b.c> wrote:", "Am ... schrieb ...:", Outlook's "From: ..." block.
     [GeneratedRegex(@"^(On\s.+wrote:|Am\s.+schrieb.+:|Le\s.+a écrit\s?:|-----\s?Original Message\s?-----|From:\s.+|Von:\s.+)$", RegexOptions.IgnoreCase)]
     private static partial Regex QuoteHeader();
 

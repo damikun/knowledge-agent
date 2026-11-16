@@ -28,8 +28,6 @@ internal sealed class LangfuseClient(HttpClient httpClient)
             return;
         }
 
-        // The trailing slash keeps a path prefix such as https://host/langfuse/ when relative paths are combined.
-        // Any other value leaves the client unconfigured, so calls fail and prompts fall back to the local defaults.
         if (Uri.TryCreate(options.BaseUrl!.Trim().TrimEnd('/') + "/", UriKind.Absolute, out var baseAddress)
             && (baseAddress.Scheme == Uri.UriSchemeHttp || baseAddress.Scheme == Uri.UriSchemeHttps))
         {
@@ -48,7 +46,6 @@ internal sealed class LangfuseClient(HttpClient httpClient)
             ? "version=" + number.ToString(CultureInfo.InvariantCulture)
             : "label=" + Uri.EscapeDataString(string.IsNullOrWhiteSpace(label) ? DefaultLabel : label.Trim());
 
-        // Escaped so that folder-style names such as team/summary work.
         var path = $"{PromptsPath}/{Uri.EscapeDataString(name)}?{query}";
 
         using var response = await SendAsync(HttpMethod.Get, path, null, cancellationToken).ConfigureAwait(false);
@@ -111,7 +108,6 @@ internal sealed class LangfuseClient(HttpClient httpClient)
         return page.Items.FirstOrDefault(item => string.Equals(item.Name, name, StringComparison.Ordinal));
     }
 
-    // A label belongs to one version at a time, so Langfuse takes it off the other versions.
     public async Task<PromptTemplate> UpdateLabelsAsync(string name, int version, IReadOnlyList<string> newLabels, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
@@ -188,7 +184,6 @@ internal sealed class LangfuseClient(HttpClient httpClient)
             }
             catch (JsonException)
             {
-                // Not JSON, such as an HTML error page from a proxy, so the raw text is used.
             }
 
             text = text.ReplaceLineEndings(" ").Trim();

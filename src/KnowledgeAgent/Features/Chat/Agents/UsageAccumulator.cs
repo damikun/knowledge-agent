@@ -4,7 +4,6 @@ namespace KnowledgeAgent.Features.Chat.Agents;
 
 internal sealed class UsageAccumulator
 {
-    // The key the Anthropic adapter uses for cache writes, which UsageDetails has no property for.
     public const string CacheCreationInputTokensKey = "CacheCreationInputTokens";
 
     private readonly Lock _gate = new();
@@ -44,7 +43,6 @@ internal sealed class UsageAccumulator
         }
     }
 
-    // Input tokens already include both cache counts, on Anthropic as on OpenAI.
     private static long? CacheWriteTokens(UsageDetails usage) =>
         usage.AdditionalCounts is { } counts && counts.TryGetValue(CacheCreationInputTokensKey, out var value) ? value : null;
 

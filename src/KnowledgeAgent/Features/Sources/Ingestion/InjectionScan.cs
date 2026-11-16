@@ -2,8 +2,6 @@ using System.Text.RegularExpressions;
 
 namespace KnowledgeAgent.Features.Sources.Ingestion;
 
-// Flags text that talks to the assistant instead of the reader: the agent's own tool names, "ignore previous
-// instructions" and the like. Cheap and deterministic; it only labels the source for a person to read, it blocks nothing.
 internal static partial class InjectionScan
 {
     public static bool IsSuspicious(string text) => !string.IsNullOrEmpty(text) && Pattern().IsMatch(text);

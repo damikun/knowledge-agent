@@ -4,7 +4,6 @@ using Npgsql;
 
 namespace KnowledgeAgent.Features.Integrations;
 
-// Callers hold the DbContextGate.
 internal static class SettingsDocuments
 {
     public static Task<string?> ReadAsync(KnowledgeDbContext db, string key, CancellationToken cancellationToken) =>
@@ -21,7 +20,6 @@ internal static class SettingsDocuments
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
-            // Two admins saved the first settings at once; the later one wins.
             db.ChangeTracker.Clear();
             await WriteOnceAsync(db, key, json, now, cancellationToken);
         }

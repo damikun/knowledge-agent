@@ -90,7 +90,6 @@ public sealed class ChatClientFactoryTests
         var high = await host.ChatClients.CreateAsync("orchestrator", requestPatch: new ModelProfilePatch(ReasoningEffort: "high"), cancellationToken: Ct);
         high.CreateOptions().Reasoning!.Effort.ShouldBe(ReasoningEffort.High);
 
-        // Claude Opus 5.5 rejects "none" because it always thinks, so the closest valid effort is used.
         var none = await host.ChatClients.CreateAsync("orchestrator", requestPatch: new ModelProfilePatch(ReasoningEffort: "none"), cancellationToken: Ct);
         none.CreateOptions().Reasoning!.Effort.ShouldBe(ReasoningEffort.Low);
     }
@@ -214,7 +213,6 @@ public sealed class ChatClientFactoryTests
             sent["custom"].ShouldBe("kept");
         }
 
-        // The caller's options stay untouched because they may be reused for the next iteration.
         options.AdditionalProperties.ContainsKey(PromptTelemetryChatClient.PromptNameKey).ShouldBeTrue();
     }
 

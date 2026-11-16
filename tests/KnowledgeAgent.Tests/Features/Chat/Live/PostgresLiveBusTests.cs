@@ -47,7 +47,6 @@ public sealed class PostgresLiveBusTests(PostgresPersistenceFixture fixture) : I
         await a.Bus.PublishAsync(new MessagesStored(conversationId, 1), Ct);
         await b.Bus.PublishAsync(new StatusChanged(conversationId, ConversationStatus.Human), Ct);
 
-        // A relays in arrival order, so by the time B's status shows up its own message has been skipped.
         (await ReadAsync(viewOnA, 1)).ShouldHaveSingleItem().ShouldBe(new ConversationChangedEvent(conversationId, "human"));
         a.Reads.ShouldBe(0);
         (await ReadAsync(viewOnB, 1)).ShouldHaveSingleItem().ShouldBeOfType<MessageAddedEvent>();
@@ -98,7 +97,6 @@ public sealed class PostgresLiveBusTests(PostgresPersistenceFixture fixture) : I
     [Fact]
     public async Task Stopping_the_listener_is_prompt_and_gives_its_connection_back()
     {
-        // One connection in the pool: it can be opened again only if the listener gave it back.
         var single = new NpgsqlConnectionStringBuilder(fixture.ConnectionString) { MaxPoolSize = 1, Timeout = 5 };
         await using var dataSource = NpgsqlDataSource.Create(single.ConnectionString);
         await using var b = new Instance(dataSource, new InMemoryConversationRepository());
@@ -152,7 +150,6 @@ public sealed class PostgresLiveBusTests(PostgresPersistenceFixture fixture) : I
         return events;
     }
 
-    // One app instance's share of the bus: its own hub, payload identity, relay and listener over a shared database.
     private sealed class Instance : IAsyncDisposable
     {
         private readonly ServiceProvider _services;
@@ -179,7 +176,6 @@ public sealed class PostgresLiveBusTests(PostgresPersistenceFixture fixture) : I
         public PostgresLiveListener Listener { get; }
         public int Reads => Volatile.Read(ref _reads);
 
-        // Returns once LISTEN has run, so nothing published afterwards is missed.
         public async Task StartAsync()
         {
             await Listener.StartAsync(Ct);

@@ -242,7 +242,6 @@ public abstract class EvalScenarios(AppFixture fixture)
         var recovery = app.Services.GetServices<IStartupInitializer>().Single(initializer => initializer.Name == "Eval run recovery");
         await recovery.InitializeAsync(Ct);
 
-        // Recovery queues the run's job again, and the job settles the run.
         var run = await WaitForRunAsync(app, interrupted.Id);
         run.Summary.Status.ShouldBe(EvalRunStatuses.Failed);
         run.Summary.Error.ShouldNotBeNull().ShouldContain("restarted");

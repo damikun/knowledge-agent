@@ -11,7 +11,6 @@ namespace KnowledgeAgent.Infrastructure.Security;
 
 public sealed record CurrentUserDto(string Name, string? Email, IReadOnlyList<string> Roles, string Mode)
 {
-    // The Keycloak subject: assignments and read state refer to it.
     public string? Id { get; init; }
 
     public bool CanManageUsers { get; init; }
@@ -63,7 +62,6 @@ internal static partial class AuthEndpoints
 
         foreach (var hook in hooks)
         {
-            // Bookkeeping only: the portal still learns who is signed in when it fails.
             try
             {
                 await hook.SeenAsync(user, cancellationToken);
@@ -88,7 +86,6 @@ internal static partial class AuthEndpoints
         });
     }
 
-    // Only paths in this site are accepted, so a crafted link cannot send a signed-in user elsewhere.
     internal static string SafeReturnUrl(string? returnUrl) =>
         returnUrl is { Length: > 0 } url && url[0] == '/' && !url.StartsWith("//", StringComparison.Ordinal) && !url.StartsWith("/\\", StringComparison.Ordinal)
             ? url

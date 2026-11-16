@@ -66,7 +66,6 @@ internal sealed class LangfuseLinkBuilder(
                     return null;
                 }
 
-                // A project-scoped API key sees exactly one project.
                 Volatile.Write(ref _projectId, projects[0].Id);
                 return _projectId;
             }

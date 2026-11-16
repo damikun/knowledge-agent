@@ -36,7 +36,6 @@ public sealed class PostgresSourceFolderRepositoryTests(PostgresPersistenceFixtu
         await using var dataSource = NpgsqlDataSource.Create(Fixture.ConnectionString);
         await using var connection = await dataSource.OpenConnectionAsync(Ct);
 
-        // Sequential scans are disabled so the plan does not depend on the table's size.
         await using (var disable = new NpgsqlCommand("SET enable_seqscan = off", connection))
         {
             await disable.ExecuteNonQueryAsync(Ct);

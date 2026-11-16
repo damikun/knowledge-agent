@@ -4,7 +4,6 @@ using System.Text;
 
 namespace KnowledgeAgent.Tests.Features.Sources.Support;
 
-// Stands in for the network: answers by absolute URL and records every request it receives.
 internal sealed class FakeWebHandler : HttpMessageHandler
 {
     private readonly ConcurrentDictionary<string, Func<HttpRequestMessage, HttpResponseMessage>> _routes = new(StringComparer.Ordinal);

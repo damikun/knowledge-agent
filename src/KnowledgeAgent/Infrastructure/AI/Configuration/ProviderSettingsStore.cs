@@ -78,7 +78,6 @@ internal sealed class ProviderSettingsStore(KnowledgeDbContext db, DbContextGate
         }
     }
 
-    // Matched in memory: the table holds a handful of rows and this behaves the same on every database provider.
     private static ProviderSettingsOverride? Match(List<ProviderSettingsOverride> settings, string key) =>
         settings.Find(entry => string.Equals(entry.Key, key, StringComparison.Ordinal))
         ?? settings

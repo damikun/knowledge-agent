@@ -211,7 +211,6 @@ public sealed class RerankTests
         ("AI:Profiles:rerank:Kind", "Rerank"),
     ];
 
-    // A provider with embeddings only, the one kind that can neither rerank nor chat.
     private sealed class EmbeddingsOnlyProvider : IAiProvider
     {
         public const string TypeName = "embeddings-only";

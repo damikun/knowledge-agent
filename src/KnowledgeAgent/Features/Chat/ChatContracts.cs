@@ -64,12 +64,9 @@ public sealed record TextDeltaEvent(string Text) : ChatStreamEvent
     [JsonIgnore]
     public override string EventType => ChatEventTypes.TextDelta;
 
-    // The model call that wrote the text; numbered per turn, so a new number starts a new paragraph.
     public int Step { get; init; }
 }
 
-// Ends one model call. "interim": tools run next, so its text was a note on the way and is not the answer.
-// "final": its text is the agent's answer. Clients that ignore this event see every step's text, as before.
 public sealed record StepFinishedEvent(int Step, string Kind) : ChatStreamEvent
 {
     public const string Interim = "interim";
@@ -117,10 +114,8 @@ public sealed record ConfirmationRequiredEvent(
     public IReadOnlyList<ConfirmationDetailDto> Details { get; init; } = [];
 }
 
-// One argument of an action that waits for Confirm, in words the person can check.
 public sealed record ConfirmationDetailDto(string Label, string Value);
 
-// The agent offered a person; the visitor asks for one with the widget's own button.
 public sealed record HandoverOfferedEvent(string CallId) : ChatStreamEvent
 {
     [JsonIgnore]
@@ -181,7 +176,6 @@ public sealed record ToolCallDto(
 
     public ToolCallConfirmationDto? Confirmation { get; init; }
 
-    // What the agent wrote before this call, on the first call of a step only.
     public string? Preamble { get; init; }
 }
 

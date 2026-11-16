@@ -7,7 +7,6 @@ public sealed class AiOptions
     public static readonly IReadOnlyList<string> DefaultAutoChatProviders = ["anthropic", "openai", "ollama"];
     public static readonly IReadOnlyList<string> DefaultAutoEmbeddingProviders = ["openai", "voyage", "ollama"];
 
-    // Dedicated rerankers only: reranking with a chat model costs one LLM call per search, so it is opt-in.
     public static readonly IReadOnlyList<string> DefaultAutoRerankProviders = ["voyage"];
 
     public Dictionary<string, AiProviderOptions> Providers { get; set; } = new(StringComparer.OrdinalIgnoreCase);

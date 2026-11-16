@@ -12,7 +12,6 @@ internal sealed class BlockedAddressException(string host)
 
 internal static partial class SafeConnector
 {
-    // Connects only to the addresses it validated, so DNS rebinding between check and connect is not possible.
     public static async ValueTask<Stream> ConnectAsync(
         SocketsHttpConnectionContext context,
         bool allowPrivateNetworks,

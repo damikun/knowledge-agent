@@ -27,7 +27,6 @@ public sealed class IntegrationSettingsRecord
 
     public string SettingsJson { get; set; } = "{}";
 
-    // Secret name to value, each encrypted with Data Protection.
     public string SecretsJson { get; set; } = "{}";
 
     public DateTimeOffset UpdatedAt { get; set; }
@@ -60,7 +59,6 @@ public interface IIntegrationSettings
     event Action? Changed;
 }
 
-// Short cache: other instances see a save once it expires.
 internal sealed partial class IntegrationSettingsStore(
     IServiceScopeFactory scopes,
     IOptionsMonitor<IntegrationOptions> options,
@@ -71,12 +69,9 @@ internal sealed partial class IntegrationSettingsStore(
     private static readonly TimeSpan CacheLifetime = TimeSpan.FromSeconds(30);
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    // Changing the purpose makes every saved secret undecryptable.
     private readonly IDataProtector _protector = dataProtection.CreateProtector("KnowledgeAgent.Integrations.Secrets.v1");
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    // Swapped whole and read without the gate. A save bumps the generation, so a load that read the rows before the
-    // save does not cache them after it.
     private Snapshot? _cache;
     private long _generation;
 
@@ -213,7 +208,6 @@ internal sealed partial class IntegrationSettingsStore(
             }
             catch (CryptographicException ex)
             {
-                // A lost key ring makes the secret unreadable; the integration then reports itself as not set up.
                 LogUnprotectFailed(logger, ex, record.Key, name);
             }
         }

@@ -2,7 +2,6 @@ using System.Text.RegularExpressions;
 
 namespace KnowledgeAgent.Features.Sources.Crawling;
 
-// Which URLs belong to a website: its scope, its exclude patterns and robots.txt.
 internal sealed class CrawlRules
 {
     private static readonly TimeSpan PatternTimeout = TimeSpan.FromMilliseconds(100);
@@ -27,7 +26,6 @@ internal sealed class CrawlRules
 
     public bool Allows(Uri uri) => InScope(uri) && !IsExcluded(uri) && _robots.IsAllowed(uri);
 
-    // http and https, and the host with or without "www.", count as the same site.
     public bool InScope(Uri uri)
     {
         if (!SourceDefaults.SiteOf(uri).Equals(_site, StringComparison.Ordinal))
@@ -66,7 +64,6 @@ internal sealed class CrawlRules
         return false;
     }
 
-    // "/docs/guide" covers "/docs/guide/…"; "/docs/index.html" covers "/docs/…".
     internal static string SectionPrefix(Uri start)
     {
         var path = start.AbsolutePath;
@@ -79,8 +76,6 @@ internal sealed class CrawlRules
         return path.EndsWith('/') ? path : path + "/";
     }
 
-    // '*' matches anything. A pattern starting with '/' matches from the start of the path, any other anywhere in it,
-    // and both match everything that follows.
     internal static Regex ToRegex(string pattern)
     {
         var trimmed = pattern.Trim();

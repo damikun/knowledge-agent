@@ -13,7 +13,6 @@ public sealed class FakeKnowledgeSearch : IKnowledgeSearch
 
     public Func<KnowledgeSearchRequest, CancellationToken, Task<IReadOnlyList<KnowledgeSearchHit>>>? Handler { get; set; }
 
-    // Reported with every result, as if those parts of the search had failed.
     public IReadOnlyList<string> Degraded { get; set; } = [];
 
     public KnowledgeSearchHit AddHit(

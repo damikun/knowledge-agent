@@ -25,8 +25,6 @@ public interface IEmailTransport
 {
     Task SendAsync(MimeMessage message, CancellationToken cancellationToken = default);
 
-    // A message is marked seen and moved to the processed folder only when handle returns true;
-    // unwanted messages stay unseen for whoever reads the mailbox.
     Task<int> ProcessInboxAsync(
         Func<EmailEnvelope, bool> wants,
         Func<InboundEmail, CancellationToken, Task<bool>> handle,
@@ -213,7 +211,6 @@ internal sealed partial class MailKitEmailTransport(IIntegrationSettings integra
         }
         catch (Exception ex) when (ex is ImapCommandException or ImapProtocolException or InvalidOperationException)
         {
-            // Without the folder, handled replies stay in the inbox marked as seen.
             LogNoProcessedFolder(logger, ex, name);
             return null;
         }

@@ -50,7 +50,6 @@ internal sealed class SourceConfiguration(bool isNpgsql) : IEntityTypeConfigurat
 
         if (isNpgsql)
         {
-            // Trigram GIN indexes back the case-insensitive substring search (ILIKE '%term%') and need pg_trgm.
             builder.HasIndex(source => source.Title).HasMethod("gin").HasOperators("gin_trgm_ops");
             builder.HasIndex(source => source.Url).HasMethod("gin").HasOperators("gin_trgm_ops");
             builder.HasIndex(source => source.FileName).HasMethod("gin").HasOperators("gin_trgm_ops");

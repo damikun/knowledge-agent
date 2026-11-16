@@ -27,7 +27,6 @@ internal static class SystemEndpoints
             .WithName("GetSystemInfo")
             .WithSummary("Providers, stores, the Langfuse link and the public address of this instance.");
 
-    // Every staff member reads the public address; only admins change it.
     public static IEndpointRouteBuilder MapPublicAddressEndpoints(this IEndpointRouteBuilder routes)
     {
         const string path = "/system/public-address";
@@ -84,7 +83,6 @@ internal static class SystemEndpoints
             await publicAddress.GetAsync(cancellationToken)));
     }
 
-    // Read from configuration directly, since each module owns its own options registration.
     private static T Bind<T>(IConfiguration configuration, string section) where T : class, new() =>
         configuration.GetSection(section).Get<T>() ?? new T();
 }

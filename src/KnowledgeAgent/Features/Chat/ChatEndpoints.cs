@@ -84,7 +84,6 @@ internal static class ChatEndpoints
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
-        // A profile or prompt variables change what the agent is told, so only admins may set them per request.
         if ((request.Profile is not null || request.Variables is { Count: > 0 }) && !user.IsInRole(AuthRoles.Admin))
         {
             return TypedResults.Problem(
@@ -118,12 +117,10 @@ internal static class ChatEndpoints
                     return ApiResults.NotFound("The agent of this widget no longer exists.");
                 }
 
-                // Visitors cannot narrow the scope, so neither does the test.
                 request = request with { Agent = agent.Key, SourceIds = null };
             }
         }
 
-        // The turn goes on if the client disconnects.
         var stream = chat.StreamAsync(request, caller, cancellationToken);
 
         if (request.ConversationId is { } conversationId && conversationId != Guid.Empty && existing is null)
@@ -131,7 +128,6 @@ internal static class ChatEndpoints
             return ApiResults.NotFound($"Conversation '{conversationId}' was not found.");
         }
 
-        // Read the first event before committing to a 200 event stream, so setup failures still become problem details.
         var events = stream.GetAsyncEnumerator(cancellationToken);
         bool hasFirst;
         try

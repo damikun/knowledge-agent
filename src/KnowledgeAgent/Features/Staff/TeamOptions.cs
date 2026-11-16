@@ -6,8 +6,6 @@ public sealed class TeamOptions
 {
     public const string SectionName = "Team";
 
-    // The Keycloak admin console of the realm. Empty: derived from Auth:Authority (…/realms/{realm} becomes
-    // …/admin/{realm}/console/), and none without sign-in.
     public string? KeycloakConsoleUrl { get; set; }
 
     internal static string? ResolveConsoleUrl(TeamOptions team, AuthOptions auth)

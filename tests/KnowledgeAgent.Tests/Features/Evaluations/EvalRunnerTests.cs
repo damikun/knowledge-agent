@@ -65,7 +65,6 @@ public sealed class EvalRunnerTests
         var vacation = result.Items[0];
         vacation.Metrics[EvalMetrics.RetrievalRecallAt5].ShouldBe(1);
         vacation.Metrics[EvalMetrics.CitationValidity].ShouldBe(1);
-        // The rule-based test model quotes one line, so answer scores are computed but not meaningful here.
         vacation.Metrics.ShouldContainKey(EvalMetrics.AnswerFactRecall);
         vacation.Retrieved.First().Expected.ShouldBeTrue();
         vacation.ToolCalls.ShouldBe(1);
@@ -178,7 +177,6 @@ public sealed class EvalRunnerTests
         item.Metrics[EvalMetrics.JudgeCorrectness].ShouldBe(0.5);
         item.Judgement.ShouldNotBeNull().Criteria.Count.ShouldBe(3);
 
-        // The judge sees the stored chunk text, not the 300-character citation snippet.
         var prompt = judgeModel.Requests.Single().Messages.Single().Text;
         prompt.ShouldContain("Every employee receives 27 vacation days per calendar year.");
         prompt.ShouldContain("department head at least six weeks in advance");

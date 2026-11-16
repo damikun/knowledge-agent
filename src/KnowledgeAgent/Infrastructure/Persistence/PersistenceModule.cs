@@ -41,7 +41,6 @@ public static class PersistenceModule
         builder.Services.TryAddScoped<DbContextGate>();
         builder.Services.TryAddEnumerable(ServiceDescriptor.Scoped<IStartupInitializer, PersistenceStartupInitializer>());
 
-        // Encrypts the saved provider API keys, so the key ring must survive restarts and keep its application name.
         builder.Services.AddDataProtection()
             .SetApplicationName("KnowledgeAgent")
             .PersistKeysToDbContext<KnowledgeDbContext>();
@@ -62,16 +61,13 @@ public static class PersistenceModule
 
         builder.Services.AddDbContextPool<KnowledgeDbContext>(dbContext => dbContext.UseNpgsql(connectionString));
 
-        // For what EF Core does not cover, such as the notifications that keep live views on several instances in step.
         builder.Services.TryAddSingleton(_ => NpgsqlDataSource.Create(connectionString));
 
-        // Adds a retrying execution strategy, so explicit transactions must run inside Database.CreateExecutionStrategy().
         builder.EnrichNpgsqlDbContext<KnowledgeDbContext>();
     }
 
     private static void AddInMemory(IHostApplicationBuilder builder, PersistenceOptions options)
     {
-        // One store per host, so hosts running side by side in one process never share data.
         builder.Services.TryAddSingleton<InMemoryDatabaseRoot>();
         builder.Services.AddDbContextPool<KnowledgeDbContext>((services, dbContext) =>
             dbContext.UseInMemoryDatabase(options.InMemoryDatabaseName, services.GetRequiredService<InMemoryDatabaseRoot>()));

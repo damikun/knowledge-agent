@@ -6,8 +6,6 @@ internal static class CrawlUrl
 {
     private static readonly string[] TrackingParameters = ["gclid", "fbclid", "msclkid", "dclid", "gbraid", "wbraid", "mc_cid", "mc_eid"];
 
-    // One spelling per page: http(s) only, no credentials or fragment, no tracking parameters, and no trailing slash
-    // except on the root. Returns null for anything that cannot be crawled.
     public static Uri? Canonicalize(Uri? uri)
     {
         if (uri is null || !uri.IsAbsoluteUri

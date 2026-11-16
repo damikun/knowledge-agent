@@ -86,7 +86,7 @@ public sealed class ChatTurnFlowTests
 
         var conversation = host.Conversations.Get(first.ConversationId);
         conversation.Title.ShouldBe("Pro plan pricing");
-        conversation.SystemPrompt.ShouldBe("You are Knowledge Agent (Knowledge Agent). Today is 2026-10-22. Ready sources: 0.");
+        conversation.SystemPrompt.ShouldBe("You are Assistant (Knowledge Agent). Today is 2026-10-22. Ready sources: 0.");
         conversation.PromptName.ShouldBe(PromptNames.OrchestratorSystem);
         conversation.PromptVersion.ShouldBe(3);
         conversation.PromptOrigin.ShouldBe("langfuse");

@@ -30,7 +30,6 @@ public static class JobsModule
         {
             InngestJobEngine.Add(builder, settings);
             services.AddSingleton(new JobEngineInfo("inngest", InngestJobEngine.ResolveDashboardUrl(settings.Inngest, builder.Configuration)));
-            // Degraded rather than Unhealthy: chat keeps working while jobs wait for Inngest.
             services.AddHealthChecks().AddInngest(name: InngestHealthCheckName, failureStatus: HealthStatus.Degraded);
         }
         else

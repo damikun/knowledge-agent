@@ -13,7 +13,6 @@ internal static class LabelEndpoints
 
     public static IEndpointRouteBuilder MapLabelEndpoints(this IEndpointRouteBuilder routes)
     {
-        // Staff read labels and put them on conversations; admins define them.
         var labels = routes.MapGroup("/labels").WithTags("Labels").RequireAdminForChanges();
 
         labels.MapGet("/", (ILabelService service, CancellationToken cancellationToken) => service.ListAsync(cancellationToken))

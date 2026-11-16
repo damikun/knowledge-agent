@@ -1,5 +1,6 @@
 using KnowledgeAgent.Features.Agents;
 using KnowledgeAgent.Features.Chat;
+using KnowledgeAgent.Features.Chat.Agents;
 using KnowledgeAgent.Features.Feedback;
 using KnowledgeAgent.Features.Prompts;
 using KnowledgeAgent.Features.Search;
@@ -13,6 +14,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.Time.Testing;
 
 namespace KnowledgeAgent.Tests.Features.Chat.Support;
@@ -43,18 +45,22 @@ internal sealed class AgentTestHost : IDisposable
         builder.Services.Replace(ServiceDescriptor.Scoped<IConversationRepository>(_ => Conversations));
         builder.Services.Replace(ServiceDescriptor.Scoped<IAgentRepository>(_ => Agents));
         builder.Services.AddScoped<ISourceFolderRepository>(_ => Folders);
-        // The app always has the feedback feature; tests that check what was saved register their own recorder.
         builder.Services.AddScoped<IFeedbackRecorder, DiscardingFeedbackRecorder>();
         configureServices?.Invoke(builder.Services);
 
         _host = builder.Build();
+
+        Starter = AgentResolver.Starter(_host.Services.GetRequiredService<IOptions<AgentOptions>>().Value);
+        Starter.CreatedAt = Now.AddYears(-1);
+        Agents.Add(Starter);
     }
+
+    public AgentConfig Starter { get; }
 
     public FakeChatClientFactory ChatClients { get; } = new();
     public FakePromptService Prompts { get; } = new();
     public FakeKnowledgeSearch Search { get; } = new();
 
-    // grep_sources runs the real exact search over this store and the source repository below.
     public InMemoryVectorStore VectorStore { get; } = new();
     public InMemorySourceRepository Sources { get; } = new();
     public InMemoryConversationRepository Conversations { get; } = new();

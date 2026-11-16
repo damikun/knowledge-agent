@@ -57,7 +57,6 @@ public sealed class LangfuseExperimentObserver(LangfuseEvalClient client, ILogge
         await SendAsync(scores, "the run", cancellationToken);
     }
 
-    // Deterministic, so sending a score again updates it in Langfuse instead of adding a duplicate.
     internal static string ScoreId(string experimentId, string subject, string metric)
     {
         var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{experimentId}\n{subject}\n{metric}"));

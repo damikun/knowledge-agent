@@ -7,7 +7,6 @@ internal static class ChatJson
 {
     public static JsonSerializerOptions Dto => JsonSerializerOptions.Web;
 
-    // M.E.AI's own options, so reasoning and tool contents round-trip when the history is replayed.
     public static JsonSerializerOptions Messages => AIJsonUtilities.DefaultOptions;
 
     public static string SerializeMessages(IEnumerable<ChatMessage> messages, Action<string>? onDropped = null)
@@ -19,7 +18,6 @@ internal static class ChatJson
         }
         catch (NotSupportedException)
         {
-            // Provider-specific content types could not be replayed anyway, so drop them instead of failing the turn.
             var sanitized = new List<ChatMessage>(array.Length);
             foreach (var message in array)
             {

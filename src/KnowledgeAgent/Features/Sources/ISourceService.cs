@@ -7,7 +7,6 @@ public interface ISourceService
 {
     Task<Source> AddUrlAsync(string url, string? title = null, Guid? folderId = null, CancellationToken cancellationToken = default);
 
-    // Scope Page adds a single page; the other scopes add a website whose pages are crawled.
     Task<Source> AddWebsiteAsync(string url, WebsiteCrawlSettings settings, string? title = null, Guid? folderId = null, CancellationToken cancellationToken = default);
 
     Task<Source> AddFileAsync(

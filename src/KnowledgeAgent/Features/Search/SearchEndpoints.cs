@@ -12,7 +12,6 @@ internal static class SearchEndpoints
     public const int MaxTopK = 50;
     public const int MaxQueryLength = 4000;
 
-    // Comma-separated reasons when part of the search failed and was skipped, for example "keyword_failed".
     public const string DegradedHeader = "X-Search-Degraded";
 
     public static RouteHandlerBuilder MapSearchEndpoints(this IEndpointRouteBuilder routes) =>

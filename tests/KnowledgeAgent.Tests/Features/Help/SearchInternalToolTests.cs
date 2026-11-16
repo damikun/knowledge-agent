@@ -75,7 +75,6 @@ public sealed class SearchInternalToolTests
             .BuildServiceProvider();
         var channel = Channel.CreateUnbounded<ChatStreamEvent>();
 
-        // The help agent's turn has no sources at all; the tool finds the Internal ones itself.
         var turn = new AgentTurnContext(Guid.NewGuid(), Guid.NewGuid(), [], citations ?? new CitationRegistry(), channel.Writer);
         return new ToolInvocation("call_1", new ToolArguments(arguments), turn, "help", null!, services);
     }

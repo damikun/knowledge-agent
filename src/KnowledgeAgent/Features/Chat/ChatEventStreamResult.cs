@@ -18,7 +18,6 @@ internal sealed partial class ChatEventStreamResult(IAsyncEnumerator<ChatStreamE
 
     private static readonly JsonWriterOptions WriterOptions = new()
     {
-        // The relaxed encoder is safe because SSE is not HTML, and it still escapes newlines that would split a data: line.
         Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
         Indented = false,
     };

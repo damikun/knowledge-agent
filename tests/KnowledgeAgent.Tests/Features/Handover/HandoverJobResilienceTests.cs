@@ -119,7 +119,6 @@ public sealed class HandoverJobResilienceTests : IAsyncLifetime
 
         await RecoverAsync(new JobEngineInfo("inprocess", DashboardUrl: null));
 
-        // The widget's defaults: escalate after 10 minutes, expire after 15.
         _jobs.Enqueued.ShouldBe(
         [
             (HandoverJobs.Expire, overdue.Id.ToString(), overdue.RequestedAt.AddMinutes(15)),
@@ -252,7 +251,6 @@ public sealed class HandoverJobResilienceTests : IAsyncLifetime
         public Task SaveSlackAsync(SlackSettings settings, CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
-    // The expiry emails the transcript when nobody got it; here the mail server is down, as in the dispatch tests.
     private sealed class FailingEmail : IEmailTransport
     {
         public Task SendAsync(MimeMessage message, CancellationToken cancellationToken = default) =>

@@ -87,7 +87,6 @@ internal sealed class AnalyticsRepository(KnowledgeDbContext db, DbContextGate g
     private static readonly string[] KnowledgeTools =
         [ToolNames.SearchKnowledgeBase, ToolNames.GrepSources, ToolNames.FindSources, ToolNames.ReadSource, ToolNames.DelegateResearch];
 
-    // Portal conversations are playground tests and count nowhere here.
     public async Task<AnalyticsDto> GetAsync(DateTimeOffset now, int days, CancellationToken cancellationToken = default)
     {
         var today = DateOnly.FromDateTime(now.UtcDateTime);
@@ -95,7 +94,6 @@ internal sealed class AnalyticsRepository(KnowledgeDbContext db, DbContextGate g
         var from = new DateTimeOffset(firstDay.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
         using var _ = await gate.EnterAsync(cancellationToken);
 
-        // Bucketed in memory so both stores agree, without date functions on converted columns.
         var conversations = await db.Conversations.AsNoTracking()
             .Where(conversation => conversation.UpdatedAt >= from && conversation.CreatedAt >= from && conversation.Channel != ConversationChannel.Portal)
             .Select(conversation => new

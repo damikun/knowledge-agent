@@ -3,7 +3,6 @@ using HandlebarsDotNet.IO;
 
 namespace KnowledgeAgent.Features.Prompts.Rendering;
 
-// Without this, Handlebars.Net prints True and culture-specific dates such as 22.10.2026, unlike Handlebars.js.
 internal sealed class InvariantValueFormatterProvider : IFormatterProvider
 {
     private static readonly Formatter Instance = new();

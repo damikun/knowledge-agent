@@ -53,7 +53,6 @@ internal static class MessageExtensions
 
     public static string ResultText(this FunctionResultContent result) => result.Result?.ToString() ?? string.Empty;
 
-    // The tool's own text inside the untrusted-content wrapper.
     public static string Unwrapped(this string text)
     {
         if (!text.StartsWith(UntrustedText.Notice, StringComparison.Ordinal))

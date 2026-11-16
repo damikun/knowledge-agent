@@ -11,7 +11,6 @@ internal sealed partial class SourceFolderService(
     TimeProvider timeProvider,
     ILogger<SourceFolderService> logger) : ISourceFolderService
 {
-    // A full page of the Sources list.
     public const int MaxSourcesPerMove = SourceQuery.MaxLimit;
 
     public async Task<SourceFolderListing> ListAsync(CancellationToken cancellationToken = default)
@@ -158,7 +157,6 @@ internal sealed partial class SourceFolderService(
 
     private async Task<int> MoveAsync(Guid? folderId, Func<Task<int>> move, CancellationToken cancellationToken)
     {
-        // Holding the gate keeps the folder from being deleted between the check and the move.
         using var _ = await gate.EnterAsync(cancellationToken).ConfigureAwait(false);
         if (folderId is { } id && await folders.GetAsync(id, cancellationToken).ConfigureAwait(false) is null)
         {
@@ -189,7 +187,6 @@ internal sealed partial class SourceFolderService(
         return cleanName;
     }
 
-    // Its subfolders are ordinary folders that happen to be inside it.
     private static void EnsureNotInternal(SourceFolder folder, string change)
     {
         if (folder.IsInternal)

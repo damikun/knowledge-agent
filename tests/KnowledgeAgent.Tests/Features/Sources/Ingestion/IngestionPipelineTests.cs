@@ -68,7 +68,6 @@ public sealed class IngestionPipelineTests
 
         await context.ProcessAsync(source.Id, Ct);
 
-        // Runs of spaces and blank lines shrink, but leading indentation survives for code and nested lists.
         var normalized = "Line one\n\n    indented code";
         context.Repository.FindContent(source.Id)!.ExtractedText.ShouldBe(normalized);
         context.Repository.Find(source.Id)!.ContentHash.ShouldBe(Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(normalized))));
@@ -105,7 +104,6 @@ public sealed class IngestionPipelineTests
         calls.ShouldAllBe(c => c.Purpose == EmbeddingPurpose.Document);
         calls.Select(c => c.Inputs.Count).ShouldBe(
             Enumerable.Range(0, (chunkCount + 2) / 3).Select(i => Math.Min(3, chunkCount - (i * 3))));
-        // Each chunk is embedded with its context (here the title) in front; the store keeps the two apart.
         var stored = context.VectorStore.ForSource(source.Id);
         stored.ShouldAllBe(chunk => chunk.Context == "Batches");
         calls.SelectMany(c => c.Inputs).ShouldBe(stored.Select(v => $"Batches\n\n{v.Content}"));

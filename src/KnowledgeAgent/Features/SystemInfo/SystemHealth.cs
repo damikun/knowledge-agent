@@ -29,7 +29,6 @@ public enum SystemComponentStatus
     Unknown,
 }
 
-// Detail is written here, never copied from an exception, so no host, credential or connection string leaks.
 public sealed record SystemComponentHealthDto(string Key, SystemComponentStatus Status, string Detail, DateTimeOffset CheckedAt, string? Variant = null);
 
 public sealed record SystemHealthDto(IReadOnlyList<SystemComponentHealthDto> Components);
@@ -47,7 +46,6 @@ public static class SystemComponents
     public const string Slack = "slack";
 }
 
-// The page may be open in several tabs, so one result serves everyone for a short while.
 internal sealed partial class SystemHealthService(
     IServiceScopeFactory scopes,
     TimeProvider timeProvider,
@@ -65,7 +63,6 @@ internal sealed partial class SystemHealthService(
 
     private readonly SemaphoreSlim _gate = new(1, 1);
 
-    // Swapped whole, so a reader outside the gate never sees a result with another result's time.
     private Cached? _cached;
 
     public async Task<SystemHealthDto> GetAsync(CancellationToken cancellationToken)

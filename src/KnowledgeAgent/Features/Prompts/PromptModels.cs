@@ -42,7 +42,6 @@ public sealed record PromptTemplate
     public IReadOnlyList<string> Tags { get; init; } = [];
     public PromptOrigin Origin { get; init; }
 
-    // The message the version was saved with in Langfuse; the seeder recognizes its own versions by it.
     public string? CommitMessage { get; init; }
 }
 

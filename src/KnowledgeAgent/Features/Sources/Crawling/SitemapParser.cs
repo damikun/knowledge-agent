@@ -9,8 +9,6 @@ internal sealed record SitemapEntry(string Url, DateTimeOffset? LastModified);
 
 internal sealed record Sitemap(IReadOnlyList<SitemapEntry> Pages, IReadOnlyList<string> Sitemaps);
 
-// Reads a urlset, a sitemap index or a plain list of URLs, gzipped or not. DTDs are refused, so entity tricks
-// (billion laughs, external entities) cannot run.
 internal static class SitemapParser
 {
     public const int MaxEntries = 50_000;
@@ -49,7 +47,6 @@ internal static class SitemapParser
             {
                 if (reader.NodeType == XmlNodeType.Element && reader.LocalName is "loc" or "lastmod")
                 {
-                    // Reading the content moves past the end tag, so the loop must not Read again.
                     var name = reader.LocalName;
                     var value = reader.ReadElementContentAsString().Trim();
                     if (name == "loc")
@@ -88,7 +85,6 @@ internal static class SitemapParser
         }
         catch (XmlException)
         {
-            // A broken sitemap still yields the entries read before the error.
         }
 
         return new Sitemap(pages, sitemaps);

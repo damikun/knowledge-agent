@@ -33,7 +33,6 @@ public sealed class HandoverPolicyMigrationTests(PostgresPersistenceFixture fixt
         await InsertWidgetAsync(dataSource, unsure, handoverEnabled: true, offerWhenUnsure: true);
         await InsertWidgetAsync(dataSource, onRequest, handoverEnabled: true, offerWhenUnsure: false);
 
-        // Only the widget that offered a person decided; the other one's offerWhenUnsure never applied.
         await InsertWidgetAsync(dataSource, mixed, handoverEnabled: true, offerWhenUnsure: false);
         await InsertWidgetAsync(dataSource, mixed, handoverEnabled: false, offerWhenUnsure: true);
 
@@ -43,7 +42,7 @@ public sealed class HandoverPolicyMigrationTests(PostgresPersistenceFixture fixt
         agents.ShouldBe(
             new Dictionary<string, string>
             {
-                ["builtin"] = """Never ["search_knowledge_base"]""",
+                ["assistant"] = """Never ["search_knowledge_base"]""",
                 ["no-tool"] = """Never ["search_knowledge_base"]""",
                 ["no-widgets"] = """OnRequest ["search_knowledge_base"]""",
                 ["unsure"] = """WhenUnsure ["search_knowledge_base"]""",

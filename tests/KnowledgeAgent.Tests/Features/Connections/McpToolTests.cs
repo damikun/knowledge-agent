@@ -277,13 +277,11 @@ public sealed class McpToolTests : IAsyncLifetime
 
         (await OfferedAsync(host, scripted, visitor)).ShouldBe([Lookup, Cancel, "mcp_shop__report_problem", "mcp_shop__broken"], ignoreOrder: true);
 
-        // A newly listed tool comes in without touching the agent, and asks for confirmation.
         server.Tools.Add(new McpToolInfo { Name = "refund_order", Title = "Refund an order" });
         (await OfferedAsync(host, scripted, visitor)).ShouldContain("mcp_shop__refund_order");
         new AgentMcpApp { Mode = McpAppMode.All }.Resolve(server.Tools).Tools.Single(item => item.Tool.Name == "refund_order").Policy
             .ShouldBe(McpToolPolicy.Confirm, "a tool that says nothing about its effect asks first");
 
-        // Nobody can confirm over MCP or the API, so only read-only tools are offered.
         (await OfferedAsync(host, scripted, new ChatCaller(ConversationChannel.Mcp, "Claude Desktop", StaffId: "apikey:1")))
             .ShouldBe([Lookup, "mcp_shop__report_problem", "mcp_shop__broken"], ignoreOrder: true);
     }
@@ -692,7 +690,6 @@ public sealed class McpToolTests : IAsyncLifetime
             McpTools = [new AgentMcpApp { ServerId = server.Id, Mode = McpAppMode.Chosen, Tools = tools.Select(tool => Approved(server, tool.Tool, tool.Policy)).ToList() }],
         });
 
-    // As an admin's save stores it: the tool's definition at that moment, or just the pick for a tool the app lacks.
     private static AgentMcpTool Approved(McpServer server, string name, McpToolPolicy policy) =>
         server.Tools.FirstOrDefault(tool => tool.Name == name) is { } info ? AgentMcpTool.Approve(info, policy) : new AgentMcpTool { Name = name, Policy = policy };
 
@@ -703,7 +700,6 @@ public sealed class McpToolTests : IAsyncLifetime
     }
 }
 
-// Keeps the servers it is given, so a test can change one (Enabled) after adding it.
 internal sealed class InMemoryMcpServerRepository : IMcpServerRepository
 {
     private readonly ConcurrentDictionary<Guid, McpServer> _servers = new();
@@ -737,7 +733,6 @@ internal sealed class InMemoryMcpServerRepository : IMcpServerRepository
     public Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default) => Task.FromResult(_servers.TryRemove(id, out _));
 }
 
-// Answers GetAsync with one contact; the MCP identity needs nothing else of the people repository.
 public class ContactLookup : System.Reflection.DispatchProxy
 {
     public KnowledgeAgent.Features.People.Contact? Contact { get; set; }

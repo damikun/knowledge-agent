@@ -9,7 +9,6 @@ using Microsoft.AspNetCore.WebUtilities;
 
 namespace KnowledgeAgent.Api.Tests.Scenarios;
 
-// Langfuse signs admins in through the realm's langfuse client and denies everyone else.
 public sealed partial class KeycloakSignInTests
 {
     private const string LangfuseClientSecret = "test-langfuse-secret-0123456789";
@@ -107,7 +106,6 @@ public sealed partial class KeycloakSignInTests
         ["state"] = Guid.NewGuid().ToString("N"),
     }));
 
-    // Redeems the code as Langfuse does, with the client secret, and returns the ID token's claims.
     private async Task<JsonNode> RedeemLangfuseCodeAsync(Uri callback)
     {
         callback.GetLeftPart(UriPartial.Path).ShouldBe(LangfuseCallback);

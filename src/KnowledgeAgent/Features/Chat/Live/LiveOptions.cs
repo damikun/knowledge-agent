@@ -6,7 +6,6 @@ public sealed class LiveOptions
 {
     public const string SectionName = "Live";
 
-    // Empty: Postgres when the database is PostgreSQL, InProcess otherwise.
     public string? Provider { get; set; }
 }
 

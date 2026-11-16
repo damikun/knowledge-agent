@@ -7,9 +7,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KnowledgeAgent.Tests.Features.Evaluations;
 
-// Ingestion, chunking and hybrid retrieval of the golden set on deterministic test embeddings, and the citation
-// plumbing with a rule-based agent. Answer quality needs a real model and runs through `make eval`.
-// The minimums are gate.offline in dataset.json, a few points below what the test embeddings score.
 public sealed class GoldenSetGateTests(EvalContainers containers) : IClassFixture<EvalContainers>
 {
     public const string DatasetName = "orbitwell-golden";

@@ -25,7 +25,6 @@ public sealed class EvalJudge(
     public const string PromptName = "eval-judge";
     public const string DefaultProfile = "judge";
 
-    // A whole chunk fits, so supported claims are never judged against a cut-off passage.
     internal const int MaxPassages = 24;
     internal const int MaxPassageChars = 8_000;
     internal const int MaxPassagesChars = 80_000;
@@ -63,7 +62,6 @@ public sealed class EvalJudge(
         ArgumentNullException.ThrowIfNull(item);
         string? model = null;
 
-        // Each judgement is its own trace, separate from the experiment item it grades.
         var previous = Activity.Current;
         Activity.Current = null;
         using var activity = Source.StartActivity("eval.judge", ActivityKind.Internal, parentContext: default);
@@ -92,7 +90,6 @@ public sealed class EvalJudge(
             var response = await handle.Client.GetResponseAsync(messages, options, cancellationToken);
             if (!JudgeResponseParser.TryParse(response.Text, out var criteria, out var problem))
             {
-                // One retry: models occasionally ignore the requested format.
                 messages.AddRange(response.Messages);
                 messages.Add(new ChatMessage(ChatRole.User, "Your reply was not the requested JSON object. Reply with only the JSON object."));
                 response = await handle.Client.GetResponseAsync(messages, handle.CreateOptions(), cancellationToken);

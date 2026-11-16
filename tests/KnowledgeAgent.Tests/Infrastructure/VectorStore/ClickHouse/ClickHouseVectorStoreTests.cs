@@ -124,7 +124,6 @@ public sealed class ClickHouseVectorStoreTests(ClickHouseContainerFixture clickH
 
         (await store.DeleteBySourceAsync(sourceId, Ct)).ShouldBe(2);
 
-        // Lightweight deletes are recorded as a mutation that masks rows via the hidden _row_exists column.
         using var admin = new ClickHouseClient(connectionString);
         var mutations = await QueryAsync(
             admin,
@@ -166,7 +165,6 @@ public sealed class ClickHouseVectorStoreTests(ClickHouseContainerFixture clickH
     [Fact]
     public async Task Ping_ReturnsFalse_WhenTheServerIsUnreachable()
     {
-        // Nothing listens on port 1, so no Docker is needed.
         var store = CreateStore("Host=127.0.0.1;Port=1;Username=default;Password=");
 
         (await store.PingAsync(Ct)).ShouldBeFalse();
@@ -234,7 +232,6 @@ public sealed class ClickHouseVectorStoreTests(ClickHouseContainerFixture clickH
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
             ActivityStopped = activity =>
             {
-                // The listener is process-wide: keep only the spans of this test's tables.
                 if (activity.GetTagItem("db.collection.name") is string table && (table == store.Table || table == missingTable.Table))
                 {
                     spans.Enqueue(activity);
@@ -269,7 +266,6 @@ public sealed class ClickHouseVectorStoreTests(ClickHouseContainerFixture clickH
         var table = $"chunks_{Guid.NewGuid():N}";
         using (var admin = new ClickHouseClient(connectionString))
         {
-            // The table as it was created before contextual retrieval.
             await admin.ExecuteNonQueryAsync($"CREATE DATABASE IF NOT EXISTS {Database}", cancellationToken: Ct);
             await admin.ExecuteNonQueryAsync(
                 $"CREATE TABLE {Database}.{table} (chunk_id UUID, source_id UUID, chunk_index UInt32, content String, metadata String, "

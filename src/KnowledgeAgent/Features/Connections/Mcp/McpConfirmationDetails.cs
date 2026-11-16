@@ -5,8 +5,6 @@ using KnowledgeAgent.Features.Chat.Tools;
 
 namespace KnowledgeAgent.Features.Connections.Mcp;
 
-// The arguments an action will run with, as "name: value" lines built here rather than described by the model,
-// so the Confirm button shows exactly what runs.
 internal static class McpConfirmationDetails
 {
     public const int MaxDetails = 20;

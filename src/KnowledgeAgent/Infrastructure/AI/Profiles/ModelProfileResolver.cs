@@ -209,7 +209,6 @@ internal sealed partial class ModelProfileResolver(
         return new ProviderSelection(key, providerOptions, provider);
     }
 
-    // A chat provider used for reranking falls back to its chat model when it names no rerank model.
     private static string? DefaultModel(ProviderSelection selection, ModelKind kind)
     {
         var descriptor = selection.Provider as IAiProviderDescriptor;
@@ -340,7 +339,6 @@ internal sealed partial class ModelProfileResolver(
             new(p.Provider, p.Model, p.Temperature, p.MaxOutputTokens, p.ReasoningEffort, p.ReasoningOutput, Dimensions: null);
     }
 
-    // Value equality tells ApplyLayer whether a layer changed anything.
     private sealed record ProfileSettings(
         string Provider,
         string? Model,
@@ -366,7 +364,6 @@ internal sealed partial class ModelProfileResolver(
             var dimensions = Dimensions;
             if (Clean(layer.Provider) is { } layerProvider && !string.Equals(layerProvider, Provider, StringComparison.OrdinalIgnoreCase))
             {
-                // A model id or dimension size from another provider is meaningless, so they fall back to the new defaults.
                 provider = layerProvider;
                 model = null;
                 dimensions = null;

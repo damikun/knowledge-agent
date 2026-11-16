@@ -10,7 +10,6 @@ internal static class SlackMessages
     public const string ReturnAction = "ka_return";
     public const string CloseAction = "ka_close";
 
-    // Slack truncates long messages; the inbox always has the whole conversation.
     private const int MaxTranscriptLength = 3500;
 
     public static (string Text, JsonArray Blocks) Request(HandoverContext context)
@@ -84,12 +83,10 @@ internal static class SlackMessages
 
     public const string AiSummaryLabel = "AI summary (unverified)";
 
-    // The model's words, defanged so its links are not clickable.
     private static string Untrusted(string text) => LinkDefang.ForSlack(Escape(text));
 
     private static string Text(ConversationMessage message) => message.Author == MessageAuthor.Assistant ? Untrusted(message.Text) : Escape(message.Text);
 
-    // Slack's three control characters.
     public static string Escape(string text) =>
         text.Replace("&", "&amp;", StringComparison.Ordinal).Replace("<", "&lt;", StringComparison.Ordinal).Replace(">", "&gt;", StringComparison.Ordinal);
 

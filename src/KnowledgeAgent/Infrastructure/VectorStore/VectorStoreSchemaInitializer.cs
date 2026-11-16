@@ -6,7 +6,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Infrastructure.VectorStore;
 
-// AttemptTimeout bounds a single attempt, since an unreachable host would otherwise hang until the HTTP timeout.
 internal sealed record StartupRetryPolicy(TimeSpan Timeout, TimeSpan InitialDelay, TimeSpan MaxDelay, TimeSpan AttemptTimeout)
 {
     public static StartupRetryPolicy Default { get; } = new(

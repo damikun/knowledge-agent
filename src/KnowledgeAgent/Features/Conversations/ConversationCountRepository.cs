@@ -59,7 +59,6 @@ internal sealed class ConversationCountRepository(KnowledgeDbContext db, DbConte
         }
 
         using var _ = await gate.EnterAsync(cancellationToken);
-        // A few grouped counts, so the rail costs a few small queries however many views it shows.
         var viewer = query.ViewerId;
         var byStatus = await Grouped(conversations, viewer).ToListAsync(cancellationToken);
         var unread = viewer is null

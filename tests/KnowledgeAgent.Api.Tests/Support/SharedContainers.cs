@@ -51,8 +51,6 @@ public static class SharedContainers
 
             if (_postgres is null || _clickHouse is null)
             {
-                // Every test app gets its own database on this server and test classes run in parallel, so the apps'
-                // connection pools together outgrow the default limit of 100.
                 var postgres = new PostgreSqlBuilder(ContainerImages.Postgres)
                     .WithUsername(PostgresUser)
                     .WithPassword(PostgresPassword)

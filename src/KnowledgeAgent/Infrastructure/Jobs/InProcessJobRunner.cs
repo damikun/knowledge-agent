@@ -7,8 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Infrastructure.Jobs;
 
-// Runs jobs in the API process (in-memory mode and tests). Nothing is stored: queued jobs are lost on shutdown
-// and the startup recoveries queue them again. Must honor JobPolicy the same way the Inngest engine does.
 internal sealed partial class InProcessJobRunner(
     IEnumerable<JobRegistration> registrations,
     IServiceScopeFactory scopeFactory,
@@ -55,8 +53,6 @@ internal sealed partial class InProcessJobRunner(
         await base.StopAsync(cancellationToken);
     }
 
-    // Cancelled rather than disposed: a host can stop its services again after disposing them, as the test host does,
-    // and a token source without a timer holds nothing to release.
     public override void Dispose()
     {
         _shutdown.Cancel();
@@ -90,7 +86,6 @@ internal sealed partial class InProcessJobRunner(
         }
     }
 
-    // Only the latest request of a burst gets through: an earlier one finds a newer generation when its wait ends.
     private async Task DebounceAsync(KindQueue queue, string key, long generation, TimeSpan period)
     {
         try
@@ -232,13 +227,10 @@ internal sealed partial class InProcessJobRunner(
     {
         private static readonly TimeSpan PruneInterval = TimeSpan.FromHours(1);
 
-        // Keys that run now; true when the key was queued again meanwhile and runs once more.
         private readonly Dictionary<string, bool> _running = new(StringComparer.Ordinal);
 
-        // Keys of an idempotent kind and when they were first queued.
         private readonly Dictionary<string, DateTimeOffset> _claimed = new(StringComparer.Ordinal);
 
-        // Keys waiting out their debounce period, with the generation of their latest request.
         private readonly Dictionary<string, long> _debouncing = new(StringComparer.Ordinal);
 
         private DateTimeOffset _nextPrune = DateTimeOffset.MinValue;

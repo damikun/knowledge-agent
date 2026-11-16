@@ -190,7 +190,6 @@ public sealed class IntegrationTestRunTests
         result.Message.ShouldContain("Invite the bot to the channel");
     }
 
-    // GreenMail with SMTP on 3025 and IMAP on 3143, accepting any address and password.
     private static async Task<IContainer> StartMailServerAsync()
     {
         var mail = new ContainerBuilder(ContainerImages.GreenMail)
@@ -220,7 +219,6 @@ public sealed class IntegrationTestRunTests
         ImapPassword = "secret",
     };
 
-    // GreenMail delivers at once, so the mailbox can be counted right after the test.
     private static async Task<int> CountAsync(IContainer mail, string mailbox)
     {
         using var imap = new ImapClient();
@@ -292,7 +290,6 @@ public sealed class IntegrationTestRunTests
         public Task<Uri> OpenSocketAsync(CancellationToken cancellationToken = default) => throw new NotSupportedException();
     }
 
-    // Unconfigured email must fail before any transport call.
     private sealed class UnusedEmail : IEmailTransport
     {
         public Task SendAsync(MimeMessage message, CancellationToken cancellationToken = default) => throw new NotSupportedException();

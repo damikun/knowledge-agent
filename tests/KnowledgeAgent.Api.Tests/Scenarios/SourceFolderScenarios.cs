@@ -124,7 +124,6 @@ public abstract class SourceFolderScenarios(AppFixture fixture)
             web.AddHtml(path, TestDocuments.HtmlArticle($"{marker} {path}", [$"The {marker} page {path} belongs to a documentation site."]));
         }
 
-        // The test server listens on 127.0.0.1, so a localhost URL is a second site with the same pages.
         var intro = await AddUrlAsync(app, web.Url(paths[0]), inbox.Id);
         var install = await AddUrlAsync(app, web.Url(paths[1]), inbox.Id);
         var faq = await AddUrlAsync(app, new UriBuilder(web.Url(paths[2])) { Host = "localhost" }.Uri, inbox.Id);
@@ -330,7 +329,6 @@ public abstract class SourceFolderScenarios(AppFixture fixture)
         return await app.Client.PostAsync("/api/sources/upload", form, Ct);
     }
 
-    // Holds document embeddings, which keeps a source in processing until the test releases it.
     private sealed class HeldEmbeddings
     {
         public TaskCompletionSource Started { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);

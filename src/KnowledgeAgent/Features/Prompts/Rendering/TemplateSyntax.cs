@@ -3,14 +3,12 @@ using System.Globalization;
 
 namespace KnowledgeAgent.Features.Prompts.Rendering;
 
-// Deliberately tolerant: malformed input never throws, scanning simply stops.
 internal static class TemplateSyntax
 {
     public static readonly FrozenSet<string> LiteralKeywords = FrozenSet.ToFrozenSet(["true", "false", "null", "undefined"], StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> BlocksRequiringArgument = FrozenSet.ToFrozenSet(["if", "unless", "each", "with"], StringComparer.Ordinal);
 
-    // Finds mistakes that Handlebars.Net silently renders as nothing, such as {{#if}} without a condition.
     public static string? FindProblem(string template)
     {
         foreach (var rawTag in ReadTags(template))
@@ -69,14 +67,12 @@ internal static class TemplateSyntax
                 yield break;
             }
 
-            // \{{literal}} is printed as is, while \\{{x}} is an escaped backslash followed by a real tag.
             if (open > 0 && template[open - 1] == '\\' && !(open > 1 && template[open - 2] == '\\'))
             {
                 index = SkipPast(template, open + 2, "}}");
                 continue;
             }
 
-            // Raw blocks {{{{raw}}}} ... {{{{/raw}}}} are not parsed.
             if (At(template, open, "{{{{"))
             {
                 var rawClose = template.IndexOf("{{{{/", open + 4, StringComparison.Ordinal);
@@ -220,7 +216,6 @@ internal static class TemplateSyntax
 
             if (c == '|')
             {
-                // Block parameters: {{#each items as |item index|}}.
                 var end = text.IndexOf('|', position + 1);
                 position = end < 0 ? text.Length : end + 1;
                 if (tokens.Count > 0 && tokens[^1] is PathToken { Text: "as" })
@@ -307,7 +302,6 @@ internal static class TemplateSyntax
 
         if (position == begin)
         {
-            // Consume a stray character such as '=' so that scanning always advances.
             position++;
             return new LiteralToken(text[begin..position]);
         }

@@ -38,7 +38,6 @@ public sealed class ScriptedChatClient : IChatClient
         return new ChatResponse(new ChatMessage(ChatRole.Assistant, contents)) { FinishReason = ChatFinishReason.ToolCalls };
     });
 
-    // A short note before the call, as models often write: "I'll check the returns policy."
     public ScriptedChatClient ThenTextAndToolCall(string text, string toolName, object? arguments = null) => Then((_, _) =>
         new ChatResponse(new ChatMessage(
             ChatRole.Assistant,

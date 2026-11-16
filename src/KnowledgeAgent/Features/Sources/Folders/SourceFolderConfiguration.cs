@@ -11,7 +11,6 @@ internal sealed class SourceFolderConfiguration : IEntityTypeConfiguration<Sourc
         builder.HasKey(folder => folder.Id);
         builder.Property(folder => folder.Name).HasMaxLength(SourceFolder.MaxNameLength);
 
-        // Deleting a folder deletes its subfolders; the sources foreign key then leaves their sources unfiled.
         builder.HasOne<SourceFolder>()
             .WithMany()
             .HasForeignKey(folder => folder.ParentId)

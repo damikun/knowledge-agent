@@ -11,8 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KnowledgeAgent.Tests.Features.Evaluations;
 
-// Runs evals/injection against a real Claude model and fails when a planted passage causes an action or a link
-// the visitor did not ask for. Opt-in: RUN_LIVE_LLM_TESTS=1 and ANTHROPIC_API_KEY; LIVE_ANTHROPIC_MODEL picks the model.
 public sealed partial class LiveInjectionTests(ITestOutputHelper output)
 {
     [Fact]

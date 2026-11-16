@@ -12,17 +12,14 @@ public sealed class SlackApiException(string method, string error) : Exception($
 
 public interface ISlackGateway
 {
-    // Returns the message ts, which identifies it (and its thread) in the channel.
     Task<string> PostMessageAsync(string channel, string text, JsonArray? blocks = null, string? threadTs = null, CancellationToken cancellationToken = default);
 
     Task UpdateMessageAsync(string channel, string ts, string text, JsonArray? blocks = null, CancellationToken cancellationToken = default);
 
     Task<string?> GetUserNameAsync(string userId, CancellationToken cancellationToken = default);
 
-    // auth.test: which workspace and bot the token belongs to.
     Task<string> TestAsync(CancellationToken cancellationToken = default);
 
-    // apps.connections.open: a fresh Socket Mode WebSocket address.
     Task<Uri> OpenSocketAsync(CancellationToken cancellationToken = default);
 }
 

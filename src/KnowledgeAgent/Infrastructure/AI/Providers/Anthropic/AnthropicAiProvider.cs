@@ -9,7 +9,6 @@ namespace KnowledgeAgent.Infrastructure.AI.Providers.Anthropic;
 
 internal sealed class AnthropicAiProvider(ILogger<AnthropicAiProvider> logger) : IAiProvider, IAiProviderDescriptor
 {
-    // Thinking tokens count toward this limit.
     public const int DefaultMaxOutputTokens = 16000;
 
     private readonly OneTimeWarnings _warnings = new(logger);
@@ -68,12 +67,10 @@ internal sealed class AnthropicAiProvider(ILogger<AnthropicAiProvider> logger) :
     {
         ApiKey = options.ApiKey!.Trim(),
 
-        // Always explicit so that an ambient ANTHROPIC_BASE_URL on the machine never redirects the application.
         BaseUrl = string.IsNullOrWhiteSpace(options.Endpoint) ? EnvironmentUrl.Production : options.Endpoint.Trim(),
         MaxRetries = settings.MaxRetries,
         Timeout = settings.Timeout,
 
-        // The Microsoft.Extensions.AI pipeline already emits the GenAI spans.
         OpenTelemetry = false,
     };
 }

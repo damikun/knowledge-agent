@@ -15,7 +15,6 @@ internal sealed record NormalizedTextSearch(
     public bool MatchesNothing => Pattern.Length == 0;
 }
 
-// The ClickHouse store runs the same pattern with RE2, so it must mean the same in RE2 and .NET.
 internal static class TextMatching
 {
     public const int MaxTextLength = 200;
@@ -27,8 +26,6 @@ internal static class TextMatching
     public static string Clean(string? text) =>
         string.Concat((text ?? string.Empty).Where(character => !char.IsControl(character) || char.IsWhiteSpace(character))).Trim();
 
-    // With whole words, a letter or digit at either end must not continue into a longer word;
-    // punctuation needs no boundary, so "C++" still matches in "C++20".
     public static string Pattern(string text, bool matchCase, bool wholeWords)
     {
         var words = Words(text);
@@ -52,10 +49,8 @@ internal static class TextMatching
         return builder.ToString();
     }
 
-    // Every match contains each word as written, so the longest one makes the most selective prefilter.
     public static string Needle(string text) => Words(text).MaxBy(word => word.Length) ?? string.Empty;
 
-    // Only ASCII punctuation and symbols are syntax in RE2 or .NET, and RE2 rejects any other escaped character.
     internal static string Escape(string word)
     {
         var builder = new StringBuilder(word.Length * 2);
@@ -72,10 +67,8 @@ internal static class TextMatching
         return builder.ToString();
     }
 
-    // Splits on the same characters as [\s\p{Z}].
     private static string[] Words(string text) => text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
 
-    // The characters of [\p{L}\p{N}].
     private static bool IsWordCharacter(Rune rune) => Rune.GetUnicodeCategory(rune) is
         UnicodeCategory.UppercaseLetter or UnicodeCategory.LowercaseLetter or UnicodeCategory.TitlecaseLetter
         or UnicodeCategory.ModifierLetter or UnicodeCategory.OtherLetter

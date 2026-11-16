@@ -53,7 +53,6 @@ public sealed class KnowledgeAgentApp : IAsyncDisposable
     public TestLogSink Logs { get; }
     public IServiceProvider Services => Factory.Services;
 
-    // Collected rather than thrown, so one shutdown bug does not fail every test class.
     public IReadOnlyList<Exception> ShutdownErrors => _shutdownErrors;
 
     public static async Task<KnowledgeAgentApp> StartAsync(
@@ -72,7 +71,6 @@ public sealed class KnowledgeAgentApp : IAsyncDisposable
 
         try
         {
-            // Program and its startup initializers run during CreateClient, so keep them off the test thread.
             var client = await Task.Run(() => factory.CreateClient(new WebApplicationFactoryClientOptions
             {
                 AllowAutoRedirect = true,
@@ -120,7 +118,6 @@ public sealed class KnowledgeAgentApp : IAsyncDisposable
             ["AI:Providers:openai:ApiKey"] = string.Empty,
             ["AI:Providers:ollama:Endpoint"] = string.Empty,
 
-            // Blank the well-known fallback variables so a developer's real key is never used.
             ["ANTHROPIC_API_KEY"] = string.Empty,
             ["OPENAI_API_KEY"] = string.Empty,
             ["VOYAGE_API_KEY"] = string.Empty,
@@ -134,7 +131,6 @@ public sealed class KnowledgeAgentApp : IAsyncDisposable
             ["AI:Profiles:embedding:Provider"] = FakeModels.ProviderKey,
             ["OTEL_EXPORTER_OTLP_ENDPOINT"] = string.Empty,
 
-            // Every request is the local admin; AuthScenarios act as other users through TestUsers.
             ["Auth:Mode"] = "None",
         };
 
@@ -151,7 +147,6 @@ public sealed class KnowledgeAgentApp : IAsyncDisposable
         return settings;
     }
 
-    // Keeps the fake Langfuse server running so tests can assert on what the app exported.
     public async ValueTask StopAsync()
     {
         if (Interlocked.Exchange(ref _stopped, 1) != 0)
@@ -196,7 +191,6 @@ public sealed class KnowledgeAgentApp : IAsyncDisposable
         }
         catch (Exception)
         {
-            // Startup already failed, and the original exception is the one that matters.
         }
     }
 }

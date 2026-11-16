@@ -55,7 +55,6 @@ internal sealed partial class KnowledgeSearch(
             ? Task.FromResult<IReadOnlyList<VectorSearchHit>>([])
             : vectorStore.SearchAsync(new VectorSearchQuery(embedding.Vectors[0], embedding.ModelKey, pool, sourceIds, request.MinScore), cancellationToken);
 
-        // Keyword search also filters by the embedding model key, so both retrievers search the same chunk set.
         var keywordTask = terms.Count == 0
             ? Task.FromResult(KeywordResult.Skipped)
             : KeywordSearchAsync(new KeywordSearchQuery(terms, embedding.ModelKey, pool, sourceIds), cancellationToken);
@@ -70,8 +69,6 @@ internal sealed partial class KnowledgeSearch(
             degraded.Add(SearchDegradations.KeywordFailed);
         }
 
-        // Scores are relative to the retrievers that returned something, so a failed or empty keyword search
-        // leaves the best vector hit at 1 instead of halving every score.
         var candidates = mode switch
         {
             SearchModes.Vector => RankFusion.Single(vectorHits, keyword: false),
@@ -79,7 +76,6 @@ internal sealed partial class KnowledgeSearch(
             _ => RankFusion.Fuse(vectorHits, keyword.Hits, settings.RrfK, keywordRan: keyword.Hits.Count > 0, settings.VectorWeight, settings.KeywordWeight),
         };
 
-        // Drop hits of deleted sources before reranking, so they take no reranker slots.
         var (sources, lookupFailed) = await LookupSourcesAsync(candidates.Select(candidate => candidate.Chunk.SourceId).Distinct().ToList(), cancellationToken).ConfigureAwait(false);
         if (lookupFailed)
         {
@@ -145,7 +141,6 @@ internal sealed partial class KnowledgeSearch(
             return (hits, true);
         }
 
-        // Null means no reranker is configured; a score count that doesn't match is a broken answer.
         if (result is null)
         {
             return (hits, false);
@@ -158,7 +153,6 @@ internal sealed partial class KnowledgeSearch(
 
         activity?.SetTag(SearchTelemetry.Tags.Reranker, result.Model);
 
-        // Ties keep the fused order, which matters because coarse LLM ratings tie often.
         var reranked = head
             .Select((hit, index) => (Hit: hit, Relevance: Math.Clamp(result.Scores[index], 0d, 1d), Index: index))
             .OrderByDescending(entry => entry.Relevance)

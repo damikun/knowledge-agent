@@ -3,7 +3,6 @@ using KnowledgeAgent.Features.Chat.Tools;
 
 namespace KnowledgeAgent.Features.Chat.Agents;
 
-// Caps on tools with side effects in one turn, sub-agents included. Reading tools are not capped here.
 internal static class TurnBudgets
 {
     public const string Handover = "handover";

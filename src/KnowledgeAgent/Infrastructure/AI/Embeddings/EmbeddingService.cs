@@ -113,7 +113,6 @@ internal sealed partial class EmbeddingService(
 
     internal static string ModelKey(ResolvedModelProfile profile, int dimensions) => $"{profile.ProviderType}:{profile.Model}:{dimensions}";
 
-    // nomic-embed models are trained with "search_query: " and "search_document: " task prefixes.
     internal static bool UsesTaskPrefixes(string model) => model.Contains("nomic", StringComparison.OrdinalIgnoreCase);
 
     private IEmbeddingGenerator<string, Embedding<float>> GetGenerator(

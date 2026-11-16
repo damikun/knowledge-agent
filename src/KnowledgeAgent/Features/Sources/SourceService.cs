@@ -206,7 +206,6 @@ internal sealed partial class SourceService(
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        // Vectors go first so that a failure leaves the source listed and the delete can be retried.
         foreach (var page in await repository.ListPagesAsync(id, cancellationToken).ConfigureAwait(false))
         {
             await vectorStore.DeleteBySourceAsync(page.Id, cancellationToken).ConfigureAwait(false);
@@ -241,7 +240,6 @@ internal sealed partial class SourceService(
         var websites = sources.Where(source => source.Type == SourceType.Website).Select(source => source.Id).ToHashSet();
         foreach (var source in sources.OrderBy(s => s.CreatedAt).ThenBy(s => s.Id))
         {
-            // Reset without queueing: the website's crawl ingests them again instead of skipping them as unchanged.
             var crawled = source.ParentId is { } parentId && websites.Contains(parentId);
             await ResetAndEnqueueAsync(source, enqueue: !crawled, cancellationToken).ConfigureAwait(false);
         }
@@ -358,8 +356,6 @@ internal sealed partial class SourceService(
             throw new ValidationFailedException("url", $"The URL must be at most {SourceDefaults.MaxUrlLength} characters long.");
         }
 
-        // Private and loopback hosts are not rejected here. The fetcher blocks them at connect time,
-        // the only point where resolved addresses can be checked reliably.
         return uri;
     }
 
@@ -388,7 +384,6 @@ internal sealed partial class SourceService(
             return null;
         }
 
-        // Browsers may send a client path such as C:\fakepath\name.pdf.
         var name = fileName.Trim();
         var separator = name.LastIndexOfAny(['/', '\\']);
         if (separator >= 0)

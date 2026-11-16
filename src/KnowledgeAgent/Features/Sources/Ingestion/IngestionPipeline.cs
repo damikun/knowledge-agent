@@ -48,7 +48,6 @@ internal sealed partial class IngestionPipeline(
 
         if (source.Type == SourceType.Website)
         {
-            // A website has no content of its own; its crawl ingests the pages.
             await queue.EnqueueCrawlAsync(source.Id, cancellationToken).ConfigureAwait(false);
             activity?.SetTag(IngestionTelemetry.Tags.Outcome, "crawl");
             return;
@@ -103,8 +102,6 @@ internal sealed partial class IngestionPipeline(
         IngestionTelemetry.Duration.Record(timeProvider.GetElapsedTime(started).TotalSeconds, tags);
     }
 
-    // For pages the crawler already fetched and extracted. Retries are the caller's: a transient failure leaves the page
-    // Pending and is rethrown instead of being queued again.
     internal async Task<SourceStatus> IngestFetchedAsync(Source source, ExtractedDocument document, string? jobRunId, CancellationToken cancellationToken)
     {
         using var activity = IngestionTelemetry.ActivitySource.StartActivity("ingest page");
@@ -226,7 +223,6 @@ internal sealed partial class IngestionPipeline(
         IngestionTelemetry.ChunksStored.Add(chunks.Count);
     }
 
-    // Labels the source for a person to read; on the daily refresh too, so a changed page is caught.
     private void FlagSuspicious(Source source, IReadOnlyList<TextChunk> chunks)
     {
         var suspicious = InjectionScan.CountSuspicious(chunks.Select(chunk => chunk.Content));
@@ -309,7 +305,6 @@ internal sealed partial class IngestionPipeline(
         return document;
     }
 
-    // Each input is a chunk with its context in front, so the vector captures what the chunk is about.
     private async Task<(string ModelKey, List<ReadOnlyMemory<float>> Vectors)> EmbedAsync(
         Source source,
         IReadOnlyList<string> chunks,
@@ -346,7 +341,6 @@ internal sealed partial class IngestionPipeline(
 
             vectors.AddRange(result.Vectors);
 
-            // The last batch is saved together with the switch to storing.
             if (vectors.Count < chunks.Count)
             {
                 source.EmbeddedChunks = vectors.Count;
@@ -365,8 +359,6 @@ internal sealed partial class IngestionPipeline(
         return repository.UpdateAsync(source, cancellationToken);
     }
 
-    // A failed attempt leaves the stored vectors as they were until it reaches the storing stage, so ChunkCount
-    // goes back to counting them.
     private static void AbandonAttempt(Source source, int storedChunkCount)
     {
         if (source.Stage != SourceStage.Storing)
@@ -416,7 +408,6 @@ internal sealed partial class IngestionPipeline(
     {
         if (!await StillExistsAsync(source.Id).ConfigureAwait(false))
         {
-            // Deleted during processing, so drop anything this attempt may have stored.
             await TryDeleteVectorsAsync(source.Id).ConfigureAwait(false);
             LogDeletedWhileProcessing(logger, source.Id);
             return "deleted";
@@ -425,7 +416,6 @@ internal sealed partial class IngestionPipeline(
         var message = ErrorSanitizer.ToUserMessage(exception);
         if (exception is ModelNotConfiguredException)
         {
-            // The embedding model is the only model ingestion uses. Retrying cannot help; saving one queues the source.
             await SetStatusAsync(source, SourceStatus.Waiting, message).ConfigureAwait(false);
             LogWaiting(logger, source.Id, message);
             return "waiting";
@@ -445,7 +435,6 @@ internal sealed partial class IngestionPipeline(
             }
             catch (Exception enqueueException)
             {
-                // The source stays Pending, so the startup recovery queues it again.
                 LogRetryNotQueued(logger, enqueueException, source.Id);
             }
 
@@ -496,7 +485,6 @@ internal sealed partial class IngestionPipeline(
         }
     }
 
-    // An attempt interrupted by shutdown does not count. The source is recovered on the next start.
     private async Task ResetAfterCancellationAsync(Source source)
     {
         try

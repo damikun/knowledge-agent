@@ -45,7 +45,6 @@ public static class VectorStoreModule
         return builder;
     }
 
-    // Chosen on first resolve rather than at registration, so configuration added after AddVectorStore is honoured.
     private static IVectorStore ResolveVectorStore(IServiceProvider services)
     {
         var options = services.GetRequiredService<IOptions<VectorStoreOptions>>().Value;

@@ -9,7 +9,6 @@ namespace KnowledgeAgent.Infrastructure.AI.Providers.OpenAI;
 
 internal sealed class OpenAiProvider(ILogger<OpenAiProvider> logger) : IAiProvider, IAiProviderDescriptor
 {
-    // The SDK requires a non-empty key, even for keyless OpenAI-compatible servers.
     internal const string KeylessCredential = "no-key";
 
     private static readonly TimeSpan NetworkTimeout = TimeSpan.FromMinutes(10);
@@ -48,13 +47,11 @@ internal sealed class OpenAiProvider(ILogger<OpenAiProvider> logger) : IAiProvid
 
             if (chatOptions.Reasoning is { } reasoning)
             {
-                // Chat completions have no reasoning summaries, so only the effort is kept.
                 chatOptions.Reasoning = reasoning.Effort is null ? null : new ReasoningOptions { Effort = reasoning.Effort };
             }
         }
         else
         {
-            // Non-reasoning models reject reasoning parameters.
             chatOptions.Reasoning = null;
         }
     }
@@ -64,7 +61,6 @@ internal sealed class OpenAiProvider(ILogger<OpenAiProvider> logger) : IAiProvid
         var result = await CreateClient(options).GetOpenAIModelClient().GetModelsAsync(cancellationToken);
         var models = result.Value.Select(model => model.Id);
 
-        // No endpoint means the official API, which also lists models that are neither chat nor embedding models.
         if (string.IsNullOrWhiteSpace(options.Endpoint))
         {
             models = models.Where(IsChatOrEmbeddingModel);

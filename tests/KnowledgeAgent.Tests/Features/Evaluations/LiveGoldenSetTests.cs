@@ -10,8 +10,6 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KnowledgeAgent.Tests.Features.Evaluations;
 
-// The golden set with a real Claude model answering and judging, on test embeddings so no embedding key is needed.
-// Opt-in: RUN_LIVE_LLM_TESTS=1 and ANTHROPIC_API_KEY; LIVE_ANTHROPIC_MODEL picks a cheaper model.
 public sealed class LiveGoldenSetTests(ITestOutputHelper output)
 {
     [Fact]

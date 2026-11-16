@@ -43,7 +43,6 @@ public abstract class HandoverScenarios(AppFixture fixture)
         var first = await visitor.ChatAsync("Can I change my order?");
         var conversationId = first.ConversationId;
 
-        // The widget asks for the address first; a client that skips the form is held to it too.
         using (var noEmail = await visitor.PostRawAsync($"conversations/{conversationId}/handover", new VisitorHandoverRequest(Name: "Ana")))
         {
             (await noEmail.ReadProblemAsync(HttpStatusCode.BadRequest)).FieldErrors.ShouldContainKey("email");
@@ -162,7 +161,6 @@ public abstract class HandoverScenarios(AppFixture fixture)
             update.EnsureSuccessStatusCode();
         }
 
-        // A model that does what the passage says.
         var scripted = app.ChatModels.Use("orchestrator", new ScriptedChatClient()
             .ThenToolCall(ToolNames.SearchKnowledgeBase, new { query = $"{marker} warranty" })
             .ThenToolCalls(
@@ -219,7 +217,6 @@ public abstract class HandoverScenarios(AppFixture fixture)
             none.StatusCode.ShouldBe(HttpStatusCode.NoContent, "no request for a person was stored");
         }
 
-        // Later turns keep testing the same widget without naming it again.
         (await app.ChatAsync(new ChatRequestDto(stream.ConversationId, "Thanks"))).Errors.ShouldBeEmpty();
         scripted.Requests[^1].Options!.Tools!.Select(tool => tool.Name).ShouldContain(ToolNames.RequestHumanHandover);
 
@@ -588,7 +585,6 @@ public abstract class HandoverScenarios(AppFixture fixture)
             message => message.Text.ShouldBe("No, that's all. Thanks!"));
     }
 
-    // GreenMail with SMTP on 3025 and IMAP on 3143, accepting any address and password.
     private static async Task<IContainer> StartMailServerAsync()
     {
         var mail = new ContainerBuilder(ContainerImages.GreenMail)
@@ -623,7 +619,6 @@ public abstract class HandoverScenarios(AppFixture fixture)
         StaffDomains: null,
         PortalUrl: "http://localhost:5173");
 
-    // Runs the conversation's request out of time at once, instead of after the widget's wait.
     private static async Task ExpireAsync(KnowledgeAgentApp app, Guid conversationId)
     {
         var handover = await app.Client.GetJsonAsync<HandoverDto>($"/api/conversations/{conversationId}/handover");

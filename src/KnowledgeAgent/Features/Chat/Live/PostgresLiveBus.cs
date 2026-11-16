@@ -10,7 +10,6 @@ namespace KnowledgeAgent.Features.Chat.Live;
 
 internal sealed partial class PostgresLiveBus(NpgsqlDataSource dataSource, LivePayload payloads, ILogger<PostgresLiveBus> logger) : ILiveBus
 {
-    // Publishing runs inside requests, so a slow database must not hold them up for the whole command timeout.
     internal static readonly TimeSpan Timeout = TimeSpan.FromSeconds(5);
 
     public async Task PublishAsync(LiveMessage message, CancellationToken cancellationToken = default)
@@ -37,7 +36,6 @@ internal sealed partial class PostgresLiveBus(NpgsqlDataSource dataSource, LiveP
         }
         catch (Exception ex) when (ex is NpgsqlException or InvalidOperationException or TimeoutException)
         {
-            // InvalidOperationException covers the data source being disposed while the app shuts down.
             LogPublishFailed(logger, ex, message.ConversationId);
         }
     }
@@ -49,7 +47,6 @@ internal sealed partial class PostgresLiveBus(NpgsqlDataSource dataSource, LiveP
     private static partial void LogPayloadTooLarge(ILogger logger, Guid conversationId);
 }
 
-// LISTEN on one held connection; relays one notification at a time, in arrival order.
 internal sealed partial class PostgresLiveListener(
     NpgsqlDataSource dataSource,
     LivePayload payloads,
@@ -58,13 +55,10 @@ internal sealed partial class PostgresLiveListener(
 {
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
 
-    // A half-open connection never fails on its own, so an idle one is checked now and then.
     private static readonly TimeSpan KeepAliveInterval = TimeSpan.FromSeconds(30);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Relayed one at a time in arrival order: a view skips a message older than the last it showed.
-        // Unbounded, since the connection raises notifications synchronously and each is a few bytes.
         var received = Channel.CreateUnbounded<string>(new UnboundedChannelOptions { SingleReader = true });
         var relaying = RelayAsync(received.Reader, stoppingToken);
         try
@@ -117,7 +111,6 @@ internal sealed partial class PostgresLiveListener(
             }
             catch (Exception ex)
             {
-                // Live views on this instance miss other instances' updates until then; they catch up on reconnect.
                 recovering = true;
                 LogListenFailed(logger, ex, RetryDelay.TotalSeconds);
                 await Task.Delay(RetryDelay, stoppingToken);
@@ -133,12 +126,10 @@ internal sealed partial class PostgresLiveListener(
             {
                 if (!LivePayload.TryParse(payload, out var message, out var origin))
                 {
-                    // An older or newer version during a rolling deploy.
                     LogUnreadable(logger, payload);
                     continue;
                 }
 
-                // This instance's own views got it from the hub already.
                 if (origin != payloads.InstanceId)
                 {
                     await relay.RelayAsync(message, stoppingToken);
@@ -163,12 +154,10 @@ internal sealed partial class PostgresLiveListener(
     private static partial void LogUnreadable(ILogger logger, string payload);
 }
 
-// Payload: "<kind>:<conversation>:<origin>:<value>", the value being the first stored sequence or the status.
 internal sealed class LivePayload
 {
     public const string Channel = "ka_live";
 
-    // PostgreSQL rejects a NOTIFY payload of 8000 bytes or more.
     public const int MaxBytes = 7_999;
 
     private const string MessagesKind = "message";

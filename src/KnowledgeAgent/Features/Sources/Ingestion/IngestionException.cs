@@ -5,6 +5,5 @@ internal sealed class IngestionException(string message, bool isPermanent = fals
 {
     public bool IsPermanent { get; } = isPermanent;
 
-    // The HTTP status when the server answered with an error.
     public int? StatusCode { get; init; }
 }

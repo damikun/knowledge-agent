@@ -148,7 +148,6 @@ public sealed class HtmlTextExtractorTests
             + "</body></html>";
         string? text = null;
 
-        // A 1 MB stack, like a thread-pool thread: recursion per nesting level would overflow it.
         var thread = new Thread(() => text = _extractor.Extract(html, null).Text, 1024 * 1024);
         thread.Start();
         thread.Join();

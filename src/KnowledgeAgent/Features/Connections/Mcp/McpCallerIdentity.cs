@@ -5,8 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KnowledgeAgent.Features.Connections.Mcp;
 
-// Who the tool call is for, sent in the request's _meta when the server asks for it. The user id is only the one the
-// website signed, never a value from the browser or the model, so the server can limit the data to that person.
 internal static class McpCallerIdentity
 {
     public const string MetaKey = "knowledge-agent/caller";

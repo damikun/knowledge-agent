@@ -15,7 +15,6 @@ using ModelContextProtocol.Protocol;
 
 namespace KnowledgeAgent.Features.Connections.Mcp;
 
-// API and MCP channels only get tools that run on their own, since nobody there can press Confirm.
 internal sealed partial class McpToolSource(
     IMcpServerRepository servers,
     McpClientPool pool,
@@ -85,7 +84,6 @@ internal sealed partial class McpToolSource(
         _ => false,
     };
 
-    // In a scope of its own, so the turn's database context keeps what it tracks; a failure only costs the cache.
     private async Task SaveToolsAsync(Guid serverId, IReadOnlyList<McpToolInfo> tools, CancellationToken cancellationToken)
     {
         try
@@ -172,7 +170,6 @@ internal sealed class McpAgentTool : IAgentTool
 
     public string ServerName => _server.Name;
 
-    // The hints are the server's claim, so they count only in the definition an admin approved.
     internal static McpCallSafety SafetyOf(McpToolInfo tool, McpToolApproval approval) =>
         approval == McpToolApproval.Approved && (tool.ReadOnlyHint == true || tool.IdempotentHint == true)
             ? McpCallSafety.RetrySafe
@@ -238,7 +235,6 @@ internal sealed class McpAgentTool : IAgentTool
         return new ToolResult(isError ? "Error: " + text : text, summary, isError) { LogText = Shorten(text, Math.Max(100, _options.LoggedResultChars)), Untrusted = true };
     }
 
-    // Stable across the retries of one call, and different for a call the model makes again.
     internal static string IdempotencyKey(ToolInvocation invocation) => $"{invocation.Turn.TurnId:N}:{invocation.CallId}";
 
     internal static string Render(CallToolResult result)

@@ -1,6 +1,5 @@
 namespace KnowledgeAgent.Infrastructure.Telemetry;
 
-// Names must start with "KnowledgeAgent." to match the wildcard subscription in ServiceDefaults.
 public static class KnowledgeAgentTelemetry
 {
     public const string Prefix = "KnowledgeAgent";

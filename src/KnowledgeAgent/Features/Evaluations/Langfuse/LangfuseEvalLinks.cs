@@ -6,8 +6,6 @@ namespace KnowledgeAgent.Features.Evaluations.Langfuse;
 public sealed class LangfuseEvalLinks(LangfuseOptions options, LangfuseEvalClient client, ILogger logger) : IDisposable
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
-    // Read without the gate; set only once the lookup has ended, so a reader never takes a lookup under way for one
-    // that found nothing.
     private volatile string? _projectId = string.IsNullOrWhiteSpace(options.ProjectId) ? null : options.ProjectId.Trim();
     private volatile bool _lookedUp;
 

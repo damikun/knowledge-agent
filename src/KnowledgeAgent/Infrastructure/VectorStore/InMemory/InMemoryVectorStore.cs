@@ -3,8 +3,6 @@ using System.Text.RegularExpressions;
 
 namespace KnowledgeAgent.Infrastructure.VectorStore.InMemory;
 
-// Readers use an immutable snapshot without locks; writers are serialized and swap in a new one.
-// Append-only like the ClickHouse table.
 internal sealed class InMemoryVectorStore : IVectorStore
 {
     private static readonly IReadOnlyList<VectorSearchHit> NoHits = [];
@@ -29,7 +27,6 @@ internal sealed class InMemoryVectorStore : IVectorStore
             return Task.CompletedTask;
         }
 
-        // Copy outside the lock: callers may reuse their vectors and dictionaries after the call returns.
         var stored = new StoredChunk[chunks.Count];
         for (var i = 0; i < chunks.Count; i++)
         {
@@ -83,7 +80,6 @@ internal sealed class InMemoryVectorStore : IVectorStore
         var vector = search.Vector.Span;
         var vectorSumOfSquares = VectorMath.SumOfSquares(vector);
 
-        // Bounded heap that always evicts the worst candidate, so memory stays O(TopK).
         var best = new PriorityQueue<Candidate, Candidate>(search.TopK + 1, WorstFirstComparer.Instance);
         foreach (var bucket in SelectBuckets(snapshot, search.SourceIds))
         {
@@ -111,7 +107,6 @@ internal sealed class InMemoryVectorStore : IVectorStore
             }
         }
 
-        // The heap yields the worst candidate first, so the result is filled from the end.
         var hits = new VectorSearchHit[best.Count];
         for (var i = hits.Length - 1; i >= 0; i--)
         {
@@ -140,7 +135,6 @@ internal sealed class InMemoryVectorStore : IVectorStore
             return Task.FromResult(NoHits);
         }
 
-        // Statistics cover every chunk of the model regardless of the source filter, so scores do not depend on it.
         var termFrequencies = new int[chunks.Count][];
         var documentFrequencies = new long[patterns.Length];
         long totalLength = 0;
@@ -256,7 +250,6 @@ internal sealed class InMemoryVectorStore : IVectorStore
 
     public Task<bool> PingAsync(CancellationToken cancellationToken = default) => Task.FromResult(true);
 
-    // Source and chunk order; a chunk stored for several models is kept once, like the ClickHouse query.
     private List<StoredChunk> MatchText(NormalizedTextSearch search, CancellationToken cancellationToken)
     {
         var pattern = new Regex(search.Pattern, RegexOptions.CultureInvariant);
@@ -330,7 +323,6 @@ internal sealed class InMemoryVectorStore : IVectorStore
 
     private readonly record struct Candidate(StoredChunk Chunk, double Score);
 
-    // Worst first. Ties are broken by source id, then chunk index, like the ClickHouse query.
     private sealed class WorstFirstComparer : IComparer<Candidate>
     {
         public static WorstFirstComparer Instance { get; } = new();

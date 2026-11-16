@@ -9,8 +9,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Handover;
 
-// The in-process runner loses delayed jobs on restart, so pending timers are requeued at startup (Inngest keeps its own).
-// The jobs end handovers with a conditional update, so a timer that did survive cannot apply twice.
 internal sealed partial class HandoverTimerRecovery(
     IServiceScopeFactory scopeFactory,
     IJobQueue jobs,
@@ -49,7 +47,6 @@ internal sealed partial class HandoverTimerRecovery(
             var expireAt = handover.RequestedAt.AddMinutes(policy.WaitMinutes);
             var key = handover.Id.ToString();
 
-            // Once it expires, the expiry emails the transcript itself, so an escalation would only race it.
             if (expireAt > now && handover is { Channel: WidgetChoices.HandoverSlack, EscalatedAt: null } && email.CanSend)
             {
                 await jobs.EnqueueAsync(HandoverJobs.Escalate, key, handover.RequestedAt.AddMinutes(policy.EscalateAfterMinutes), cancellationToken);

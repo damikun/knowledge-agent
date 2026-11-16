@@ -3,8 +3,6 @@ using System.Text.Json;
 
 namespace KnowledgeAgent.Features.Connections.Mcp;
 
-// SHA-256 of what the model sees of a tool and what decides how it runs: name, title, description, input schema and
-// annotations. Object keys are sorted, so the same definition always gives the same value.
 internal static class McpToolFingerprint
 {
     public static string Compute(McpToolInfo tool)

@@ -25,7 +25,6 @@ internal sealed class ChatService(IConversationRepository conversations, ChatTur
         ArgumentNullException.ThrowIfNull(request);
         ArgumentNullException.ThrowIfNull(caller);
 
-        // Validated before the turn starts, so callers can answer 400 before the stream does.
         var message = request.Message?.Trim() ?? string.Empty;
         if (message.Length == 0 && request.Confirmation is { } confirmation)
         {

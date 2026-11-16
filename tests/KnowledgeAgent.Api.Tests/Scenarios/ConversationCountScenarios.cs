@@ -76,7 +76,6 @@ public abstract class ConversationCountScenarios(AppFixture fixture)
         return await response.ReadJsonAsync<WidgetDto>(HttpStatusCode.Created);
     }
 
-    // A new visitor, so every call starts a conversation of its own.
     private static async Task<VisitorSessionDto> StartVisitorConversationAsync(KnowledgeAgentApp app, string key, string message)
     {
         VisitorSessionDto session;

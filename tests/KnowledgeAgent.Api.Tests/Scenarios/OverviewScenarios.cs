@@ -23,7 +23,6 @@ public abstract class OverviewScenarios(AppFixture fixture)
         var widget = await CreateWidgetAsync(app);
         var unused = await CreateWidgetAsync(app);
 
-        // Portal chats are playground tests, also when they test a widget, and count nowhere.
         (await app.ChatAsync(new ChatRequestDto(null, "What is our travel policy?"))).Errors.ShouldBeEmpty();
         (await app.ChatAsync(new ChatRequestDto(null, "Testing the shop widget", WidgetId: widget.Id))).Errors.ShouldBeEmpty();
         var asked = await StartVisitorConversationAsync(app, widget.PublicKey, "Can I change my order?");
@@ -63,7 +62,6 @@ public abstract class OverviewScenarios(AppFixture fixture)
         return await response.ReadJsonAsync<WidgetDto>(HttpStatusCode.Created);
     }
 
-    // A new visitor, so every call starts a conversation of its own.
     private static async Task<VisitorSessionDto> StartVisitorConversationAsync(KnowledgeAgentApp app, string key, string message)
     {
         VisitorSessionDto session;

@@ -6,7 +6,6 @@ using Microsoft.Extensions.AI;
 
 namespace KnowledgeAgent.Infrastructure.AI.Chat;
 
-// Must sit inside the OpenTelemetry stage so that Activity.Current is the GenAI span when the prompt tags are set.
 internal sealed class PromptTelemetryChatClient(IChatClient innerClient) : DelegatingChatClient(innerClient)
 {
     public const string PromptNameKey = KnowledgeAgentTelemetry.LangfusePromptNameKey;
@@ -38,7 +37,6 @@ internal sealed class PromptTelemetryChatClient(IChatClient innerClient) : Deleg
         properties.TryGetValue(PromptNameKey, out var name);
         properties.TryGetValue(PromptVersionKey, out var version);
 
-        // Without a listener no GenAI span exists and Activity.Current is an outer span that must not be tagged.
         if (Activity.Current is { } activity && activity.Source.Name == KnowledgeAgentTelemetry.AI)
         {
             if (ToText(name) is { } promptName)
@@ -71,7 +69,6 @@ internal sealed class PromptTelemetryChatClient(IChatClient innerClient) : Deleg
         _ => value.ToString(),
     };
 
-    // Langfuse expects an integer version, so anything non-numeric is passed through as text.
     private static object? ToVersion(object? value)
     {
         switch (value)

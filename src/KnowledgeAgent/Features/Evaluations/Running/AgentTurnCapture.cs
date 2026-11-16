@@ -42,7 +42,6 @@ internal static class AgentTurnCapture
                         answer.Append(delta.Text);
                         break;
 
-                    // Scored like the stored answer: text written before tool calls is not part of it.
                     case StepFinishedEvent { Kind: StepFinishedEvent.Interim } when isOrchestrator:
                         if (!string.IsNullOrWhiteSpace(answer.ToString()))
                         {

@@ -14,7 +14,6 @@ public sealed class ConversationBusyException(Guid conversationId)
     public Guid ConversationId { get; } = conversationId;
 }
 
-// One turn per conversation at a time on an instance.
 public sealed partial class ChatTurnHost(
     IServiceScopeFactory scopeFactory,
     ConversationEventHub hub,
@@ -45,7 +44,6 @@ public sealed partial class ChatTurnHost(
         return broadcast.ReadAllAsync(readerCancellation);
     }
 
-    // A new conversation gets its id inside the turn, so the turn claims it then.
     internal bool Claim(Guid conversationId, TurnBroadcast broadcast)
     {
         if (!_active.TryAdd(conversationId, broadcast))
@@ -66,7 +64,6 @@ public sealed partial class ChatTurnHost(
         }
         catch (Exception ex)
         {
-            // The executor reports its own failures as events; this catches what escaped it, so the reader is told too.
             LogTurnCrashed(logger, ex, broadcast.ConversationId);
             broadcast.Writer.TryWrite(new ErrorEvent(ChatService.InternalErrorMessage, ChatErrorCodes.InternalError));
         }
@@ -128,13 +125,11 @@ public sealed class TurnBroadcast
         }
         catch (ObjectDisposedException)
         {
-            // The turn ended in between.
         }
 
         return true;
     }
 
-    // The text written since the last interim step: notes written before tool calls are not part of the answer.
     public string AnswerSoFar()
     {
         var events = Snapshot();
@@ -153,7 +148,6 @@ public sealed class TurnBroadcast
 
     public Guid? ConversationId { get; internal set; }
 
-    // Tells this turn's events apart from the next turn's in live views, where indexes start again at 0.
     public Guid Key { get; } = Guid.NewGuid();
 
     public ChannelWriter<ChatStreamEvent> Writer { get; }
@@ -215,8 +209,6 @@ public sealed class TurnBroadcast
 
             _completed = true;
 
-            // The turn has saved everything by now. Letting go of the conversation before the readers see the end
-            // means a caller that sends the next message at once is not told this answer is still being written.
             _host.Release(this);
             foreach (var reader in _readers)
             {
@@ -226,7 +218,6 @@ public sealed class TurnBroadcast
             _readers.Clear();
         }
 
-        // Linked to the application's stopping token, so it must not outlive the turn.
         _stop.Dispose();
     }
 
@@ -245,7 +236,6 @@ public sealed class TurnBroadcast
                 reader.TryWrite(streamEvent);
             }
 
-            // Inside the lock, so live views get the events in the order of their indexes.
             if (ConversationId is { } conversationId)
             {
                 _hub.Publish(conversationId, new TurnStreamEvent(streamEvent, Key, _events.Count - 1));

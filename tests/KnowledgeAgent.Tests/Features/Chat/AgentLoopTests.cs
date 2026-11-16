@@ -45,7 +45,6 @@ public sealed class AgentLoopTests
         var chat = host.ChatAsync("Compare things", cancellationToken: Ct);
         await slowSearchStarted.Task.WaitAsync(TimeSpan.FromSeconds(10), Ct);
 
-        // The other two calls returning while the slow one is blocked proves the calls run concurrently.
         var turns = host.Services.GetRequiredService<ChatTurnHost>();
         await WaitUntilAsync(() => host.Conversations.All.SingleOrDefault() is { } conversation
             && turns.Find(conversation.Id)?.Snapshot().OfType<ToolResultEvent>().Count() == 2);
@@ -67,7 +66,6 @@ public sealed class AgentLoopTests
         toolResults[1].ResultText().ShouldContain("Handbook");
         toolResults[2].ResultText().ShouldContain("Passage for fast");
 
-        // Citation numbers follow registration order, and the slow search registered last.
         toolResults[2].ResultText().ShouldContain("[S1]");
         toolResults[0].ResultText().ShouldContain("[S2]");
     }
@@ -305,7 +303,6 @@ public sealed class AgentLoopTests
         error.Message.ShouldBe("No chat provider is configured. Set AI:Providers:anthropic:ApiKey.");
         events.Done().FinishReason.ShouldBe("error");
 
-        // The utility profile is not configured either, so the title falls back to the message prefix.
         events.OfType<ConversationEvent>().Last().Title.ShouldBe("What is in my documents about onboarding new employees in th");
 
         var turn = host.SingleTurn(events.ConversationId());

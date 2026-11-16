@@ -152,7 +152,6 @@ public sealed class VectorStoreModuleTests
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["VectorStore:Provider"] = "ClickHouse" });
         builder.AddVectorStore();
 
-        // WebApplicationFactory adds its configuration only when the host is built.
         builder.Configuration.AddInMemoryCollection(new Dictionary<string, string?> { ["VectorStore:Provider"] = "InMemory" });
         using var host = builder.Build();
 

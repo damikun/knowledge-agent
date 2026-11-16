@@ -34,12 +34,10 @@ internal sealed record AnthropicSettings(
     public const string TimeoutSecondsKey = "TimeoutSeconds";
     public const string ThinkingMismatchKey = "ThinkingMismatch";
 
-    // The API accepts at most three fallback entries.
     public const int MaxFallbackModels = 3;
 
     private static readonly string[] Disabled = ["none", "off", "false", "disabled", "no"];
 
-    // Server-side fallbacks and thinking block binding are only served by the beta messages endpoint.
     public bool UsesBetaEndpoint => RefusalFallback != RefusalFallbackMode.None || ThinkingMismatch != ThinkingMismatchMode.Off;
 
     public static AnthropicSettings From(AiProviderOptions options)

@@ -11,9 +11,6 @@ using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Features.Sources.Ingestion;
 
-// Contextual retrieval: a passage on its own often lacks what it is about ("the limit is 30 days" of what?). Each chunk
-// gets a short context, its document title and section path and, when a model is set up for it, a sentence or two
-// written by that model. Search embeds and indexes the context with the chunk; citations still show only the chunk.
 internal interface IChunkContextualizer
 {
     Task<IReadOnlyList<string>> ContextualizeAsync(Source source, string documentText, IReadOnlyList<TextChunk> chunks, CancellationToken cancellationToken);
@@ -27,8 +24,6 @@ internal sealed partial class ChunkContextualizer(
     public const string ProfileName = "contextualizer";
     public const int MaxContextLength = 600;
 
-    // The part of the document sent with each chunk, centred on it: enough to place it, without paying for the whole
-    // document on every call.
     internal const int DocumentWindowChars = 24_000;
 
     internal const string Instructions =
@@ -78,7 +73,6 @@ internal sealed partial class ChunkContextualizer(
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException || !token.IsCancellationRequested)
                 {
-                    // One failed chunk keeps its heading context; the source is still ingested.
                     if (Interlocked.Increment(ref failures) == 1)
                     {
                         LogChunkFailed(logger, ex, source.Id);
@@ -90,7 +84,6 @@ internal sealed partial class ChunkContextualizer(
         return contexts;
     }
 
-    // "Title > Section > Subsection (page 3)", from the Markdown headings above each chunk.
     internal static IReadOnlyList<string> HeadingContexts(string title, string text, IReadOnlyList<TextChunk> chunks)
     {
         var headings = Heading().Matches(text)
@@ -114,7 +107,6 @@ internal sealed partial class ChunkContextualizer(
                 position = searchFrom;
             }
 
-            // Headings that start inside the chunk's first line count as its section.
             while (next < headings.Count && headings[next].Position <= position + probe.Length)
             {
                 var heading = headings[next++];
@@ -134,7 +126,6 @@ internal sealed partial class ChunkContextualizer(
         return combined.Length > MaxContextLength ? combined[..MaxContextLength] : combined;
     }
 
-    // The document around the chunk, at most DocumentWindowChars long.
     internal static string Window(string documentText, string chunk)
     {
         if (documentText.Length <= DocumentWindowChars)
@@ -155,7 +146,6 @@ internal sealed partial class ChunkContextualizer(
             return true;
         }
 
-        // Auto: only once someone chose a model for the profile, so ingestion does not start paying for calls unasked.
         if (services.GetService<IModelProfileResolver>() is not { } resolver)
         {
             return false;

@@ -20,7 +20,6 @@ internal sealed class PromptSeedingService(
         var attempt = 0;
         while (!stoppingToken.IsCancellationRequested && !seeder.IsCompleted)
         {
-            // The startup initializer may have tried a moment ago, so the interval is kept.
             if (seeder.LastAttemptAt is { } lastAttempt)
             {
                 var wait = lastAttempt + settings.RetryInterval - timeProvider.GetUtcNow();

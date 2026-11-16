@@ -28,11 +28,9 @@ public sealed record EmailSettings
 
     public string ProcessedFolder { get; init; } = "Processed";
 
-    // Only these senders count as staff replies; empty trusts the support address's domain.
     public List<string> StaffAddresses { get; init; } = [];
     public List<string> StaffDomains { get; init; } = [];
 
-    // Legacy: only read when neither the saved public address nor App:PublicUrl is set.
     public string? PortalUrl { get; init; }
 
     [MemberNotNullWhen(true, nameof(SmtpHost), nameof(FromAddress))]
@@ -48,7 +46,6 @@ public sealed record SlackSettings
 
     public string? BotToken { get; init; }
 
-    // xapp- app-level token with the connections:write scope, for Socket Mode.
     public string? AppToken { get; init; }
 
     public string? ChannelId { get; init; }
@@ -70,7 +67,6 @@ public static class MailSecurity
     public static readonly IReadOnlyList<string> All = [Auto, None, StartTls, Ssl];
 }
 
-// Secrets are never returned, only whether they are set.
 public sealed record EmailSettingsDto(
     bool Enabled,
     string? SmtpHost,
@@ -100,7 +96,6 @@ public sealed record SlackSettingsDto(bool Enabled, bool HasBotToken, bool HasAp
 
 public sealed record IntegrationsDto(EmailSettingsDto Email, SlackSettingsDto Slack);
 
-// Secrets: null keeps the saved value, an empty string removes it.
 public sealed record SaveEmailSettingsRequest(
     bool Enabled,
     string? SmtpHost,
