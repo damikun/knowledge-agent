@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { Route, useLocation, type RouteObject } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { dismissAllToasts, Toaster } from '../../components/ui/Toast';
-import { agentDto, agentGuid, agentOptions, agentsRoutes, builtInAgent } from '../../test/agentsApi';
+import { agentDto, agentGuid, agentOptions, agentsRoutes, assistantAgent } from '../../test/agentsApi';
 import { sourceDto } from '../../test/fixtures';
 import { sourceFolder, sourcesRoutes } from '../../test/sourcesApi';
 import { fetchCalls, jsonResponse, mockFetch, problemResponse, renderRouter, renderWithProviders } from '../../test/utils';
@@ -32,7 +32,6 @@ import type { AgentDto } from './types';
 afterEach(() => {
   vi.unstubAllGlobals();
   sessionStorage.clear();
-  // Toasts live outside React, so one test's toast would show in the next.
   dismissAllToasts();
 });
 
@@ -100,7 +99,6 @@ function renderAt(path: string) {
   });
 }
 
-// In a data router, as the app has it, so the leave guard can block.
 function renderInRouter(path: string) {
   const routeObjects: RouteObject[] = [
     { path: '/agents', element: withToaster(<AgentsPage />) },
@@ -139,7 +137,7 @@ async function continueTo(user: ReturnType<typeof userEvent.setup>, title: strin
 
 describe('AgentsPage', () => {
   it('shows each agent as a card with its purpose, knowledge, widgets and recent conversations', async () => {
-    mockFetch(routes(() => [helper, builtInAgent]));
+    mockFetch(routes(() => [helper, assistantAgent]));
     renderAt('/agents');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Agents' })).toBeInTheDocument();
@@ -149,8 +147,7 @@ describe('AgentsPage', () => {
       within(list)
         .getAllByRole('heading', { level: 2 })
         .map((h) => h.textContent),
-    ).toEqual(['Website helper']);
-    expect(screen.queryByText('Knowledge Agent')).toBeNull();
+    ).toEqual(['Website helper', 'Assistant']);
 
     const website = card('Website helper');
     expect(within(website).getByText('Answers visitors of the public website.')).toBeInTheDocument();
@@ -162,7 +159,7 @@ describe('AgentsPage', () => {
 
   it('keeps duplicate and delete in the card menu, and a copy starts the wizard with its settings', async () => {
     const user = userEvent.setup();
-    mockFetch(routes(() => [builtInAgent, helper]));
+    mockFetch(routes(() => [assistantAgent, helper]));
     renderAt('/agents');
 
     await user.click(await screen.findByRole('button', { name: 'Actions for Website helper' }));
@@ -179,8 +176,8 @@ describe('AgentsPage', () => {
     expect(await screen.findByRole('radio', { name: /Copy of Website helper/ })).toBeChecked();
   });
 
-  it('shows the empty state while the team has no agent of its own', async () => {
-    mockFetch(routes(() => [builtInAgent]));
+  it('shows the empty state while there is no agent', async () => {
+    mockFetch(routes(() => []));
     renderAt('/agents');
 
     expect(await screen.findByRole('link', { name: /Create an agent for your website/ })).toHaveAttribute('href', '/agents/new');
@@ -192,7 +189,7 @@ describe('AgentsPage', () => {
 describe('NewAgentWizard', () => {
   it('walks through the steps from a template, reviews, creates and offers the next steps', async () => {
     const user = userEvent.setup();
-    let agents: AgentDto[] = [builtInAgent];
+    let agents: AgentDto[] = [assistantAgent];
     const fetchMock = mockFetch(routes(() => agents, createRoute(() => agents, (next) => (agents = next))));
     renderAt('/agents');
 
@@ -267,7 +264,7 @@ describe('NewAgentWizard', () => {
 
   it('checks each step, and changes from the review return to their step', async () => {
     const user = userEvent.setup();
-    let agents: AgentDto[] = [builtInAgent];
+    let agents: AgentDto[] = [assistantAgent];
     const fetchMock = mockFetch(routes(() => agents, createRoute(() => agents, (next) => (agents = next))));
     renderAt('/agents/new?template=blank');
 
@@ -332,7 +329,7 @@ describe('NewAgentWizard', () => {
   it('returns to the step of a field the API refused, and lists the others on the review', async () => {
     const user = userEvent.setup();
     mockFetch(
-      routes(() => [builtInAgent], {
+      routes(() => [assistantAgent], {
         'POST /api/agents': () =>
           problemResponse(
             {
@@ -359,7 +356,7 @@ describe('NewAgentWizard', () => {
   });
 
   it('keeps the step in the address, opens the first step left to do, and keeps a draft over a reload', async () => {
-    mockFetch(routes(() => [builtInAgent]));
+    mockFetch(routes(() => [assistantAgent]));
     const { unmount } = renderAt('/agents/new?template=support&step=people');
     expect(await screen.findByRole('heading', { level: 1, name: 'Tools and handover' })).toBeInTheDocument();
     expect(step()).toHaveTextContent('Step 5 of 5');
@@ -379,7 +376,7 @@ describe('NewAgentWizard', () => {
 
   it('cancels with Esc and asks first once something was entered', async () => {
     const user = userEvent.setup();
-    mockFetch(routes(() => [builtInAgent]));
+    mockFetch(routes(() => [assistantAgent]));
     renderInRouter('/agents/new?template=support');
 
     const name = await screen.findByRole('textbox', { name: 'Name' });
@@ -404,7 +401,7 @@ describe('NewAgentWizard', () => {
 
   it('leaves at once with Esc while nothing was entered', async () => {
     const user = userEvent.setup();
-    mockFetch(routes(() => [builtInAgent]));
+    mockFetch(routes(() => [assistantAgent]));
     renderInRouter('/agents/new');
 
     expect(await screen.findByRole('heading', { level: 1, name: 'How should it start?' })).toBeInTheDocument();
@@ -416,7 +413,7 @@ describe('NewAgentWizard', () => {
 describe('AgentPage', () => {
   it('shows the agent at a glance with its widgets, last 7 days and an Edit per setting', async () => {
     const user = userEvent.setup();
-    mockFetch(routes(() => [builtInAgent, helper]));
+    mockFetch(routes(() => [assistantAgent, helper]));
     renderAt(`/agents/${helper.id}`);
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Website helper' })).toBeInTheDocument();
@@ -457,10 +454,9 @@ describe('AgentPage', () => {
       sourceFolder('runbooks', 'Runbooks', 'internal'),
     ];
     const withInternalSources = [...sources, sourceDto({ id: 's3', folderId: 'runbooks' })];
-    // Runbooks has since moved into Internal.
     const stale = agentDto({ folderIds: ['contracts', 'runbooks'] });
     const fetchMock = mockFetch({
-      ...routes(() => [builtInAgent, stale], {
+      ...routes(() => [assistantAgent, stale], {
         [`PUT /api/agents/${stale.id}`]: (_url: URL, init: RequestInit) => jsonResponse({ ...stale, ...(JSON.parse(init.body as string) as object) }),
       }),
       ...sourcesRoutes(
@@ -483,7 +479,7 @@ describe('AgentPage', () => {
 
   it('saves each tab on its own, with a save bar only while that tab has changes', async () => {
     const user = userEvent.setup();
-    let agents: AgentDto[] = [builtInAgent, helper];
+    let agents: AgentDto[] = [assistantAgent, helper];
     const save = (saved: AgentDto) => (agents = agents.map((item) => (item.id === saved.id ? saved : item)));
     const fetchMock = mockFetch(
       routes(() => agents, {
@@ -569,7 +565,7 @@ describe('AgentPage', () => {
   it('checks the knowledge tab and shows the field errors the API sends back', async () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch(
-      routes(() => [builtInAgent, helper], {
+      routes(() => [assistantAgent, helper], {
         [`PUT /api/agents/${helper.id}`]: () =>
           problemResponse({ title: 'One or more validation errors occurred.', errors: { name: ['The name is taken.'], folderIds: ['These folders do not exist: 4f1c.'] } }, 400),
       }),
@@ -589,7 +585,7 @@ describe('AgentPage', () => {
 
   it('asks before a tab or the page is left with unsaved changes', async () => {
     const user = userEvent.setup();
-    mockFetch(routes(() => [builtInAgent, helper]));
+    mockFetch(routes(() => [assistantAgent, helper]));
     renderInRouter(`/agents/${helper.id}?tab=general`);
 
     const name = await screen.findByRole('textbox', { name: 'Name' });
@@ -615,7 +611,7 @@ describe('AgentPage', () => {
     });
     const inbox = widgetDto({ id: 'w-inbox', name: 'Docs help', settings: widgetSettings({ behavior: { handoverEnabled: true } }) });
     const quiet = widgetDto({ id: 'w-quiet', name: 'Careers' });
-    mockFetch(routes(() => [builtInAgent, helper], {}, [slack, inbox, quiet]));
+    mockFetch(routes(() => [assistantAgent, helper], {}, [slack, inbox, quiet]));
     renderAt(`/agents/${helper.id}?tab=handover`);
 
     const usedBy = await screen.findByRole('list', { name: 'Used by' });
@@ -635,7 +631,7 @@ describe('AgentPage', () => {
     let widgets = [widgetDto(), careers];
     const fetchMock = mockFetch(
       routes(
-        () => [builtInAgent, helper, other],
+        () => [assistantAgent, helper, other],
         {
           'PUT /api/widgets/w-careers': (_url: URL, init: RequestInit) => {
             const saved = { ...careers, ...(JSON.parse(init.body as string) as object) };
@@ -659,18 +655,19 @@ describe('AgentPage', () => {
     expect(body(fetchMock, 'PUT')).toMatchObject({ name: 'Careers', agentId: helper.id, enabled: true });
   });
 
-  it('sends a link to the built-in agent, which is no agent of the team, to the agents list', async () => {
-    mockFetch(routes(() => [builtInAgent, helper]));
-    renderAt(`/agents/${builtInAgent.id}?tab=knowledge`);
+  it('opens the agent a fresh install starts with like any other', async () => {
+    const user = userEvent.setup();
+    mockFetch(routes(() => [assistantAgent, helper]));
+    renderAt(`/agents/${assistantAgent.id}`);
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Agents' })).toBeInTheDocument();
-    expect(address()).toBe('/agents');
-    expect(screen.queryByText('Knowledge Agent')).toBeNull();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Assistant' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'More actions for this agent' }));
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual(['Duplicate', 'Delete']);
   });
 
   it('duplicates an agent from its page', async () => {
     const user = userEvent.setup();
-    mockFetch(routes(() => [builtInAgent, helper]));
+    mockFetch(routes(() => [assistantAgent, helper]));
     renderAt(`/agents/${helper.id}`);
 
     await user.click(await screen.findByRole('button', { name: 'More actions for this agent' }));
@@ -683,7 +680,7 @@ describe('AgentPage', () => {
     const user = userEvent.setup();
     const billing = agentDto({ id: agentGuid(3), key: 'billing', name: 'Billing', description: 'Invoices and refunds' });
     const orders = agentDto({ id: agentGuid(4), key: 'orders', name: 'Orders', specialists: [{ agentId: helper.id, whenToUse: 'General questions' }] });
-    let agents: AgentDto[] = [builtInAgent, helper, billing, orders];
+    let agents: AgentDto[] = [assistantAgent, helper, billing, orders];
     const fetchMock = mockFetch(
       routes(() => agents, {
         [`PUT /api/agents/${helper.id}`]: (_url: URL, init: RequestInit) => {
@@ -719,7 +716,7 @@ describe('AgentPage', () => {
   it('asks before deleting an agent that others hand conversations to', async () => {
     const user = userEvent.setup();
     const front = agentDto({ id: agentGuid(3), key: 'front', name: 'Front desk', specialists: [{ agentId: helper.id, whenToUse: 'Website questions' }] });
-    let agents: AgentDto[] = [builtInAgent, helper, front];
+    let agents: AgentDto[] = [assistantAgent, helper, front];
     const asked: string[] = [];
     mockFetch(
       routes(() => agents, {
@@ -728,7 +725,7 @@ describe('AgentPage', () => {
           if (!url.searchParams.has('removeFromTeams')) {
             return problemResponse({ title: 'Other agents hand off to this agent', code: 'agent_is_specialist', agents: [{ id: front.id, name: 'Front desk' }] }, 409);
           }
-          agents = [builtInAgent, { ...front, specialists: [] }];
+          agents = [assistantAgent, { ...front, specialists: [] }];
           return new Response(null, { status: 204 });
         },
       }),
@@ -748,11 +745,11 @@ describe('AgentPage', () => {
 
   it('deletes an agent from its card after confirmation', async () => {
     const user = userEvent.setup();
-    let agents: AgentDto[] = [builtInAgent, helper];
+    let agents: AgentDto[] = [assistantAgent, helper];
     const fetchMock = mockFetch(
       routes(() => agents, {
         [`DELETE /api/agents/${helper.id}`]: () => {
-          agents = [builtInAgent];
+          agents = [assistantAgent];
           return new Response(null, { status: 204 });
         },
       }),
@@ -762,7 +759,9 @@ describe('AgentPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Actions for Website helper' }));
     await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
     const confirm = await screen.findByRole('dialog', { name: 'Delete agent?' });
-    expect(confirm).toHaveTextContent('“Website helper” will be deleted. Its conversations continue with the built-in agent.');
+    expect(confirm).toHaveTextContent(
+      '“Website helper” will be deleted. Its portal conversations continue with another agent, and its widget conversations end.',
+    );
     await user.click(within(confirm).getByRole('button', { name: 'Delete' }));
 
     await waitFor(() => expect(screen.queryByRole('heading', { level: 2, name: 'Website helper' })).toBeNull());
@@ -773,7 +772,7 @@ describe('AgentPage', () => {
   it('deletes an agent from its page, and shows why the API refused a delete', async () => {
     const user = userEvent.setup();
     let attempts = 0;
-    let agents: AgentDto[] = [builtInAgent, helper];
+    let agents: AgentDto[] = [assistantAgent, helper];
     mockFetch(
       routes(() => agents, {
         [`DELETE /api/agents/${helper.id}`]: () => {
@@ -781,7 +780,7 @@ describe('AgentPage', () => {
           if (attempts === 1) {
             return problemResponse({ title: 'One or more validation errors occurred.', errors: { id: ["The widget 'Shop help' uses this agent."] } }, 400);
           }
-          agents = [builtInAgent];
+          agents = [assistantAgent];
           return new Response(null, { status: 204 });
         },
       }),
@@ -799,8 +798,28 @@ describe('AgentPage', () => {
     expect(screen.queryByRole('heading', { level: 2, name: 'Website helper' })).toBeNull();
   });
 
+  it('shows why the last agent cannot be deleted', async () => {
+    const user = userEvent.setup();
+    const message = 'Keep at least one agent: the playground and evaluations use it.';
+    mockFetch(
+      routes(() => [assistantAgent], {
+        [`DELETE /api/agents/${assistantAgent.id}`]: () =>
+          problemResponse({ title: 'One or more validation errors occurred.', errors: { id: [message] } }, 400),
+      }),
+    );
+    renderAt('/agents');
+
+    await user.click(await screen.findByRole('button', { name: 'Actions for Assistant' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Delete agent?' });
+    await user.click(within(confirm).getByRole('button', { name: 'Delete' }));
+
+    expect(await within(confirm).findByRole('alert')).toHaveTextContent(message);
+    expect(screen.getByRole('heading', { level: 2, name: 'Assistant' })).toBeInTheDocument();
+  });
+
   it('says when an agent does not exist', async () => {
-    mockFetch(routes(() => [builtInAgent]));
+    mockFetch(routes(() => [assistantAgent]));
     renderAt(`/agents/${agentGuid(9)}`);
 
     expect(await screen.findByText('This agent does not exist')).toBeInTheDocument();

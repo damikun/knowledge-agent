@@ -18,7 +18,6 @@ export interface PutOnWebsiteProps {
   variant?: ButtonVariant;
 }
 
-/** The widget editor reads the agent from navigation state, so a new widget starts with it chosen. */
 export function PutOnWebsite({ agent, variant = 'secondary' }: PutOnWebsiteProps) {
   const returnState = useReturnState(agent.name);
   const navigate = useNavigate();

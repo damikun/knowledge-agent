@@ -50,7 +50,6 @@ internal sealed partial class HelpChatService(
 
     private async Task RunAsync(HelpChatRequest request, bool isAdmin, ChannelWriter<ChatStreamEvent> writer, CancellationToken cancellationToken)
     {
-        // Yield first, so the caller reads events while the turn runs.
         await Task.Yield();
         var previous = Activity.Current;
         Activity? activity = null;
@@ -123,7 +122,6 @@ internal sealed partial class HelpChatService(
         messages.AddRange(History(request.History));
         messages.Add(new ChatMessage(ChatRole.User, request.Message.Trim()));
 
-        // Empty scope keeps every other tool blind; search_internal reads only the Internal folder.
         var turn = new AgentTurnContext(sessionId, turnId, scopeSourceIds: [], new CitationRegistry(), writer);
         var agent = new AgentDefinition(AgentName, HelpPrompt.Name, AgentDefaults.ProfileName, ToolNames: [], MaxToolRounds)
         {
@@ -191,7 +189,6 @@ internal sealed partial class HelpChatService(
         return variables;
     }
 
-    // Tags of earlier answers are dropped because this turn numbers its sections afresh.
     private static IEnumerable<ChatMessage> History(IReadOnlyList<HelpHistoryMessage>? history)
     {
         if (history is not { Count: > 0 })

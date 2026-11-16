@@ -48,7 +48,6 @@ internal sealed class AgentAskService(
         var caller = new ChatCaller(channel, key.Name, StaffId: "apikey:" + key.Id.ToString("N"));
         if (request.ConversationId is { } conversationId)
         {
-            // A key continues only conversations it started, on the same agent and channel.
             var existing = await conversations.GetAsync(conversationId, includeTurns: false, cancellationToken);
             if (existing is null || existing.AgentId != agent.Id || existing.Channel != channel || existing.CreatedById != caller.StaffId)
             {

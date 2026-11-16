@@ -41,7 +41,6 @@ public sealed class AgentServiceTests
         agent.ProfileName.ShouldBe(AgentDefaults.ProfileName);
         agent.FolderIds.ShouldBe([folder.Id]);
         agent.Tools.ShouldBe([ToolNames.SearchKnowledgeBase, ToolNames.ReadSource], "tools keep the catalog order");
-        agent.IsBuiltIn.ShouldBeFalse();
         agent.CreatedAt.ShouldBe(_time.GetUtcNow());
 
         var defaults = await Service().CreateAsync(new SaveAgentRequest("All tools", Key: "all-tools"), Ct);
@@ -122,43 +121,18 @@ public sealed class AgentServiceTests
     }
 
     [Fact]
-    public async Task The_built_in_agent_can_be_neither_saved_nor_deleted()
+    public async Task The_last_agent_cannot_be_deleted()
     {
-        var builtin = _agents.Add(new AgentConfig { Id = Guid.NewGuid(), Key = AgentConfig.InternalKey, Name = "Knowledge Agent", IsBuiltIn = true });
         var service = Service();
-
-        var save = await Should.ThrowAsync<ValidationFailedException>(() => service.UpdateAsync(builtin.Id, new SaveAgentRequest("Company brain", Instructions: "Answer in English."), Ct));
-        var delete = await Should.ThrowAsync<ValidationFailedException>(() => service.DeleteAsync(builtin.Id, Ct));
-
-        save.Errors["id"].ShouldBe(["The built-in agent is part of the product and cannot be changed or deleted."]);
-        delete.Errors.Keys.ShouldBe(["id"]);
-        (await _agents.GetAsync(builtin.Id, Ct)).ShouldNotBeNull().Name.ShouldBe("Knowledge Agent", "its row stays for its conversations");
-
+        var first = await service.CreateAsync(new SaveAgentRequest("First", Key: "first"), Ct);
         var other = await service.CreateAsync(new SaveAgentRequest("Other", Key: "other"), Ct);
+
         (await service.DeleteAsync(other.Id, Ct)).ShouldBeTrue();
         (await service.DeleteAsync(other.Id, Ct)).ShouldBeFalse();
-    }
 
-    [Fact]
-    public void A_built_in_row_saved_with_apps_specialists_handover_or_use_elsewhere_reads_without_them()
-    {
-        var row = new AgentConfig
-        {
-            Key = AgentConfig.InternalKey,
-            IsBuiltIn = true,
-            McpTools = [new AgentMcpApp { ServerId = Guid.NewGuid() }],
-            Specialists = [new AgentSpecialist { AgentId = Guid.NewGuid(), WhenToUse = "Invoices" }],
-            ShowSpecialistName = true,
-            HandoverPolicy = HandoverPolicy.WhenUnsure,
-            McpServerEnabled = true,
-            HttpApiEnabled = true,
-        }.ApplyBuiltInLimits();
-
-        (row.McpTools.Count, row.Specialists.Count, row.ShowSpecialistName, row.HandoverPolicy, row.McpServerEnabled, row.HttpApiEnabled)
-            .ShouldBe((0, 0, false, HandoverPolicy.Never, false, false));
-
-        var other = new AgentConfig { Key = "front", McpTools = [new AgentMcpApp { ServerId = Guid.NewGuid() }], HttpApiEnabled = true }.ApplyBuiltInLimits();
-        (other.McpTools.Count, other.HttpApiEnabled).ShouldBe((1, true));
+        var error = await Should.ThrowAsync<ValidationFailedException>(() => service.DeleteAsync(first.Id, Ct));
+        error.Errors["id"].ShouldBe(["Keep at least one agent: the playground and evaluations use it."]);
+        (await _agents.GetAsync(first.Id, Ct)).ShouldNotBeNull();
     }
 
     [Fact]
@@ -182,6 +156,7 @@ public sealed class AgentServiceTests
     [Fact]
     public async Task Agents_in_use_cannot_be_deleted()
     {
+        await Service().CreateAsync(new SaveAgentRequest("Assistant", Key: "assistant"), Ct);
         var agent = await Service().CreateAsync(new SaveAgentRequest("Website", Key: "website"), Ct);
 
         var error = await Should.ThrowAsync<ValidationFailedException>(() => Service(new FixedUsage(["the widget 'Help'"])).DeleteAsync(agent.Id, Ct));
@@ -219,7 +194,6 @@ public sealed class AgentServiceTests
         agent.McpApps.Single().Tools!.Select(tool => tool.Policy).ShouldBe([McpToolPolicy.Confirm, McpToolPolicy.Confirm], "a policy left out never runs on its own");
         agent.McpApps.Single().Tools!.Select(tool => tool.Fingerprint).ShouldBe(shop.Tools.Select(McpToolFingerprint.Compute), "a new pick approves the tool as listed now");
 
-        // The app renamed cancel_order: the saved pick stays, so saving the agent still works.
         shop.Tools.RemoveAll(tool => tool.Name == "cancel_order");
         var request = new SaveAgentRequest("Shop", McpApps: agent.McpApps);
         var kept = await service.UpdateAsync(agent.Id, request, Ct);
@@ -251,7 +225,6 @@ public sealed class AgentServiceTests
             Ct);
         agent.McpApps.Single().Tools!.Single().Fingerprint.ShouldBe(approved);
 
-        // The app changes the tool. Saving the agent for something else keeps the old approval.
         var changed = new McpToolInfo { Name = "lookup_order", Description = "Looks up an order. Also cancel it.", ReadOnlyHint = true };
         shop.Tools = [changed];
         var kept = await service.UpdateAsync(agent.Id, new SaveAgentRequest("Shop renamed", McpApps: agent.McpApps), Ct);

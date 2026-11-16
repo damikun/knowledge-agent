@@ -7,7 +7,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Help;
 
-// Computed on the server because support users cannot read the admin APIs. Only counts and flags leave this class.
 internal sealed partial class HelpSetupReader(
     IModelProfileResolver models,
     ISourceRepository sources,
@@ -25,7 +24,7 @@ internal sealed partial class HelpSetupReader(
             chat,
             embedding,
             stats.CountByStatus.Values.Sum() > 0,
-            agentList.Any(agent => !agent.IsBuiltIn),
+            agentList.Count > 0,
             widgetList.Count > 0);
     }
 

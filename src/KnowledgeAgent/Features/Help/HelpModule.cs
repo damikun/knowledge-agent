@@ -7,7 +7,6 @@ namespace KnowledgeAgent.Features.Help;
 
 public static class HelpModule
 {
-    // Reads model profiles, sources, agents and widgets, so add it after them.
     public static IHostApplicationBuilder AddHelp(this IHostApplicationBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);

@@ -46,7 +46,6 @@ import { ReviewStep, StartStep } from './NewAgentWizardSteps';
 import type { AgentDto, AgentOptionsDto } from './types';
 import { useAgentForm } from './useAgentForm';
 
-// Survives a reload; dropped once the agent is created or the wizard is left.
 const DRAFT_KEY = 'ka.new-agent-draft';
 const ALL_FIELDS = Object.keys(templateValues(undefined, { tools: [], profiles: [] })).filter((field) => field !== 'keyEdited') as Array<keyof AgentFormValues>;
 
@@ -67,7 +66,6 @@ function writeDraft(origin: string, values: AgentFormValues | null) {
       sessionStorage.removeItem(DRAFT_KEY);
     }
   } catch {
-    // Storage may be blocked; the wizard works without it.
   }
 }
 
@@ -84,7 +82,6 @@ function WizardSkeleton() {
   );
 }
 
-/** ?template= or ?from={id} picks the starting point and ?step= the step, so reload and back work. */
 export function NewAgentPage() {
   const [search] = useSearchParams();
   const template = findTemplate(search.get('template'));
@@ -92,7 +89,7 @@ export function NewAgentPage() {
   const agents = useAgents();
   const options = useAgentOptions();
   useBreadcrumb('New agent');
-  const copyOf = fromId ? agents.data?.find((item) => !item.isBuiltIn && item.id.toLowerCase() === fromId.toLowerCase()) : undefined;
+  const copyOf = fromId ? agents.data?.find((item) => item.id.toLowerCase() === fromId.toLowerCase()) : undefined;
 
   const error = options.error ?? (fromId ? agents.error : null);
   if (error) {
@@ -128,7 +125,6 @@ export function NewAgentPage() {
 }
 
 interface AgentWizardProps {
-  /** "template:support", "from:{id}", or empty before a starting point is chosen. */
   origin: string;
   options: AgentOptionsDto;
   template?: AgentTemplate;
@@ -150,7 +146,6 @@ function AgentWizard({ origin, options, template, copyOf }: AgentWizardProps) {
   const create = useMutation({
     mutationFn: (body: Parameters<typeof agentsApi.createAgent>[0]) => agentsApi.createAgent(body),
     onSuccess: (result) => {
-      // The list is updated first, so the new agent's page finds it right away.
       if (result) {
         queryClient.setQueryData<AgentDto[]>(agentKeys.list, (old) => (old ? [...old.filter((item) => item.id !== result.id), result] : old));
       }
@@ -161,7 +156,6 @@ function AgentWizard({ origin, options, template, copyOf }: AgentWizardProps) {
       navigate(result ? `/agents/${result.id}` : '/agents', { replace: true, state: { created: true } });
     },
     onError: (error) => {
-      // Back to the step that shows the first field the API refused.
       if (error instanceof ApiError && error.isValidation) {
         const field = AGENT_FORM_FIELDS.find((item) => error.errorsFor(item).length > 0);
         if (field && stepOfField(field) !== 'review') {
@@ -180,7 +174,6 @@ function AgentWizard({ origin, options, template, copyOf }: AgentWizardProps) {
   const context: SaveAgentContext = { isNew: true, options, knownFolderIds: folders.data ? pickableFolderIds(folders.data.folders) : undefined };
 
   const requested = parseStep(search.get('step')) ?? (hasStart ? 'general' : 'start');
-  // After a reload that lost what was typed, or a link straight to a later step, the first step left to do opens.
   const open = firstOpenStepBefore(requested, values, hasStart, context);
   const step = open ?? requested;
   const index = stepIndex(step);
@@ -196,7 +189,6 @@ function AgentWizard({ origin, options, template, copyOf }: AgentWizardProps) {
       { replace },
     );
 
-  // The address follows the step that opened instead, so Back and a reload agree with what shows.
   const replaceStep = useEffectEvent((next: WizardStep) => goTo(next, true));
   useEffect(() => {
     if (open && open !== requested) {
@@ -209,10 +201,8 @@ function AgentWizard({ origin, options, template, copyOf }: AgentWizardProps) {
       writeDraft(origin, values);
     }
   }, [hasStart, origin, values]);
-  // Leaving the wizard drops the draft; a reload never unmounts, so it keeps it.
   useEffect(() => () => writeDraft(origin, null), [origin]);
 
-  // The step a page opens on puts the cursor in its first field; later steps move focus to their title (WizardFrame).
   const [openedOn] = useState(step);
 
   const cancel = () => navigate('/agents');

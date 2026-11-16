@@ -14,7 +14,7 @@ internal sealed partial class AgentSeedInitializer(
 {
     public int Order => StartupOrder.Agents;
 
-    public string Name => "Built-in agent";
+    public string Name => "Starter agent";
 
     public bool IsCritical => true;
 
@@ -22,21 +22,20 @@ internal sealed partial class AgentSeedInitializer(
     {
         await using var scope = scopeFactory.CreateAsyncScope();
         var agents = scope.ServiceProvider.GetRequiredService<IAgentRepository>();
-        if (await agents.GetByKeyAsync(AgentConfig.InternalKey, cancellationToken) is not null)
+        if ((await agents.ListAsync(cancellationToken)).Count > 0)
         {
             return;
         }
 
-        var agent = AgentResolver.Builtin(options.Value);
+        var agent = AgentResolver.Starter(options.Value);
         var now = timeProvider.GetUtcNow();
         agent.Id = Guid.CreateVersion7();
-        agent.Description = "The agent of the portal's chat, for admins and support staff.";
         agent.CreatedAt = now;
         agent.UpdatedAt = now;
         await agents.AddAsync(agent, cancellationToken);
-        LogSeeded(logger, AgentConfig.InternalKey);
+        LogSeeded(logger, agent.Key);
     }
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Created the built-in agent '{Key}'")]
+    [LoggerMessage(Level = LogLevel.Information, Message = "Created the starter agent '{Key}'")]
     private static partial void LogSeeded(ILogger logger, string key);
 }

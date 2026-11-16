@@ -16,7 +16,6 @@ import type { HandoverPolicy } from './types';
 
 export type ToneId = 'friendly' | 'professional' | 'brief' | 'own';
 
-// The first line of the instructions; the tone control finds and swaps it.
 export const TONE_SENTENCES: Readonly<Record<Exclude<ToneId, 'own'>, string>> = {
   friendly: 'Be warm and friendly, and write the way a helpful person talks.',
   professional: 'Be polite and professional, and keep a calm, factual tone.',
@@ -33,13 +32,11 @@ export const TONES: ReadonlyArray<{ value: ToneId; label: string; summary: strin
   { value: 'own', label: 'Own words', summary: 'tone in your own words', example: 'Describe the tone yourself in the instructions.' },
 ];
 
-/** The tone whose sentence the instructions contain; "own" when none does. */
 export function toneOf(instructions: string): ToneId {
   const found = (Object.keys(TONE_SENTENCES) as Array<keyof typeof TONE_SENTENCES>).find((tone) => instructions.includes(TONE_SENTENCES[tone]));
   return found ?? 'own';
 }
 
-/** The instructions with the tone sentence swapped; "own" removes it, so people describe the tone themselves. */
 export function withTone(instructions: string, tone: ToneId): string {
   let rest = instructions;
   for (const sentence of Object.values(TONE_SENTENCES)) {
@@ -71,7 +68,6 @@ export function withSnippet(instructions: string, snippet: InstructionSnippet): 
   return trimmed ? `${trimmed}\n${snippet.text}` : snippet.text;
 }
 
-/** Long prompts get harder for the model to follow. */
 export function instructionsGuidance(length: number, max: number): { text: string; long: boolean } {
   if (length === 0) {
     return { text: 'A few clear sentences are enough. Your knowledge does the rest.', long: false };
@@ -83,7 +79,6 @@ export function instructionsGuidance(length: number, max: number): { text: strin
   return { text: `${count} Most good instructions are 200 to 1,500.`, long: false };
 }
 
-// Tools, in plain words. Ids the portal does not know yet still show, under Other.
 export interface ToolInfo {
   label: string;
   effect: string;
@@ -134,7 +129,6 @@ export interface AgentTemplate {
   name: string;
   description: string;
   instructions: string;
-  /** Null turns on every tool. */
   tools: string[] | null;
   handoverPolicy: HandoverPolicy;
   allowGeneralKnowledge: boolean;

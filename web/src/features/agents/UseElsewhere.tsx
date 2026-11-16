@@ -37,7 +37,6 @@ export function UseElsewhere({ agent }: { agent: AgentDto }) {
   const keys = useAgentApiKeys(agent.id);
   const [client, setClient] = useState<SnippetClient>('claude');
   const [created, setCreated] = useState<CreatedAgentApiKeyDto | null>(null);
-  // The portal proxies /mcp and /api to the API, so the public address serves both.
   const { origin, placeholder } = usePublicOrigin();
 
   const saveAccess = useMutation({
@@ -159,7 +158,6 @@ function NewKeyForm({ agentId, onCreated }: { agentId: string; onCreated: (creat
   const [error, setError] = useState<string | null>(null);
   const create = useMutation({
     mutationFn: (body: { name: string; requestsPerMinute: number }) => accessApi.createKey(agentId, body),
-    // The response carries the key: keep it out of the cache.
     gcTime: 0,
     onSuccess: (created) => {
       setName('');

@@ -51,14 +51,14 @@ public sealed class AgentChatTests
     }
 
     [Fact]
-    public async Task Without_an_agent_the_chat_runs_as_the_built_in_one()
+    public async Task Without_an_agent_the_chat_runs_as_the_starter_agent()
     {
         using var host = new AgentTestHost();
         var scripted = host.ChatClients.Script("orchestrator").ThenText("Hello.");
 
         var events = await host.ChatAsync("Hi", cancellationToken: Ct);
 
-        host.Conversations.Get(events.ConversationId()).AgentId.ShouldBeNull("the built-in agent is not seeded in this host");
+        host.Conversations.Get(events.ConversationId()).AgentId.ShouldBe(host.Starter.Id);
         scripted.Requests.ShouldHaveSingleItem().Options!.Tools!.Select(tool => tool.Name)
             .ShouldBe(AgentDefaults.Tools, ignoreOrder: true, "the portal never offers a person");
     }
@@ -159,7 +159,6 @@ public sealed class AgentChatTests
     [Fact]
     public async Task The_next_message_may_follow_as_soon_as_an_answer_ends()
     {
-        // The turn's scope is still being disposed when its events end, as with a slow database connection.
         var disposing = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         using var host = new AgentTestHost(configureServices: services => services.AddScoped(_ => new SlowToDispose(disposing.Task)));
         var turns = host.Services.GetRequiredService<ChatTurnHost>();

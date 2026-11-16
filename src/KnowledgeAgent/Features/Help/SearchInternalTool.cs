@@ -11,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace KnowledgeAgent.Features.Help;
 
-// Knowledge search limited to the Internal folder, which no customer agent ever searches. Help agent only.
 internal sealed class SearchInternalTool : IAgentTool
 {
     public const string ToolName = "search_internal";

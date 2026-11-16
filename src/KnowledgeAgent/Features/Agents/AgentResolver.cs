@@ -2,7 +2,6 @@ using KnowledgeAgent.Features.Chat.Agents;
 using KnowledgeAgent.Features.Chat.Tools;
 using KnowledgeAgent.Features.Sources;
 using KnowledgeAgent.Features.Sources.Folders;
-using Microsoft.Extensions.Options;
 
 namespace KnowledgeAgent.Features.Agents;
 
@@ -19,26 +18,23 @@ public interface IAgentResolver
 
     Task<AgentConfig?> FindAsync(Guid id, CancellationToken cancellationToken = default);
 
-    // Never includes the Internal folder, which only the help assistant searches.
     Task<IReadOnlyList<Guid>?> ResolveScopeAsync(AgentConfig agent, IReadOnlyList<Guid> conversationScope, CancellationToken cancellationToken = default);
 }
 
 internal sealed class AgentResolver(
     IAgentRepository agents,
     ISourceFolderRepository folders,
-    ISourceRepository sources,
-    IOptions<AgentOptions> options) : IAgentResolver
+    ISourceRepository sources) : IAgentResolver
 {
     public async Task<AgentConfig> ResolveAsync(string? key, CancellationToken cancellationToken = default)
     {
-        var wanted = string.IsNullOrWhiteSpace(key) ? AgentConfig.InternalKey : key.Trim().ToLowerInvariant();
-        if (await agents.GetByKeyAsync(wanted, cancellationToken) is { } agent)
+        if (string.IsNullOrWhiteSpace(key))
         {
-            return agent;
+            return (await agents.ListAsync(cancellationToken)).MinBy(agent => agent.CreatedAt) ?? throw new AgentNotFoundException(AgentConfig.StarterKey);
         }
 
-        // The seed may not have run yet.
-        return wanted == AgentConfig.InternalKey ? Builtin(options.Value) : throw new AgentNotFoundException(wanted);
+        var wanted = key.Trim().ToLowerInvariant();
+        return await agents.GetByKeyAsync(wanted, cancellationToken) ?? throw new AgentNotFoundException(wanted);
     }
 
     public async Task<AgentConfig> ResolveAsync(Guid? id, string? fallbackKey, CancellationToken cancellationToken = default) =>
@@ -93,15 +89,13 @@ internal sealed class AgentResolver(
         return await sources.ListIdsOutsideFoldersAsync(internalFolders, cancellationToken);
     }
 
-    internal static AgentConfig Builtin(AgentOptions settings) => new()
+    internal static AgentConfig Starter(AgentOptions settings) => new()
     {
-        Key = AgentConfig.InternalKey,
-        Name = settings.AppName,
+        Key = AgentConfig.StarterKey,
+        Name = "Assistant",
+        Description = "Answers from all your sources. Change it or add agents of your own.",
         ProfileName = settings.OrchestratorProfile,
         Tools = AgentDefaults.Tools.Where(tool => settings.ResearcherEnabled || tool != ToolNames.DelegateResearch).ToList(),
         AllowGeneralKnowledge = settings.AllowGeneralKnowledge,
-
-        HandoverPolicy = HandoverPolicy.Never,
-        IsBuiltIn = true,
     };
 }

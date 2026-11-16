@@ -12,7 +12,6 @@ using ModelContextProtocol.Server;
 
 namespace KnowledgeAgent.Features.Agents.Access;
 
-// Stateless Streamable HTTP, so any instance can answer.
 internal static class AgentMcpServer
 {
     public const string AskTool = "ask";
@@ -200,7 +199,6 @@ internal static class AgentMcpServer
     }
 }
 
-// Read again so a revoked key stops working at once.
 internal sealed class AgentKeyLookup(Infrastructure.Persistence.KnowledgeDbContext db, Infrastructure.Persistence.DbContextGate gate)
 {
     public async Task<AgentApiKey?> GetAsync(Guid keyId, CancellationToken cancellationToken)

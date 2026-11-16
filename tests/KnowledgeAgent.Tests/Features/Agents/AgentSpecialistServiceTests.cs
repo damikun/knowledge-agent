@@ -41,10 +41,9 @@ public sealed class AgentSpecialistServiceTests
     }
 
     [Fact]
-    public async Task An_agent_cannot_hand_off_to_itself_a_missing_agent_the_built_in_one_or_without_saying_when()
+    public async Task An_agent_cannot_hand_off_to_itself_a_missing_agent_or_without_saying_when()
     {
         var service = Service();
-        var builtIn = _agents.Add(new AgentConfig { Key = AgentConfig.InternalKey, Name = "Knowledge Agent", IsBuiltIn = true });
         var billing = await service.CreateAsync(new SaveAgentRequest("Billing", Key: "billing"), Ct);
         var front = await service.CreateAsync(new SaveAgentRequest("Front", Key: "front"), Ct);
 
@@ -56,7 +55,6 @@ public sealed class AgentSpecialistServiceTests
                 [
                     new(front.Id, "Me"),
                     new(Guid.NewGuid(), "Gone"),
-                    new(builtIn.Id, "Everything"),
                     new(billing.Id, " "),
                 ],
             },
@@ -64,10 +62,9 @@ public sealed class AgentSpecialistServiceTests
 
         error.Errors.Keys.ShouldBe(["specialists"]);
         var messages = error.Errors["specialists"];
-        messages.Length.ShouldBe(4);
+        messages.Length.ShouldBe(3);
         messages.ShouldContain(message => message.Contains("itself"));
         messages.ShouldContain(message => message.Contains("does not exist"));
-        messages.ShouldContain(message => message.Contains("built-in"));
         messages.ShouldContain(message => message.Contains("Billing"));
         (await service.GetAsync(front.Id, Ct)).ShouldNotBeNull().Specialists.ShouldBeEmpty();
     }

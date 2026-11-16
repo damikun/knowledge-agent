@@ -20,20 +20,17 @@ export interface AgentFormState {
   setValues: (values: AgentFormValues) => void;
   clientErrors: AgentFormErrors;
   setClientErrors: (errors: AgentFormErrors) => void;
-  /** Field errors the API sent back, outside `shownFields`, listed together. */
   otherErrors: (shownFields: readonly AgentFormField[]) => string[];
   focusInvalid: () => void;
   formRef: React.RefObject<HTMLFormElement | null>;
 }
 
-/** A new agent's key follows its name until the key is typed. */
 export function useAgentForm(initial: AgentFormValues, { isNew, serverError }: { isNew: boolean; serverError: unknown }): AgentFormState {
   const idPrefix = useId();
   const [values, setValues] = useState(initial);
   const [clientErrors, setClientErrors] = useState<AgentFormErrors>({});
   const [focusRequest, setFocusRequest] = useState(0);
   const validation = serverError instanceof ApiError && serverError.isValidation ? serverError : null;
-  // A radio group marked invalid hands the focus to its first option.
   const formRef = useFocusFirstInvalid(focusRequest, validation, INVALID_CONTROL);
 
   const set: FieldKit['set'] = (field, value, clears = []) => {

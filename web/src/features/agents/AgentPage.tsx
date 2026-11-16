@@ -1,6 +1,6 @@
 import { Bot, Copy, FlaskConical, Trash2 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router';
 import { buttonClass } from '../../components/ui/Button';
 import { Card, EmptyState, ErrorMessage, PageHeader } from '../../components/ui/feedback';
 import { Menu, type MenuItem } from '../../components/ui/Menu';
@@ -56,9 +56,6 @@ export function AgentPage() {
   if (!agents.data || !options.data) {
     return <PageSkeleton />;
   }
-  if (agent?.isBuiltIn) {
-    return <Navigate to="/agents" replace />;
-  }
   if (!agent) {
     return (
       <Page width="narrow">
@@ -107,7 +104,6 @@ function AgentView({ agent, options }: { agent: AgentDto; options: AgentOptionsD
         }
         return params;
       },
-      // Keep the new-agent state while switching tabs.
       { state: location.state },
     );
 

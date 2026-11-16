@@ -23,13 +23,11 @@ public abstract class AgentScenarios(AppFixture fixture)
         var folder = await CreateFolderAsync(app, ApiClient.UniqueWord("folder"));
 
         var all = await app.Client.GetJsonAsync<AgentDto[]>("/api/agents");
-        var builtin = all.Where(agent => agent.IsBuiltIn).ShouldHaveSingleItem();
-        builtin.Key.ShouldBe(AgentConfig.InternalKey);
+        all.ShouldContain(agent => agent.Key == AgentConfig.StarterKey, "a new install starts with an ordinary agent");
         var options = await app.Client.GetJsonAsync<AgentOptionsDto>("/api/agents/options");
         options.Tools.ShouldContain(ToolNames.SearchKnowledgeBase);
         options.Profiles.ShouldContain(AgentDefaults.ProfileName);
         options.Tools.ShouldNotContain(ToolNames.RequestHumanHandover, "when the agent offers a person is its handover policy");
-        builtin.HandoverPolicy.ShouldBe(HandoverPolicy.Never);
 
         AgentDto created;
         using (var create = await app.Client.PostJsonAsync(
@@ -58,16 +56,6 @@ public abstract class AgentScenarios(AppFixture fixture)
             updated.FolderIds.ShouldBeEmpty("an update replaces the whole agent");
             updated.HandoverPolicy.ShouldBe(HandoverPolicy.WhenUnsure, "but keeps its handover policy when none is sent");
             (await update.Content.ReadAsStringAsync(Ct)).ShouldContain("\"handoverPolicy\":\"whenUnsure\"");
-        }
-
-        using (var saveBuiltin = await app.Client.PutJsonAsync($"/api/agents/{builtin.Id}", new SaveAgentRequest("Company brain")))
-        {
-            (await saveBuiltin.ReadProblemAsync(HttpStatusCode.BadRequest)).FieldErrors.ShouldContainKey("id");
-        }
-
-        using (var deleteBuiltin = await app.Client.DeleteAsync($"/api/agents/{builtin.Id}", Ct))
-        {
-            (await deleteBuiltin.ReadProblemAsync(HttpStatusCode.BadRequest)).FieldErrors.ShouldContainKey("id");
         }
 
         using (var delete = await app.Client.DeleteAsync($"/api/agents/{created.Id}", Ct))
@@ -222,17 +210,6 @@ public abstract class AgentScenarios(AppFixture fixture)
         var portalCited = portal.All<ToolResultEvent>(ChatEventTypes.ToolResult).SelectMany(result => result.Citations).Select(citation => citation.SourceId).ToList();
         portalCited.ShouldContain(open.Id, portal.Describe());
         portalCited.ShouldNotContain(secret.Id);
-        var builtIn = (await app.Client.GetJsonAsync<AgentDto[]>("/api/agents")).Single(agent => agent.IsBuiltIn);
-        using (var expose = await app.Client.PutJsonAsync($"/api/agents/{builtIn.Id}/access", new SaveAgentAccessRequest(McpServerEnabled: true)))
-        {
-            (await expose.ReadProblemAsync(HttpStatusCode.BadRequest)).Errors.ShouldNotBeNull().ShouldContainKey("id");
-        }
-
-        using (var builtInKey = await app.Client.PostJsonAsync($"/api/agents/{builtIn.Id}/api-keys", new CreateAgentApiKeyRequest("Backend")))
-        {
-            builtInKey.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
-        }
-
         using (var rename = await app.Client.PatchJsonAsync($"/api/sources/folders/{internalFolder.Id}", new RenameSourceFolderRequest("Team")))
         {
             rename.StatusCode.ShouldBe(HttpStatusCode.BadRequest);

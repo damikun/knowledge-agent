@@ -21,28 +21,25 @@ internal sealed class AgentRepository(KnowledgeDbContext db, DbContextGate gate)
         var agents = await db.Agents.AsNoTracking().ToListAsync(cancellationToken);
 
         return agents
-            .Select(agent => agent.ApplyBuiltInLimits())
-            .OrderByDescending(agent => agent.IsBuiltIn)
-            .ThenBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
+            .OrderBy(agent => agent.Name, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
 
     public async Task<AgentConfig?> GetAsync(Guid id, CancellationToken cancellationToken = default)
     {
         using var _ = await gate.EnterAsync(cancellationToken);
-        return (await db.Agents.AsNoTracking().FirstOrDefaultAsync(agent => agent.Id == id, cancellationToken))?.ApplyBuiltInLimits();
+        return await db.Agents.AsNoTracking().FirstOrDefaultAsync(agent => agent.Id == id, cancellationToken);
     }
 
     public async Task<AgentConfig?> GetByKeyAsync(string key, CancellationToken cancellationToken = default)
     {
         using var _ = await gate.EnterAsync(cancellationToken);
-        return (await db.Agents.AsNoTracking().FirstOrDefaultAsync(agent => agent.Key == key, cancellationToken))?.ApplyBuiltInLimits();
+        return await db.Agents.AsNoTracking().FirstOrDefaultAsync(agent => agent.Key == key, cancellationToken);
     }
 
     public async Task<AgentConfig> AddAsync(AgentConfig agent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(agent);
-        agent.ApplyBuiltInLimits();
         using var _ = await gate.EnterAsync(cancellationToken);
         try
         {
@@ -59,7 +56,6 @@ internal sealed class AgentRepository(KnowledgeDbContext db, DbContextGate gate)
     public async Task UpdateAsync(AgentConfig agent, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(agent);
-        agent.ApplyBuiltInLimits();
         using var _ = await gate.EnterAsync(cancellationToken);
         try
         {

@@ -1,4 +1,3 @@
-/** Stored by English name ("German"), which the prompt uses; empty answers in each question's language. */
 const LANGUAGES: ReadonlyArray<{ value: string; label: string }> = [
   { value: 'English', label: 'English' },
   { value: 'German', label: 'Deutsch' },
@@ -39,13 +38,11 @@ export function languageOptions(current: string): Array<{ value: string; label: 
   return own && !matchLanguage(own) ? [...options, { value: own, label: own, hint: 'Your own' }] : options;
 }
 
-/** The list's value for a saved language, ignoring case, such as "german" → "German". */
 export function matchLanguage(value: string): string | undefined {
   const wanted = value.trim().toLowerCase();
   return LANGUAGES.find((language) => language.value.toLowerCase() === wanted || language.label.toLowerCase() === wanted)?.value;
 }
 
-/** "Deutsch (German)" for a saved "German"; other values as they are. */
 export function languageName(value: string): string {
   const match = LANGUAGES.find((language) => language.value === matchLanguage(value));
   return match ? (match.label === match.value ? match.label : `${match.label} (${match.value})`) : value.trim();

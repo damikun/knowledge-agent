@@ -70,7 +70,6 @@ export function McpAppsField({ values, set, id }: FieldKit) {
     return <Skeleton shape="card" className="h-24" />;
   }
   if (servers.isError) {
-    // Without the admin role, or on an API without MCP servers, there is nothing to pick from.
     if (servers.error instanceof ApiError && (servers.error.status === 404 || servers.error.status === 403)) {
       return <p className="text-small text-fg-secondary">Connected apps are not available here.</p>;
     }
@@ -93,7 +92,6 @@ export function McpAppsField({ values, set, id }: FieldKit) {
 
   const update = (serverId: string, next: AgentMcpAppDto) => set('mcpApps', [...apps.filter((app) => !sameId(app.serverId, serverId)), next]);
 
-  // Apps of servers deleted since are dropped by the API when the connection goes.
   return (
     <div className="space-y-3">
       <ul aria-label="Connected apps" className="space-y-3">
@@ -142,7 +140,6 @@ function AppRow({
       onChange(withAllTools(current, server));
       return;
     }
-    // The first time, every tool starts picked with the policy it has now, so nothing changes until a tool is turned off.
     const tools =
       current.tools.length > 0
         ? current.tools
@@ -150,7 +147,6 @@ function AppRow({
     onChange({ ...current, mode: 'chosen', tools });
   };
 
-  // Turning an app on for all its tools approves the ones it lists now.
   const turnOn = (checked: boolean) =>
     onChange(
       checked && current.mode === 'all' && current.tools.length === 0
@@ -297,7 +293,6 @@ function ToolChoices({
   idPrefix: string;
   onChange: (next: AgentMcpAppDto) => void;
 }) {
-  // A newly picked tool is approved as the app lists it now; a changed policy keeps the approval.
   const setTool = (tool: { name: string; fingerprint?: string | null }, policy: McpToolPolicy | null) => {
     const { name } = tool;
     const others = app.tools.filter((item) => item.name !== name);
@@ -314,7 +309,6 @@ function ToolChoices({
     const approval = approvalOf(tool, app);
     return approval === 'changed' || approval === 'needed';
   });
-  // Picks of tools the app no longer lists, such as after a rename: they are skipped while answering.
   const gone = app.tools.filter((tool) => !server.tools.some((item) => item.name === tool.name));
 
   if (server.tools.length === 0 && gone.length === 0) {

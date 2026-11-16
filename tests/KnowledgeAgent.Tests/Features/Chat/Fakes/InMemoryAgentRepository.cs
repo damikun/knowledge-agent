@@ -21,7 +21,7 @@ internal sealed class InMemoryAgentRepository : IAgentRepository
     }
 
     public Task<IReadOnlyList<AgentConfig>> ListAsync(CancellationToken cancellationToken = default) =>
-        Task.FromResult<IReadOnlyList<AgentConfig>>(_agents.Values.Select(Clone).OrderByDescending(a => a.IsBuiltIn).ThenBy(a => a.Name).ToList());
+        Task.FromResult<IReadOnlyList<AgentConfig>>(_agents.Values.Select(Clone).OrderBy(a => a.Name).ToList());
 
     public Task<AgentConfig?> GetAsync(Guid id, CancellationToken cancellationToken = default) =>
         Task.FromResult(_agents.TryGetValue(id, out var agent) ? Clone(agent) : null);
@@ -52,7 +52,6 @@ internal sealed class InMemoryAgentRepository : IAgentRepository
         Tools = [.. agent.Tools],
         AllowGeneralKnowledge = agent.AllowGeneralKnowledge,
         HandoverPolicy = agent.HandoverPolicy,
-        IsBuiltIn = agent.IsBuiltIn,
         McpTools = agent.McpTools
             .Select(app => new AgentMcpApp
             {

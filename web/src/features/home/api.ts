@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { isRecord, request } from '../../lib/api';
+import { call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import { conversationItems, isConversationStatus } from '../inbox/api';
 import type { RecentConversation } from './types';
 
 const RECENT_CONVERSATIONS = 6;
 
-// Under the chat's ['conversations'] key, so new conversations refresh this list too.
 const homeKeys = {
   recent: ['conversations', 'recent'] as const,
 };
@@ -28,7 +28,7 @@ function toRecentConversation(value: unknown): RecentConversation {
 
 const homeApi = {
   listRecent: async (signal?: AbortSignal) =>
-    conversationItems(await request<unknown>('/api/conversations', { query: { limit: RECENT_CONVERSATIONS }, signal })).map(toRecentConversation),
+    conversationItems(await call(endpoints.conversations.list, { query: { limit: RECENT_CONVERSATIONS }, signal })).map(toRecentConversation),
 };
 
 export function useRecentConversations() {

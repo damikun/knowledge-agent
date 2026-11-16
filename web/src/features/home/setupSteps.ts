@@ -1,19 +1,14 @@
 import type { SetupStep } from '../../components/ui/SetupChecklist';
 import { PROVIDERS_PATH } from '../models/providerSettings';
 
-/** Undefined while loading or when it couldn't be read. */
 export interface SetupFacts {
-  /** Answering and embeddings both resolve to a model. */
   modelConnected: boolean | undefined;
   hasSources: boolean | undefined;
-  /** An agent besides the built-in one, which only answers in the portal. */
   hasAgent: boolean | undefined;
   firstWidgetId: string | null | undefined;
-  /** A widget has had a conversation, so it's on a site. */
   widgetLive: boolean | undefined;
 }
 
-/** Null until every fact is known. */
 export function setupSteps(facts: SetupFacts): SetupStep[] | null {
   const { modelConnected, hasSources, hasAgent, firstWidgetId, widgetLive } = facts;
   if (modelConnected === undefined || hasSources === undefined || hasAgent === undefined || firstWidgetId === undefined || widgetLive === undefined) {

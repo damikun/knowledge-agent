@@ -6,7 +6,6 @@ namespace KnowledgeAgent.Features.Help;
 
 internal static class HelpIds
 {
-    // A name-based id (version 8 layout), so the same section always gets the same id.
     public static Guid For(string name)
     {
         Span<byte> hash = stackalloc byte[32];
@@ -226,7 +225,6 @@ internal static partial class HelpMarkdown
     [GeneratedRegex(@"(?m)^\s*\|?[\s:|-]*-{3,}[\s:|-]*$")]
     private static partial Regex TableRule();
 
-    // The end of a sentence: a full stop, question or exclamation mark before a space, unless it ends "e.g." and the like.
     [GeneratedRegex(@"(?<!\b(?:e\.g|i\.e|etc|vs))[.!?](?=\s|$)")]
     private static partial Regex SentenceEnd();
 }

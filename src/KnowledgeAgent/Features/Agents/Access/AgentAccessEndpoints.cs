@@ -43,7 +43,6 @@ internal static class AgentAccessEndpoints
         return group;
     }
 
-    // Outside /api's staff sign-in: the agent's API key authorizes.
     public static void MapAgentPublicEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var api = endpoints.MapGroup("/api/public/agents/{agentKey}")

@@ -52,7 +52,6 @@ public abstract class HelpScenarios(AppFixture fixture)
         citation.SourceTitle.ShouldBe("Connect a model > Add an API key");
         citation.SourceUrl.ShouldBe("/models#providers");
 
-        // Two help tools and one Internal search tool, nothing else; an unknown id comes back as a recoverable error.
         var first = model.Requests[0];
         first.Options!.Tools!.Select(tool => tool.Name).ShouldBe([ReadHelpSectionTool.ToolName, SearchHelpTool.ToolName, SearchInternalTool.ToolName], ignoreOrder: true);
         var system = first.Messages[0];
@@ -84,7 +83,6 @@ public abstract class HelpScenarios(AppFixture fixture)
 
         var internalFolder = (await app.Client.GetJsonAsync<SourceFolderListDto>("/api/sources/folders")).Folders.Single(folder => folder.IsInternal);
         var runbook = await AddReadyTextAsync(app, "On-call runbook", $"The {marker} escalation pages the second line after ten minutes.", internalFolder.Id);
-        // Matches the query as well, but it is no Internal source.
         await AddReadyTextAsync(app, "Public FAQ", $"The {marker} escalation is explained to customers in the FAQ.", folderId: null);
         model = app.ChatModels.Use("orchestrator", new ScriptedChatClient()
             .ThenToolCall(SearchInternalTool.ToolName, new { query = $"{marker} escalation" })
@@ -119,7 +117,7 @@ public abstract class HelpScenarios(AppFixture fixture)
         var status = await app.Client.GetJsonAsync<HelpStatusDto>("/api/help");
         (status.Enabled, status.ModelReady, status.CanManage).ShouldBe((true, false, true));
         status.Setup.ShouldNotBeNull().ChatModel.ShouldBeFalse();
-        status.Setup.Agent.ShouldBeFalse("only the built-in agent exists");
+        status.Setup.Agent.ShouldBeTrue("a new install starts with an agent");
 
         var stream = await HelpChatAsync(app, new HelpChatRequest("How do I put the widget on my site?", Page: "/widgets"));
         stream.Errors.ShouldHaveSingleItem(stream.Describe()).Code.ShouldBe(ChatErrorCodes.ModelNotConfigured);
@@ -167,7 +165,6 @@ public abstract class HelpScenarios(AppFixture fixture)
         return new ChatStream(response.Content.Headers.ContentType?.MediaType, null, null, await SseReader.ReadAllAsync(response, Ct));
     }
 
-    // Rows of every table a conversation could touch, plus what the portal's lists and counts show.
     private static async Task<string> SnapshotAsync(KnowledgeAgentApp app)
     {
         await using var scope = app.Services.CreateAsyncScope();

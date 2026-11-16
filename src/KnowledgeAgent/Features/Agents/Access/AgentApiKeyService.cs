@@ -52,8 +52,6 @@ internal sealed partial class AgentApiKeyService(
 
     public static string ApiPath(string agentKey) => $"/api/public/agents/{agentKey}";
 
-    private const string BuiltInStaysInPortal = "The built-in agent cannot be used elsewhere. Create an agent of your own.";
-
     public static string HashOf(string key) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(key)));
 
     public async Task<IReadOnlyList<AgentApiKeyDto>?> ListAsync(Guid agentId, CancellationToken cancellationToken = default)
@@ -74,11 +72,6 @@ internal sealed partial class AgentApiKeyService(
         if (await agents.GetAsync(agentId, cancellationToken) is not { } agent)
         {
             return null;
-        }
-
-        if (agent.IsBuiltIn)
-        {
-            throw new ValidationFailedException("id", BuiltInStaysInPortal);
         }
 
         var errors = new ValidationErrors();
@@ -105,7 +98,6 @@ internal sealed partial class AgentApiKeyService(
             throw new ValidationFailedException(errors.ToDictionary());
         }
 
-        // 32 random bytes: a hash without salt is enough, since nobody can guess such a key from a list of hashes.
         var secret = KeyPrefix + Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).TrimEnd('=').Replace('+', '-').Replace('/', '_');
         var apiKey = new AgentApiKey
         {
@@ -166,11 +158,6 @@ internal sealed partial class AgentApiKeyService(
             return null;
         }
 
-        if (agent.IsBuiltIn && (request.McpServerEnabled is true || request.HttpApiEnabled is true))
-        {
-            throw new ValidationFailedException("id", BuiltInStaysInPortal);
-        }
-
         agent.McpServerEnabled = request.McpServerEnabled ?? agent.McpServerEnabled;
         agent.HttpApiEnabled = request.HttpApiEnabled ?? agent.HttpApiEnabled;
         agent.UpdatedAt = timeProvider.GetUtcNow();
@@ -195,7 +182,6 @@ internal sealed partial class AgentApiKeyService(
     private static partial void LogRevoked(ILogger logger, Guid keyId, Guid agentId);
 }
 
-// LastUsedAt is written at most once a minute per key, so busy clients don't write on every request.
 internal sealed class AgentKeyAuthenticator(KnowledgeDbContext db, DbContextGate gate, AgentKeyUsage usage, TimeProvider timeProvider)
 {
     public async Task<AgentKeyMatch?> AuthenticateAsync(string presented, CancellationToken cancellationToken)
@@ -211,15 +197,13 @@ internal sealed class AgentKeyAuthenticator(KnowledgeDbContext db, DbContextGate
         {
             var key = await db.AgentApiKeys.FirstOrDefaultAsync(item => item.Hash == hash, cancellationToken);
 
-            // Compared again in constant time, so the lookup reveals nothing about near matches.
             if (key is null || key.RevokedAt is not null
                 || !CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(key.Hash), Encoding.ASCII.GetBytes(hash)))
             {
                 return null;
             }
 
-            // The built-in agent never answers here, whatever an old row says.
-            var agent = (await db.Agents.AsNoTracking().FirstOrDefaultAsync(item => item.Id == key.AgentId, cancellationToken))?.ApplyBuiltInLimits();
+            var agent = await db.Agents.AsNoTracking().FirstOrDefaultAsync(item => item.Id == key.AgentId, cancellationToken);
             if (agent is null)
             {
                 return null;

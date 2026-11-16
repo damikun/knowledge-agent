@@ -14,7 +14,6 @@ export const TABS: ReadonlyArray<{ id: AgentTab; label: string }> = [
   { id: 'advanced', label: 'Advanced' },
 ];
 
-// Tab names from older links.
 const OLD_TABS: Readonly<Record<string, AgentTab>> = { people: 'handover' };
 
 export function parseTab(value: string | null): AgentTab {

@@ -7,7 +7,6 @@ using Microsoft.Extensions.AI;
 
 namespace KnowledgeAgent.Features.Help;
 
-// Given only to the help agent and never registered, so no customer agent can use it.
 internal sealed class SearchHelpTool(HelpIndex index, string? page) : IAgentTool
 {
     public const string ToolName = "search_help";

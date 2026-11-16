@@ -123,7 +123,6 @@ function ChoiceCards<T extends string>({ name, label, labelledBy, describedBy, o
 }
 
 export interface NameFieldsProps extends FieldKit {
-  /** A new agent also gets its key, which follows the name until it is typed. */
   isNew: boolean;
   autoFocus?: boolean;
 }
@@ -195,7 +194,6 @@ export function NameFields({ values, set, errorsFor, id, isNew, autoFocus }: Nam
   );
 }
 
-/** A saved language missing from the list stays an option. */
 export function LanguageField({ values, set, errorsFor, id }: FieldKit) {
   const options = languageOptions(values.language);
   const value = matchLanguage(values.language) ?? values.language.trim();
@@ -212,7 +210,6 @@ export function LanguageField({ values, set, errorsFor, id }: FieldKit) {
   );
 }
 
-/** The tone becomes the first line of the instructions. */
 export function ToneField({ values, set, id, ownHint }: FieldKit & { ownHint: string }) {
   const options = TONES.map((tone) => ({ value: tone.value, label: tone.label, description: tone.value === 'own' ? ownHint : tone.example }));
   return (
@@ -326,7 +323,6 @@ const SCOPES: ReadonlyArray<{ value: KnowledgeScope; label: string; description:
   { value: 'folders', label: 'Chosen folders', description: 'Only the folders you pick, with their subfolders.' },
 ];
 
-/** Only the help assistant searches Internal, so it isn't offered and All sources leaves it out. */
 export function KnowledgeFields({ values, set, errorsFor, id }: FieldKit) {
   const folders = useSourceFolders();
   const fullTree = useMemo(() => (folders.data ? buildFolderTree(folders.data.folders) : undefined), [folders.data]);
@@ -443,7 +439,6 @@ function personChannels(widget: WidgetDto): string | null {
     return null;
   }
   const channel = widget.settings.handover.channel;
-  // The inbox always gets the request, whatever else the widget sends it to.
   return channel === 'portal' ? 'Inbox' : `Inbox, ${HANDOVER_CHANNEL_LABELS[channel] ?? channel}`;
 }
 

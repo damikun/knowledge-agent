@@ -12,7 +12,6 @@ public sealed record AgentDto(
     IReadOnlyList<string> Tools,
     bool AllowGeneralKnowledge,
     HandoverPolicy HandoverPolicy,
-    bool IsBuiltIn,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt)
 {
@@ -36,8 +35,6 @@ public sealed record AgentMcpAppDto(
     McpToolPolicy ChangesPolicy = McpToolPolicy.Confirm,
     IReadOnlyList<AgentMcpToolDto>? Tools = null);
 
-// Fingerprint: the definition the admin approved. Sent back unchanged it keeps that approval; the tool's current
-// fingerprint from the connection approves the definition the app lists now.
 public sealed record AgentMcpToolDto(string Name, McpToolPolicy? Policy = null, string? Fingerprint = null);
 
 public sealed record SaveAgentRequest(
@@ -73,7 +70,6 @@ internal static class AgentMappings
         agent.Tools,
         agent.AllowGeneralKnowledge,
         agent.HandoverPolicy,
-        agent.IsBuiltIn,
         agent.CreatedAt,
         agent.UpdatedAt)
     {

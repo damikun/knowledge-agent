@@ -10,7 +10,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { StatCard, type StatTrend } from '../../components/ui/StatCard';
 import { StatusDot } from '../../components/ui/StatusDot';
 import { formatDateTime, formatNumber, formatRelativeTime, pluralize } from '../../lib/format';
-import { ownAgents, useAgents } from '../agents/api';
+import { useAgents } from '../agents/api';
 import { NeedsAttention } from '../alerts';
 import { STATUS_LABELS, STATUS_TONES, widgetLabel } from '../inbox/status';
 import { useInboxConversations } from '../inbox/api';
@@ -101,7 +101,6 @@ function share(part: number, whole: number): string {
   return whole > 0 ? `${Math.round((part / whole) * 100)}% of conversations` : 'No conversations yet';
 }
 
-/** Against the week before; none without a previous week to compare. */
 function conversationTrend(current: number, previous: number): StatTrend | undefined {
   if (previous === 0) {
     return undefined;
@@ -217,7 +216,7 @@ export function HomePage() {
   const steps = setupSteps({
     modelConnected,
     hasSources: sources.data ? sources.data.total > 0 : undefined,
-    hasAgent: agents.data ? ownAgents(agents.data).length > 0 : undefined,
+    hasAgent: agents.data ? agents.data.length > 0 : undefined,
     firstWidgetId: widgets.data ? ([...widgets.data].sort((a, b) => a.name.localeCompare(b.name))[0]?.id ?? null) : undefined,
     widgetLive: overview.data ? overview.data.widgets.some((widget) => widget.lastConversationAt !== null) : undefined,
   });

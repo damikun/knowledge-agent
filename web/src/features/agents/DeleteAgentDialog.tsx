@@ -16,7 +16,6 @@ export interface DeleteAgentDialogProps {
 
 export function DeleteAgentDialog({ agent, onClose, onDeleted }: DeleteAgentDialogProps) {
   const queryClient = useQueryClient();
-  // Agents that hand off to this one; the API wants a confirmation before removing it from them.
   const [teams, setTeams] = useState<AgentReferenceDto[]>([]);
   const remove = useMutation({
     mutationFn: ({ id, removeFromTeams }: { id: string; removeFromTeams: boolean }) => agentsApi.deleteAgent(id, removeFromTeams),
@@ -36,7 +35,6 @@ export function DeleteAgentDialog({ agent, onClose, onDeleted }: DeleteAgentDial
     },
   });
   const askedToConfirm = teamsOf(remove.error).length > 0;
-  // The API puts these errors on `id`, which needs no field name in front.
   const idErrors = remove.error instanceof ApiError ? remove.error.errorsFor('id') : [];
   const error = idErrors.length > 0 ? new Error(idErrors.join(' ')) : remove.error;
 
@@ -51,7 +49,7 @@ export function DeleteAgentDialog({ agent, onClose, onDeleted }: DeleteAgentDial
             removes it from their specialists. This cannot be undone.
           </>
         ) : (
-          <>“{agent?.name}” will be deleted. Its conversations continue with the built-in agent. This cannot be undone.</>
+          <>“{agent?.name}” will be deleted. Its portal conversations continue with another agent, and its widget conversations end. This cannot be undone.</>
         )
       }
       confirmLabel={teams.length > 0 ? 'Remove and delete' : 'Delete'}

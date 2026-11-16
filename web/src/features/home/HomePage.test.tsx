@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { agentDto, agentsRoutes, builtInAgent } from '../../test/agentsApi';
+import { agentDto, agentsRoutes, assistantAgent } from '../../test/agentsApi';
 import { alertDto, alertsRoutes, waitingAlert } from '../../test/alertsApi';
 import { embeddingProfile, orchestratorProfile } from '../../test/apiFixtures';
 import { sourceDto } from '../../test/fixtures';
@@ -56,12 +56,11 @@ interface Setup {
   alerts?: AlertDto[];
 }
 
-// GET /api/conversations serves both the waiting list (status=handover_pending) and recent activity.
 function serve({
   overview: numbers = overview(),
   waiting = [],
   recent = [],
-  agents = [builtInAgent, agentDto()],
+  agents = [assistantAgent, agentDto()],
   noChatModel = false,
   alerts = [],
 }: Setup = {}) {
@@ -148,7 +147,7 @@ describe('HomePage', () => {
   });
 
   it('shows the setup checklist until everything is set up', async () => {
-    serve({ noChatModel: true, agents: [builtInAgent] });
+    serve({ noChatModel: true, agents: [] });
     const { unmount } = renderWithProviders(<HomePage />);
 
     const checklist = await screen.findByRole('region', { name: 'Get your agent on your website' });

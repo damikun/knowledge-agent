@@ -54,7 +54,6 @@ export function FolderChecklist({ tree, selected, onToggle, describedBy }: Folde
             <Folder className="size-4 shrink-0 text-fg-muted" aria-hidden />
             <span className="min-w-0 flex-1 truncate">{node.folder.name}</span>
             {covered ? <span className="shrink-0 text-xs">Included</span> : null}
-            {/* The count describes the checkbox rather than naming it, so the folder's name stays its name. */}
             <span aria-hidden className="shrink-0 text-xs text-fg-muted tabular-nums">
               {node.totalCount}
             </span>

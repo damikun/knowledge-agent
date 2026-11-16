@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { ApiError, asArray, asStrings, isRecord, request } from '../../lib/api';
+import { ApiError, asArray, asStrings, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { Guid } from '../../lib/types';
 import { toPolicy } from '../tools/mcp';
 import type { AgentDto, AgentMcpAppDto, AgentOptionsDto, AgentReferenceDto, AgentSpecialistDto, HandoverPolicy, SaveAgentRequest } from './types';
@@ -39,7 +40,6 @@ function specialists(value: unknown): AgentSpecialistDto[] {
     .map((item) => ({ agentId: item.agentId as string, whenToUse: typeof item.whenToUse === 'string' ? item.whenToUse : '' }));
 }
 
-/** The agents named by a 409 of a delete: they hand conversations to the agent. */
 export function teamsOf(error: unknown): AgentReferenceDto[] {
   if (!(error instanceof ApiError) || error.status !== 409) {
     return [];
@@ -59,7 +59,6 @@ function normalizeAgent(agent: AgentDto): AgentDto {
     tools: asStrings(agent.tools),
     allowGeneralKnowledge: agent.allowGeneralKnowledge === true,
     handoverPolicy: handoverPolicy(agent.handoverPolicy),
-    isBuiltIn: agent.isBuiltIn === true,
     mcpApps: mcpApps(agent.mcpApps),
     mcpServerEnabled: agent.mcpServerEnabled === true,
     httpApiEnabled: agent.httpApiEnabled === true,
@@ -73,33 +72,20 @@ function toOptions(value: unknown): AgentOptionsDto {
   return { tools: asStrings(options.tools), profiles: asStrings(options.profiles) };
 }
 
-const agentPath = (id: Guid) => `/api/agents/${encodeURIComponent(id)}`;
-
 export const agentsApi = {
-  /** Built-in agent last. Its row only names the agent of old conversations; lists and pickers use ownAgents. */
-  listAgents: async (signal?: AbortSignal) =>
-    asArray<AgentDto>(await request<unknown>('/api/agents', { signal }))
-      .map(normalizeAgent)
-      // Stable, so the API's order holds otherwise.
-      .sort((a, b) => Number(a.isBuiltIn) - Number(b.isBuiltIn)),
-  getOptions: async (signal?: AbortSignal) => toOptions(await request<unknown>('/api/agents/options', { signal })),
+  listAgents: async (signal?: AbortSignal) => asArray<AgentDto>(await call(endpoints.agents.list, { signal })).map(normalizeAgent),
+  getOptions: async (signal?: AbortSignal) => toOptions(await call(endpoints.agents.options, { signal })),
   createAgent: async (body: SaveAgentRequest) => {
-    const agent = await request<AgentDto | undefined>('/api/agents', { method: 'POST', body });
+    const agent: AgentDto | undefined = await call(endpoints.agents.create, { body });
     return agent ? normalizeAgent(agent) : undefined;
   },
   updateAgent: async (id: Guid, body: SaveAgentRequest) => {
-    const agent = await request<AgentDto | undefined>(agentPath(id), { method: 'PUT', body });
+    const agent: AgentDto | undefined = await call(endpoints.agents.update, { params: { id }, body });
     return agent ? normalizeAgent(agent) : undefined;
   },
-  /** 400 with an `id` error for the built-in agent; 409 naming the agents that hand off to it, unless removeFromTeams. */
-  deleteAgent: (id: Guid, removeFromTeams = false) =>
-    request<void>(removeFromTeams ? `${agentPath(id)}?removeFromTeams=true` : agentPath(id), { method: 'DELETE' }),
+  deleteAgent: (id: Guid, removeFromTeams = false): Promise<void> =>
+    call(endpoints.agents.remove, { params: { id }, query: { removeFromTeams: removeFromTeams ? true : undefined } }),
 };
-
-/** Without the built-in agent. */
-export function ownAgents(agents: readonly AgentDto[]): AgentDto[] {
-  return agents.filter((agent) => !agent.isBuiltIn);
-}
 
 export function useAgents() {
   return useQuery({ queryKey: agentKeys.list, queryFn: ({ signal }) => agentsApi.listAgents(signal), staleTime: 30_000 });

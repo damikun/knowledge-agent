@@ -58,7 +58,6 @@ export interface SectionFormProps {
   guard: LeaveGuardHandle;
 }
 
-/** Saves only its own fields on top of the saved agent, so one tab never carries another tab's edits. */
 export function SectionForm({ agent, options, section, using, guard }: SectionFormProps) {
   const queryClient = useQueryClient();
   const folders = useSourceFolders();

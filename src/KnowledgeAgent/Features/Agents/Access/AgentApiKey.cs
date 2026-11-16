@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace KnowledgeAgent.Features.Agents.Access;
 
-// Only a SHA-256 hash is stored; the key is shown once, on creation.
 public sealed class AgentApiKey
 {
     public const int MaxNameLength = 100;

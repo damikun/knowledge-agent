@@ -4,7 +4,6 @@ import { findNode, folderPath, folderPathLabel, subtreeIds, type FolderNode } fr
 import { toolInfo, type AgentTemplate } from './agentTemplates';
 import type { AgentDto, AgentMcpAppDto, AgentOptionsDto, AgentSpecialistDto, HandoverPolicy, SaveAgentRequest } from './types';
 
-// Limits of the API.
 export const MAX_NAME_LENGTH = 100;
 export const MAX_KEY_LENGTH = 64;
 export const MAX_DESCRIPTION_LENGTH = 500;
@@ -30,7 +29,6 @@ export const HANDOVER_POLICIES: ReadonlyArray<{ value: HandoverPolicy; label: st
 export interface AgentFormValues {
   name: string;
   key: string;
-  /** Until the key is typed, it follows the name. */
   keyEdited: boolean;
   description: string;
   instructions: string;
@@ -41,25 +39,20 @@ export interface AgentFormValues {
   folderIds: Guid[];
   allowGeneralKnowledge: boolean;
   handoverPolicy: HandoverPolicy;
-  /** Left out of the request until the agent has some or one is turned on. */
   mcpApps?: AgentMcpAppDto[];
-  /** Left out of the request until some are picked. */
   specialists?: AgentSpecialistDto[];
-  /** Left out (and not sent) while off and untouched. */
   showSpecialistName?: boolean;
 }
 
 export type AgentFormField = 'name' | 'key' | 'description' | 'instructions' | 'language' | 'profileName' | 'tools' | 'folderIds' | 'specialists';
 export type AgentFormErrors = Partial<Record<AgentFormField, string>>;
 
-/** Fields with a control in the form; validation messages for other fields are listed together. */
 export const AGENT_FORM_FIELDS: readonly AgentFormField[] = ['name', 'key', 'description', 'instructions', 'language', 'profileName', 'tools', 'folderIds', 'specialists'];
 
 function defaultProfile(options: AgentOptionsDto): string {
   return options.profiles.includes(DEFAULT_PROFILE) ? DEFAULT_PROFILE : (options.profiles[0] ?? DEFAULT_PROFILE);
 }
 
-/** A new agent from a template; without one it may use every tool, search every source and bring in a person when asked. */
 export function templateValues(template: AgentTemplate | undefined, options: AgentOptionsDto): AgentFormValues {
   return {
     name: template?.name ?? '',
@@ -108,7 +101,6 @@ export function initialAgentValues(agent: AgentDto | null, options: AgentOptions
   };
 }
 
-/** "Website helper" → "website-helper". */
 export function keyFromName(name: string): string {
   return name
     .normalize('NFKD')
@@ -128,11 +120,9 @@ export interface SaveAgentResult {
 export interface SaveAgentContext {
   isNew: boolean;
   options: AgentOptionsDto;
-  /** Drops chosen folders deleted since; the API refuses unknown folders. Undefined while the folders load. */
   knownFolderIds?: ReadonlySet<Guid>;
 }
 
-/** The whole agent, since PUT replaces it; the key only on create. */
 export function toSaveRequest(values: AgentFormValues, { isNew, options, knownFolderIds }: SaveAgentContext): SaveAgentResult {
   const errors: AgentFormErrors = {};
   const name = values.name.trim();
@@ -144,7 +134,6 @@ export function toSaveRequest(values: AgentFormValues, { isNew, options, knownFo
     errors.key = 'Use 1 to 64 lowercase letters, digits or dashes, starting with a letter or digit.';
   }
   const folderIds = values.scope === 'folders' ? values.folderIds.filter((id) => !knownFolderIds || knownFolderIds.has(id)) : [];
-  // An empty list would mean every source.
   if (values.scope === 'folders' && folderIds.length === 0) {
     errors.folderIds = 'Choose at least one folder, or All sources.';
   }
@@ -175,12 +164,10 @@ export function toSaveRequest(values: AgentFormValues, { isNew, options, knownFo
   };
 }
 
-/** An app turned on and off again without any choice is the same as one never touched, so it is not kept. */
 function keptApps(apps: readonly AgentMcpAppDto[]): AgentMcpAppDto[] {
   return apps.filter((app) => app.enabled || app.mode === 'chosen' || app.tools.length > 0 || app.changesPolicy !== 'confirm');
 }
 
-/** A chosen folder covers its subfolders, so they leave the selection. */
 export function toggleFolder(selected: readonly Guid[], node: FolderNode): Guid[] {
   if (selected.includes(node.folder.id)) {
     return selected.filter((id) => id !== node.folder.id);
@@ -219,7 +206,6 @@ export const SECTION_FIELDS: Readonly<Record<AgentSection, ReadonlyArray<keyof A
   advanced: ['profileName'],
 };
 
-/** Whether the fields hold the same values; the order of tools and folders does not matter. */
 export function sameFields(a: AgentFormValues, b: AgentFormValues, fields: ReadonlyArray<keyof AgentFormValues>): boolean {
   const comparable = (values: AgentFormValues) =>
     JSON.stringify(
@@ -238,7 +224,6 @@ export function sameFields(a: AgentFormValues, b: AgentFormValues, fields: Reado
   return comparable(a) === comparable(b);
 }
 
-/** The saved agent with one section's draft on top, since PUT replaces the whole agent. */
 export function withSection(saved: AgentFormValues, draft: AgentFormValues, section: AgentSection): AgentFormValues {
   const next = { ...saved };
   for (const field of SECTION_FIELDS[section]) {

@@ -14,7 +14,6 @@ public sealed class HelpOptions
 {
     public const string SectionName = "Help";
 
-    // Reserved for the docs site's JSON export; not read yet.
     public string? RemoteUrl { get; set; }
 }
 

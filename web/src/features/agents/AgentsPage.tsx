@@ -15,7 +15,7 @@ import { useWidgets } from '../widgets/api';
 import { scopeSummary } from './agentForm';
 import { namesList } from './agentSummary';
 import { AGENT_FRAMING } from './agentTemplates';
-import { ownAgents, useAgents } from './api';
+import { useAgents } from './api';
 import { DeleteAgentDialog } from './DeleteAgentDialog';
 import type { AgentDto } from './types';
 
@@ -78,7 +78,6 @@ export function AgentsPage() {
     const use = usage.get(agent.id.toLowerCase()) ?? { names: [], conversations: 0 };
     return [
       { icon: Library, label: scopeSummary(agent.folderIds, tree) },
-      // Unknown until the widgets load, rather than a wrong "not on your website".
       ...(widgets.data
         ? [
             { icon: AppWindow, label: usedBy(use.names) },
@@ -108,7 +107,7 @@ export function AgentsPage() {
         <ErrorMessage error={agents.error} title="Could not load agents" />
       ) : (
         <CardGrid label="Agents">
-          {ownAgents(agents.data).map((agent) => (
+          {agents.data.map((agent) => (
             <li key={agent.id}>
               <EntityCard
                 title={agent.name}
@@ -129,7 +128,7 @@ export function AgentsPage() {
               />
             </li>
           ))}
-          {ownAgents(agents.data).length === 0 ? (
+          {agents.data.length === 0 ? (
             <li>
               <FirstAgentTile />
             </li>

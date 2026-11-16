@@ -2,7 +2,7 @@ namespace KnowledgeAgent.Features.Agents;
 
 public sealed class AgentConfig
 {
-    public const string InternalKey = "internal";
+    public const string StarterKey = "assistant";
     public const int MaxKeyLength = 64;
     public const int MaxNameLength = 100;
     public const int MaxDescriptionLength = 500;
@@ -29,7 +29,6 @@ public sealed class AgentConfig
 
     public List<string> Tools { get; set; } = [];
 
-    // The column is still mcp_tools; the API calls these mcpApps.
     public List<AgentMcpApp> McpTools { get; set; } = [];
 
     public bool McpServerEnabled { get; set; }
@@ -44,26 +43,9 @@ public sealed class AgentConfig
 
     public HandoverPolicy HandoverPolicy { get; set; } = HandoverPolicy.OnRequest;
 
-    public bool IsBuiltIn { get; set; }
-
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
-
-    public AgentConfig ApplyBuiltInLimits()
-    {
-        if (IsBuiltIn)
-        {
-            McpTools = [];
-            Specialists = [];
-            ShowSpecialistName = false;
-            McpServerEnabled = false;
-            HttpApiEnabled = false;
-            HandoverPolicy = HandoverPolicy.Never;
-        }
-
-        return this;
-    }
 }
 
 public enum HandoverPolicy

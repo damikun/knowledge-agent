@@ -28,7 +28,7 @@ internal static class AgentEndpoints
             .WithSummary("Replaces an agent. Without a handover policy it keeps its own.");
         group.MapDelete("/{id:guid}", DeleteAsync)
             .WithName("DeleteAgent")
-            .WithSummary("Deletes an agent. The built-in agent cannot be deleted. An agent others hand off to answers 409 with them, unless removeFromTeams=true removes it from their specialists first.");
+            .WithSummary("Deletes an agent. The last agent cannot be deleted. An agent others hand off to answers 409 with them, unless removeFromTeams=true removes it from their specialists first.");
 
         return group;
     }

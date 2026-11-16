@@ -36,7 +36,7 @@ internal sealed partial class AgentService(
     ILogger<AgentService> logger,
     IMcpServerRepository? mcpServers = null) : IAgentService
 {
-    private const string BuiltInIsFixed = "The built-in agent is part of the product and cannot be changed or deleted.";
+    private const string LastAgentStays = "Keep at least one agent: the playground and evaluations use it.";
 
     public async Task<IReadOnlyList<AgentDto>> ListAsync(CancellationToken cancellationToken = default) =>
         (await agents.ListAsync(cancellationToken)).Select(agent => agent.ToDto()).ToList();
@@ -76,11 +76,6 @@ internal sealed partial class AgentService(
             return null;
         }
 
-        if (agent.IsBuiltIn)
-        {
-            throw new ValidationFailedException("id", BuiltInIsFixed);
-        }
-
         var errors = new ValidationErrors();
         if (request.Key is { } key && !string.Equals(key.Trim(), agent.Key, StringComparison.OrdinalIgnoreCase))
         {
@@ -103,9 +98,9 @@ internal sealed partial class AgentService(
             return false;
         }
 
-        if (agent.IsBuiltIn)
+        if ((await agents.ListAsync(cancellationToken)).Count == 1)
         {
-            throw new ValidationFailedException("id", BuiltInIsFixed);
+            throw new ValidationFailedException("id", LastAgentStays);
         }
 
         var uses = new List<string>();
@@ -159,7 +154,6 @@ internal sealed partial class AgentService(
             errors.Add("profileName", $"'{profile}' is not a chat profile. Choose one of: {string.Join(", ", ChatProfiles())}.");
         }
 
-        // Older clients may still send request_human_handover as a tool.
         var tools = (request.Tools ?? AgentDefaults.Tools)
             .Select(tool => tool.Trim())
             .Where(tool => tool != ToolNames.RequestHumanHandover)
@@ -218,7 +212,6 @@ internal sealed partial class AgentService(
         agent.HandoverPolicy = handoverPolicy;
     }
 
-    // Picks the app no longer offers are kept and skipped at run time, so a renamed tool never blocks saving.
     private async Task<List<AgentMcpApp>> McpAppsAsync(AgentConfig agent, IReadOnlyList<AgentMcpAppDto> requested, ValidationErrors errors, CancellationToken cancellationToken)
     {
         var apps = requested.Where(app => app is not null && app.ServerId != Guid.Empty).ToList();
@@ -288,15 +281,12 @@ internal sealed partial class AgentService(
                     continue;
                 }
 
-                // All mode takes the policy from the approved definition. A pick without a policy keeps its earlier one, and
-                // otherwise never runs on its own: Auto is always an explicit choice.
                 var definition = approved.Approved ?? info ?? new McpToolInfo { Name = choice.Name };
                 var chosen = app.Mode == McpAppMode.All ? entry.PolicyFor(definition)
                     : policy ?? (previous is { Mode: McpAppMode.Chosen } ? kept?.Policy : null) ?? (definition.MayChangeThings ? app.ChangesPolicy : McpToolPolicy.Confirm);
                 entry.Tools.Add(new AgentMcpTool { Name = choice.Name, Policy = chosen, Fingerprint = approved.Fingerprint, Approved = approved.Approved });
             }
 
-            // Switching to all tools approves the ones the app lists now; tools it adds later wait for approval.
             if (app.Mode == McpAppMode.All && previous is not { Mode: McpAppMode.All })
             {
                 foreach (var info in server.Tools.Where(tool => entry.Tools.All(saved => saved.Name != tool.Name)))
@@ -315,12 +305,10 @@ internal sealed partial class AgentService(
         return result;
     }
 
-    // Null when the fingerprint matches neither the current definition nor the approved one.
     private static (string? Fingerprint, McpToolInfo? Approved)? Approval(McpToolInfo? current, AgentMcpTool? kept, string? fingerprint)
     {
         if (fingerprint is null)
         {
-            // A new pick approves what the app lists now; an earlier pick keeps its approval.
             return kept is not null ? (kept.Fingerprint, kept.Approved)
                 : current is not null ? (McpToolFingerprint.Compute(current), current)
                 : null;
@@ -334,7 +322,6 @@ internal sealed partial class AgentService(
         return kept is { Approved: not null } && kept.Fingerprint == fingerprint ? (kept.Fingerprint, kept.Approved) : null;
     }
 
-    // Never the built-in agent (it may search every source), and no cycles.
     private async Task<List<AgentSpecialist>> SpecialistsAsync(AgentConfig agent, IReadOnlyList<AgentSpecialistDto> requested, ValidationErrors errors, CancellationToken cancellationToken)
     {
         var chosen = requested.Where(item => item is not null && item.AgentId != Guid.Empty).DistinctBy(item => item.AgentId).ToList();
@@ -362,12 +349,6 @@ internal sealed partial class AgentService(
             if (!all.TryGetValue(item.AgentId, out var specialist))
             {
                 errors.Add("specialists", $"The agent '{item.AgentId}' does not exist.");
-                continue;
-            }
-
-            if (specialist.IsBuiltIn)
-            {
-                errors.Add("specialists", "The built-in agent cannot be a specialist: it may search every source.");
                 continue;
             }
 

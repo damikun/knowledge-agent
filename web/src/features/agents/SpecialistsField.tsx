@@ -12,7 +12,6 @@ import type { FieldKit } from './agentFields';
 import type { AgentDto } from './types';
 import { useReturnState } from '../../lib/returnTo';
 
-/** Whether `start` hands off to `target`, directly or through its own specialists; such a pair would loop. */
 function handsOffTo(agents: readonly AgentDto[], start: Guid, target: Guid): boolean {
   const seen = new Set<string>();
   const pending = [start];
@@ -40,7 +39,7 @@ export function SpecialistsField({ kit, agent, agents }: { kit: FieldKit; agent:
   const { values, set, errorsFor, id } = kit;
   const chosen = values.specialists ?? [];
   const errors = errorsFor('specialists');
-  const candidates = agents.filter((other) => !other.isBuiltIn && !sameId(other.id, agent.id) && !chosen.some((item) => sameId(item.agentId, other.id)));
+  const candidates = agents.filter((other) => !sameId(other.id, agent.id) && !chosen.some((item) => sameId(item.agentId, other.id)));
   const memberOf = teamsWith(agents, agent);
 
   const update = (index: number, whenToUse: string) =>

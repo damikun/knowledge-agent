@@ -6,7 +6,6 @@ export interface SummaryContext {
   widgetNames?: readonly string[];
 }
 
-/** "Demo shop", "Demo shop and Docs help", "Demo shop and 2 more". */
 export function namesList(names: readonly string[]): string {
   if (names.length <= 2) {
     return names.join(' and ');
@@ -30,7 +29,6 @@ export function tonePhrase(instructions: string): string | null {
   return TONES.find((item) => item.value === tone)?.summary ?? null;
 }
 
-/** E.g. "This agent answers from 3 folders in English, friendly tone, used by Demo shop." */
 export function agentSentence(values: AgentFormValues, { widgetNames }: SummaryContext = {}): string {
   const parts: string[] = [];
   const tone = tonePhrase(values.instructions);

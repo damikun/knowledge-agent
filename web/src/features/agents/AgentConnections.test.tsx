@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { dismissAllToasts, Toaster } from '../../components/ui/Toast';
-import { agentDto, agentsRoutes, builtInAgent } from '../../test/agentsApi';
+import { agentDto, agentsRoutes, assistantAgent } from '../../test/agentsApi';
 import { mcpServer } from '../../test/mcpApi';
 import { chooseOption } from '../../test/select';
 import { sourcesRoutes } from '../../test/sourcesApi';
@@ -64,7 +64,7 @@ describe('connected apps on an agent', () => {
     return {
       [`PUT /api/agents/${helper.id}`]: (_url: URL, init: RequestInit) => {
         const saved = { ...helper, ...(JSON.parse(init.body as string) as object) } as AgentDto;
-        setAgents([builtInAgent, saved]);
+        setAgents([assistantAgent, saved]);
         return jsonResponse(saved);
       },
     };
@@ -72,7 +72,7 @@ describe('connected apps on an agent', () => {
 
   it('turns an app on with all its tools, sets what changes need and saves it with the agent', async () => {
     const user = userEvent.setup();
-    let agents: AgentDto[] = [builtInAgent, agentDto()];
+    let agents: AgentDto[] = [assistantAgent, agentDto()];
     const helper = agents[1]!;
     const fetchMock = mockFetch(
       routes(() => agents, {
@@ -112,7 +112,7 @@ describe('connected apps on an agent', () => {
   it('lists tools that are new or changed since approval, which need Confirm until approved', async () => {
     const user = userEvent.setup();
     let agents: AgentDto[] = [
-      builtInAgent,
+      assistantAgent,
       agentDto({
         mcpApps: [
           {
@@ -168,7 +168,7 @@ describe('connected apps on an agent', () => {
         },
       ],
     });
-    mockFetch(routes(() => [builtInAgent, helper], { 'GET /api/connections/mcp': [mcpServer()] }));
+    mockFetch(routes(() => [assistantAgent, helper], { 'GET /api/connections/mcp': [mcpServer()] }));
     renderAt(`/agents/${helper.id}?tab=tools`);
 
     const shop = await screen.findByRole('region', { name: 'Shop' });
@@ -182,7 +182,7 @@ describe('connected apps on an agent', () => {
   it('picks only some tools, shows a pick the app no longer offers and lets it go', async () => {
     const user = userEvent.setup();
     let agents: AgentDto[] = [
-      builtInAgent,
+      assistantAgent,
       agentDto({
         mcpApps: [
           {
@@ -238,7 +238,7 @@ describe('connected apps on an agent', () => {
   it('starts a pick from every tool with the policy it has, so nothing changes until a tool is turned off', async () => {
     const user = userEvent.setup();
     const helper = agentDto({ mcpApps: [{ serverId: mcpServer().id, enabled: true, mode: 'all', changesPolicy: 'confirm', tools: [] }] });
-    mockFetch(routes(() => [builtInAgent, helper], { 'GET /api/connections/mcp': [mcpServer()] }));
+    mockFetch(routes(() => [assistantAgent, helper], { 'GET /api/connections/mcp': [mcpServer()] }));
     renderAt(`/agents/${helper.id}?tab=tools`);
 
     const shop = await screen.findByRole('region', { name: 'Shop' });
@@ -252,7 +252,7 @@ describe('connected apps on an agent', () => {
 
   it('mentions the apps it uses on the overview', async () => {
     const helper = agentDto({ mcpApps: [{ serverId: mcpServer().id, enabled: true, mode: 'all', changesPolicy: 'confirm', tools: [] }] });
-    mockFetch(routes(() => [builtInAgent, helper], { 'GET /api/connections/mcp': [mcpServer()] }));
+    mockFetch(routes(() => [assistantAgent, helper], { 'GET /api/connections/mcp': [mcpServer()] }));
     renderAt(`/agents/${helper.id}`);
 
     expect(await screen.findByText('Uses Shop (all tools)')).toBeInTheDocument();
@@ -260,7 +260,7 @@ describe('connected apps on an agent', () => {
 
   it('points to the Tools page while no app is connected', async () => {
     const helper = agentDto();
-    mockFetch(routes(() => [builtInAgent, helper], { 'GET /api/connections/mcp': [] }));
+    mockFetch(routes(() => [assistantAgent, helper], { 'GET /api/connections/mcp': [] }));
     renderAt(`/agents/${helper.id}?tab=tools`);
 
     expect(await screen.findByText(/No app is connected yet/)).toBeInTheDocument();
@@ -274,7 +274,7 @@ describe('Use elsewhere', () => {
   const keysPath = `/api/agents/${helper.id}/api-keys`;
 
   it('lists the MCP server and the HTTP API under Where it answers when they are on', async () => {
-    mockFetch(routes(() => [builtInAgent, helper]));
+    mockFetch(routes(() => [assistantAgent, helper]));
     renderAt(`/agents/${helper.id}`);
 
     const ways = await screen.findByRole('list', { name: 'Other ways it answers' });
@@ -305,7 +305,7 @@ describe('Use elsewhere', () => {
     let keys = [existing];
     const created = { ...existing, id: 'k2', name: 'Cursor', prefix: 'ka_newkey' };
     const fetchMock = mockFetch(
-      routes(() => [builtInAgent, off], {
+      routes(() => [assistantAgent, off], {
         [`GET ${accessPath}`]: () => jsonResponse(access),
         [`PUT ${accessPath}`]: (_url: URL, init: RequestInit) => {
           access = { ...access, ...(JSON.parse(init.body as string) as object) };

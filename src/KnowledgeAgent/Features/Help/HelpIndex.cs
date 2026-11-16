@@ -12,10 +12,8 @@ internal sealed class HelpIndex
     public const int DefaultLimit = 5;
     public const int MaxLimit = 8;
 
-    // Repository docs are for whoever runs the installation, so they rank below the guide.
     private const double DocsWeight = 0.6;
 
-    // Sections about the page the person is on come first among equals.
     private const double PageBoost = 1.25;
 
     private readonly IReadOnlyList<Entry> _entries;
@@ -148,7 +146,6 @@ internal sealed class HelpIndex
         {
             Section = section;
 
-            // The path twice, so a word in a heading weighs more than one in the text.
             SearchText = $"{section.Path}\n{section.Path}\n{HelpMarkdown.Plain(section.Text)}";
             Length = KeywordScoring.Length(SearchText);
         }

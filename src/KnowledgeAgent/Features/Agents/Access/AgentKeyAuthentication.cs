@@ -35,7 +35,6 @@ public static class AgentKeyAuth
         int.TryParse(user.FindFirst(RateClaim)?.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var rate) ? rate : AgentApiKey.DefaultRequestsPerMinute;
 }
 
-// Bearer ka_... A key only works for its own agent; enabled channels become claims the policies require.
 internal sealed class AgentKeyAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory logger,

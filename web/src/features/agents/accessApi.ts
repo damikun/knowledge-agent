@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { asArray, isRecord, request } from '../../lib/api';
+import { asArray, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { Guid, IsoDateTime } from '../../lib/types';
 
-/** GET /api/agents/{id}/access. The paths are relative to the API's public address. */
 export interface AgentAccessDto {
   mcpServerEnabled: boolean;
   httpApiEnabled: boolean;
@@ -11,7 +11,6 @@ export interface AgentAccessDto {
   activeKeys: number;
 }
 
-/** An API key without the key: only its start, to recognize it. */
 export interface AgentApiKeyDto {
   id: Guid;
   name: string;
@@ -23,7 +22,6 @@ export interface AgentApiKeyDto {
   revokedAt: IsoDateTime | null;
 }
 
-/** The only response that carries the key itself. */
 export interface CreatedAgentApiKeyDto {
   key: AgentApiKeyDto;
   secret: string;
@@ -63,19 +61,18 @@ function toKey(value: unknown): AgentApiKeyDto {
   };
 }
 
-const base = (agentId: Guid) => `/api/agents/${encodeURIComponent(agentId)}`;
-
 export const accessApi = {
-  getAccess: async (agentId: Guid, signal?: AbortSignal) => toAccess(await request<unknown>(`${base(agentId)}/access`, { signal })),
+  getAccess: async (agentId: Guid, signal?: AbortSignal) => toAccess(await call(endpoints.agents.access, { params: { id: agentId }, signal })),
   saveAccess: async (agentId: Guid, body: { mcpServerEnabled?: boolean; httpApiEnabled?: boolean }) =>
-    toAccess(await request<unknown>(`${base(agentId)}/access`, { method: 'PUT', body })),
-  listKeys: async (agentId: Guid, signal?: AbortSignal) => asArray<unknown>(await request<unknown>(`${base(agentId)}/api-keys`, { signal })).map(toKey),
+    toAccess(await call(endpoints.agents.saveAccess, { params: { id: agentId }, body })),
+  listKeys: async (agentId: Guid, signal?: AbortSignal) =>
+    asArray<unknown>(await call(endpoints.agents.listKeys, { params: { id: agentId }, signal })).map(toKey),
   createKey: async (agentId: Guid, body: { name: string; requestsPerMinute: number }) => {
-    const created = await request<unknown>(`${base(agentId)}/api-keys`, { method: 'POST', body });
+    const created = await call(endpoints.agents.createKey, { params: { id: agentId }, body });
     const record = isRecord(created) ? created : {};
     return { key: toKey(record.key), secret: text(record.secret) ?? '' } satisfies CreatedAgentApiKeyDto;
   },
-  revokeKey: (agentId: Guid, keyId: Guid) => request<void>(`${base(agentId)}/api-keys/${encodeURIComponent(keyId)}`, { method: 'DELETE' }),
+  revokeKey: (agentId: Guid, keyId: Guid): Promise<void> => call(endpoints.agents.revokeKey, { params: { id: agentId, keyId } }),
 };
 
 export function useAgentAccess(agentId: Guid) {
@@ -86,7 +83,6 @@ export function useAgentApiKeys(agentId: Guid) {
   return useQuery({ queryKey: accessKeys.keys(agentId), queryFn: ({ signal }) => accessApi.listKeys(agentId, signal), staleTime: 30_000 });
 }
 
-/** The key is a placeholder unless one was just created. */
 export function mcpSnippets(name: string, url: string, key: string) {
   const id = name.replace(/[^a-z0-9-]/gi, '-').toLowerCase() || 'agent';
   return {
