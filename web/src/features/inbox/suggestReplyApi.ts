@@ -1,5 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { ApiError, isRecord, request } from '../../lib/api';
+import { ApiError, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { Guid } from '../../lib/types';
 import type { CitationDto } from '../chat/types';
 
@@ -31,15 +32,13 @@ export function toReplySuggestion(value: unknown): ReplySuggestionDto {
 }
 
 async function suggestReply(conversationId: Guid): Promise<ReplySuggestionDto> {
-  return toReplySuggestion(await request<unknown>(`/api/conversations/${encodeURIComponent(conversationId)}/suggest-reply`, { method: 'POST' }));
+  return toReplySuggestion(await call(endpoints.conversations.suggestReply, { params: { id: conversationId } }));
 }
 
-/** The API returns 503 with this code when no chat model is connected. */
 export function isModelNotConfigured(error: unknown): boolean {
   return error instanceof ApiError && error.problem?.code === 'model_not_configured';
 }
 
-/** Each source once, in the order the draft cites them. */
 export function citedSources(citations: readonly CitationDto[]): Array<{ sourceId: Guid; title: string; refs: string[] }> {
   const bySource = new Map<Guid, { sourceId: Guid; title: string; refs: string[] }>();
   for (const citation of citations) {

@@ -1,5 +1,6 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, type InfiniteData, type QueryClient } from '@tanstack/react-query';
-import { ApiError, asArray, buildUrl, isRecord, networkError, request, toApiError } from '../../lib/api';
+import { ApiError, asArray, call, isRecord, networkError, toApiError, urlOf } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import { safeExternalUrl } from '../../lib/format';
 import { isAbortError, sseRequest, type SseMessage } from '../../lib/sse';
 import type { Guid } from '../../lib/types';
@@ -33,7 +34,6 @@ const CONVERSATION_PAGE_SIZE = 50;
 
 export const conversationKeys = {
   all: ['conversations'] as const,
-  /** Every page of every filtered chat list; the inbox and the search page have their own keys under `all`. */
   lists: ['conversations', 'list'] as const,
   list: (filters: ConversationListFilters) => ['conversations', 'list', filters] as const,
   detail: (id: string) => ['conversations', id] as const,
@@ -69,7 +69,6 @@ function normalizeLabels(value: unknown): ConversationLabelDto[] {
     );
 }
 
-/** Fills in fields older API versions leave out. */
 export function normalizeSummary(dto: ConversationSummaryDto): ConversationListItem {
   return { ...dto, title: typeof dto.title === 'string' ? dto.title : '', pinned: dto.pinned === true, labels: normalizeLabels(dto.labels) };
 }
@@ -81,7 +80,6 @@ function compareConversations(a: ConversationListItem, b: ConversationListItem):
   return b.updatedAt.localeCompare(a.updatedAt);
 }
 
-/** Older APIs answer a plain array and ignore the filters, so titles are filtered here and there's no next page. */
 export function toConversationPage(body: unknown, filters: ConversationListFilters): ConversationPage {
   if (isRecord(body) && Array.isArray(body.items)) {
     return {
@@ -113,14 +111,12 @@ function normalizeLabel(value: unknown): LabelDto | null {
   };
 }
 
-/** The `code` of the 409 problem POST /api/chat answers while the previous answer is still being written. */
 const CONVERSATION_BUSY = 'conversation_busy';
 
 export function isConversationBusy(error: unknown): boolean {
   return error instanceof ApiError && error.status === 409 && error.problem?.code === CONVERSATION_BUSY;
 }
 
-// Older API versions leave out messages, channel, status and the agent.
 function normalizeConversation(dto: ConversationDto): ConversationDto {
   return {
     ...dto,
@@ -133,10 +129,9 @@ function normalizeConversation(dto: ConversationDto): ConversationDto {
 }
 
 export const chatApi = {
-  // Website conversations belong to the Inbox, not the chat list.
   listConversations: async (filters: ConversationListFilters, cursor: string | null, signal?: AbortSignal) =>
     toConversationPage(
-      await request<unknown>('/api/conversations', {
+      await call(endpoints.conversations.list, {
         query: {
           channel: 'portal',
           q: filters.q.trim(),
@@ -150,21 +145,20 @@ export const chatApi = {
       filters,
     ),
   updateConversation: (id: Guid, patch: { title?: string; pinned?: boolean }) =>
-    request<unknown>(`/api/conversations/${encodeURIComponent(id)}`, { method: 'PATCH', body: patch }),
+    call(endpoints.conversations.update, { params: { id }, body: patch }),
   setLabels: (id: Guid, labelIds: Guid[]) =>
-    request<unknown>(`/api/conversations/${encodeURIComponent(id)}/labels`, { method: 'PUT', body: { labelIds } }),
+    call(endpoints.conversations.setLabels, { params: { id }, body: { labelIds } }),
   listLabels: async (signal?: AbortSignal) =>
-    asArray<unknown>(await request<unknown>('/api/labels', { signal })).flatMap((label) => normalizeLabel(label) ?? []),
+    asArray<unknown>(await call(endpoints.labels.list, { signal })).flatMap((label) => normalizeLabel(label) ?? []),
   listLinkHosts: async (signal?: AbortSignal) => {
-    const result = await request<unknown>('/api/link-hosts', { signal });
+    const result = await call(endpoints.chat.linkHosts, { signal });
     return isRecord(result) ? asArray<unknown>(result.hosts).filter((host): host is string => typeof host === 'string') : [];
   },
   getConversation: async (id: Guid, signal?: AbortSignal) =>
-    normalizeConversation(await request<ConversationDto>(`/api/conversations/${encodeURIComponent(id)}`, { signal })),
-  deleteConversation: (id: Guid) => request<void>(`/api/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  /** Stops the answer being written and keeps the text so far; false when none ran on the API instance that got this. */
+    normalizeConversation(await call(endpoints.conversations.get, { params: { id }, signal })),
+  deleteConversation: (id: Guid): Promise<void> => call(endpoints.conversations.remove, { params: { id } }),
   stopAnswer: async (id: Guid) => {
-    const result = await request<{ stopped?: unknown } | undefined>(`/api/conversations/${encodeURIComponent(id)}/stop`, { method: 'POST' });
+    const result: { stopped?: unknown } | undefined = await call(endpoints.conversations.stop, { params: { id } });
     return result?.stopped === true;
   },
 };
@@ -235,7 +229,6 @@ export function parseConversationEvent({ event, data }: SseMessage): Conversatio
   }
 }
 
-// fetch rejects with a TypeError when the API cannot be reached.
 function toStreamError(error: unknown): unknown {
   if (isAbortError(error) || error instanceof ApiError) {
     return error;
@@ -245,8 +238,9 @@ function toStreamError(error: unknown): unknown {
 
 export async function* streamChat(request: ChatRequestDto, signal?: AbortSignal): AsyncGenerator<ChatEvent, void, undefined> {
   try {
-    const stream = sseRequest(buildUrl('/api/chat'), {
-      method: 'POST',
+    const target = endpoints.chat.send;
+    const stream = sseRequest(urlOf(target), {
+      method: target.method,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
       ...(signal ? { signal } : {}),
@@ -264,9 +258,7 @@ export async function* streamChat(request: ChatRequestDto, signal?: AbortSignal)
 }
 
 export interface ConversationEventsRequest {
-  /** Stored messages after this sequence come first. */
   after: number;
-  /** Sends `after` as Last-Event-ID, as a browser does when it reconnects. */
   resume?: boolean;
   signal?: AbortSignal;
   onOpen?: () => void;
@@ -277,9 +269,9 @@ export async function* streamConversationEvents(
   { after, resume = false, signal, onOpen }: ConversationEventsRequest,
 ): AsyncGenerator<ConversationLiveEvent, void, undefined> {
   try {
-    const path = `/api/conversations/${encodeURIComponent(id)}/events`;
-    const stream = sseRequest(buildUrl(path, resume ? undefined : { after }), {
-      method: 'GET',
+    const target = endpoints.conversations.events;
+    const stream = sseRequest(urlOf(target, { params: { id }, query: resume ? undefined : { after } }), {
+      method: target.method,
       ...(resume ? { headers: { 'Last-Event-ID': String(after) } } : {}),
       ...(signal ? { signal } : {}),
       ...(onOpen ? { onOpen: () => onOpen() } : {}),
@@ -304,12 +296,10 @@ export function useConversationList(filters: ConversationListFilters) {
     queryFn: ({ signal, pageParam }) => chatApi.listConversations(filters, pageParam, signal),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
-    // The old results stay while a new search loads, so the list does not flash empty on each keystroke.
     placeholderData: keepPreviousData,
   });
 }
 
-/** The labels to pick from. An API without labels answers 404, which leaves the list empty and the features hidden. */
 export function useLabels() {
   return useQuery({
     queryKey: labelKeys.all,
@@ -329,13 +319,11 @@ export function useLabels() {
 
 const NO_HOSTS: readonly string[] = [];
 
-/** Hosts answers may link to; until they load, or when they cannot, links show as text. */
 export function useLinkHosts(): readonly string[] {
   const query = useQuery({ queryKey: ['link-hosts'], queryFn: ({ signal }) => chatApi.listLinkHosts(signal), staleTime: 5 * 60_000, retry: false });
   return query.data ?? NO_HOSTS;
 }
 
-/** Changes or removes (null) a conversation in every loaded list, for optimistic updates. */
 export function updateListItems(queryClient: QueryClient, change: (item: ConversationListItem) => ConversationListItem | null): void {
   queryClient.setQueriesData<ConversationListData>({ queryKey: conversationKeys.lists }, (data) =>
     data
@@ -377,13 +365,11 @@ export function useConversation(id: string | null) {
   });
 }
 
-/** Admins only: support users may not read the system configuration. */
 export function useLangfuseUrl(enabled: boolean): string | null {
   const info = useSystemInfo({ enabled });
   return info.data?.langfuseConfigured ? safeExternalUrl(info.data.langfuseUrl) : null;
 }
 
-/** Stops an answer this tab only follows, such as one asked in another tab; the followed stream then ends with it. */
 export function useStopAnswer() {
   return useMutation({ mutationFn: (conversationId: Guid) => chatApi.stopAnswer(conversationId) });
 }

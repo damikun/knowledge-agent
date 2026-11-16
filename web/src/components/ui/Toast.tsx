@@ -8,7 +8,6 @@ export interface ToastOptions {
   title: string;
   description?: string;
   tone?: Tone;
-  /** One follow-up, such as Undo or Open; choosing it closes the toast. */
   action?: { label: string; onClick: () => void };
 }
 
@@ -16,7 +15,6 @@ interface ToastEntry extends ToastOptions {
   id: number;
 }
 
-// Enough to read two lines. The timers pause while the pointer or focus is on a toast (WCAG 2.2.1).
 const DURATION = 5000;
 const MAX_TOASTS = 3;
 
@@ -43,7 +41,6 @@ function stopTimer(id: number): void {
   timers.delete(id);
 }
 
-/** Returns an id for dismissToast. */
 export function toast(options: ToastOptions | string): number {
   const entry: ToastEntry = { ...(typeof options === 'string' ? { title: options } : options), id: nextId++ };
   timers.set(entry.id, { remaining: DURATION, started: 0 });
@@ -63,7 +60,6 @@ export function dismissToast(id: number): void {
   emit();
 }
 
-/** The list lives outside React, so tests clear it between runs. */
 export function dismissAllToasts(): void {
   entries.forEach((entry) => stopTimer(entry.id));
   entries = [];
@@ -119,10 +115,8 @@ function ToastItem({ id, title, description, tone = 'neutral', action }: ToastEn
   );
 }
 
-/** Render once. The list stays mounted so screen readers announce each toast. */
 export function Toaster() {
   const items = useSyncExternalStore(subscribe, () => entries, () => entries);
-  // Leaving while hovered sends no pointerleave, so the timers would stay paused.
   useEffect(() => () => setPaused(false), []);
   const onBlur = (event: FocusEvent<HTMLOListElement>) => {
     if (!event.currentTarget.contains(event.relatedTarget)) {

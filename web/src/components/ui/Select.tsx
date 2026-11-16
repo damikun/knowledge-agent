@@ -21,7 +21,6 @@ import { transformOriginOf } from './floating';
 
 export interface SelectOption<T extends string> {
   value: T;
-  /** Also what typing a letter matches. */
   label: string;
   hint?: ReactNode;
   disabled?: boolean;
@@ -35,15 +34,12 @@ export interface SelectProps<T extends string> {
   'aria-describedby'?: string;
   'aria-invalid'?: boolean;
   id?: string;
-  /** Submits the value with a form, like a native select. */
   name?: string;
   placeholder?: string;
-  /** 32 px like inputs, or 28 px beside small buttons. */
   size?: 'sm' | 'md';
   icon?: LucideIcon;
   disabled?: boolean;
   align?: 'start' | 'end';
-  /** Sets the width of the trigger, such as w-40; it fills its container otherwise, like an input. */
   className?: string;
 }
 
@@ -51,7 +47,6 @@ const GAP = 4;
 const MARGIN = 8;
 const MAX_HEIGHT = 320;
 
-/** A select-only combobox (WAI-ARIA APG) with the listbox in a portal. Typing jumps to a match, also while closed. */
 export function Select<T extends string>({
   value,
   onChange,
@@ -73,7 +68,6 @@ export function Select<T extends string>({
   const listRef = useRef<Array<HTMLElement | null>>([]);
   const labelsRef = useRef<Array<string | null>>([]);
   labelsRef.current = options.map((option) => (option.disabled ? null : option.label));
-  // Space chooses an option, except while typing a label that contains one.
   const typingRef = useRef(false);
 
   const index = options.findIndex((option) => option.value === value);
@@ -85,7 +79,6 @@ export function Select<T extends string>({
     onOpenChange: setOpen,
     placement: align === 'end' ? 'bottom-end' : 'bottom-start',
     strategy: 'fixed',
-    // Top and left instead of a transform, so the opening scale starts at the trigger.
     transform: false,
     middleware: [
       offset(GAP),
@@ -113,7 +106,6 @@ export function Select<T extends string>({
   };
 
   const { getReferenceProps, getFloatingProps, getItemProps } = useInteractions([
-    // Opens on press, so a press, drag and release on an option chooses it as in a native select.
     useClick(context, { event: 'mousedown' }),
     useDismiss(context),
     useRole(context, { role: 'select' }),
@@ -137,7 +129,6 @@ export function Select<T extends string>({
   ]);
 
   const transformOrigin = transformOriginOf(placement);
-  // The listbox needs a name too; a visible <label> names the trigger, so it lends its text.
   const listLabel = ariaLabel ?? refs.domReference.current?.labels?.[0]?.textContent ?? undefined;
 
   return (
@@ -167,7 +158,6 @@ export function Select<T extends string>({
               style={{ ...floatingStyles, transformOrigin }}
               className="z-50 max-w-[calc(100vw-1rem)] animate-pop-in overflow-y-auto rounded-xl border border-border bg-raised p-1 text-sm text-fg shadow-menu outline-none"
               {...getFloatingProps({
-                // React passes events up through portals, so Esc would also close a sheet around the trigger.
                 onKeyDown: (event) => {
                   if (event.key === 'Escape') {
                     event.stopPropagation();
@@ -189,7 +179,6 @@ export function Select<T extends string>({
                     aria-disabled={option.disabled || undefined}
                     data-active={active || undefined}
                     className={clsx(
-                      // The fill marks the active option for the mouse and the keyboard alike, so it needs no ring.
                       'flex h-8 cursor-default items-center gap-2 rounded-md px-2 outline-none select-none',
                       option.disabled ? 'text-fg-disabled' : 'text-fg data-active:bg-fill-hover',
                       'forced-colors:data-active:outline-2 forced-colors:data-active:outline-[Highlight]',

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { envelope, parseEditorMessage, parsePreviewMessage, PREVIEW_SOURCE, PREVIEW_VERSION } from './preview';
+import { envelope, parseEditorMessage, parsePreviewMessage, PREVIEW_SOURCE, PREVIEW_VERSION, type PreviewRect } from './preview';
 
 describe('preview protocol', () => {
   it('wraps messages with the source and the version, and reads them back on the other side', () => {
@@ -36,6 +36,19 @@ describe('preview protocol', () => {
       target: 'appearance.subtitle',
       anchor: 'appearance.title',
       rect,
+    });
+  });
+
+  it('keeps the corner radii and the panel of a rectangle, and drops them when they are malformed', () => {
+    const panel = { x: 0, y: 0, width: 400, height: 660 };
+    const rect: PreviewRect = { x: 0, y: 620, width: 400, height: 40, radii: [0, 0, 28, 28], panel };
+    expect(parsePreviewMessage(envelope({ type: 'hover', target: 'texts.poweredBy', rect }))).toEqual({ type: 'hover', target: 'texts.poweredBy', rect });
+
+    const malformed = { x: 0, y: 620, width: 400, height: 40, radii: [0, -1, 28], panel: { x: 0 } };
+    expect(parsePreviewMessage(envelope({ type: 'hover', target: 'texts.poweredBy', rect: malformed as unknown as PreviewRect }))).toEqual({
+      type: 'hover',
+      target: 'texts.poweredBy',
+      rect: { x: 0, y: 620, width: 400, height: 40 },
     });
   });
 

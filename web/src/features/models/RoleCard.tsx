@@ -19,7 +19,6 @@ const ROLE_ICONS: Readonly<Record<string, LucideIcon>> = {
   judge: ClipboardCheck,
 };
 
-// Without these the agent can't answer or read sources; the other jobs degrade quietly.
 const ESSENTIAL = new Set(['orchestrator', 'embedding']);
 
 function status(profile: ModelProfileDto): { tone: Tone; label: string } {

@@ -39,10 +39,6 @@ export function ReindexNotice({ count, models, currentKey }: { count: number; mo
   );
 }
 
-/**
- * The state of the whole library, whichever folder is open. The status chips show the same counts, so this list is for
- * screen readers, which hear each change.
- */
 export function LibrarySummary({ stats }: { stats: SourceStatsDto }) {
   return (
     <ul aria-label="Library" className="sr-only">

@@ -20,7 +20,6 @@ export interface ConversationPick {
   question: string;
   answer: string;
   answerMessageId: string | null;
-  /** Sent as history when `withContext` is on. */
   context: EvalTurn[];
   withContext: boolean;
 }

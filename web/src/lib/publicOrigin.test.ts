@@ -29,7 +29,6 @@ describe('publicOrigin', () => {
   });
 
   it('shows the placeholder on localhost when nothing is saved or the saved value is unusable', () => {
-    // The tests run on localhost.
     expect(publicOrigin(null)).toBe(PLACEHOLDER_ORIGIN);
     expect(publicOrigin('not an address')).toBe(PLACEHOLDER_ORIGIN);
     expect(usesPlaceholderOrigin()).toBe(true);

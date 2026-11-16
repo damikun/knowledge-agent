@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { asArray, isRecord, request } from '../../../lib/api';
+import { asArray, call, isRecord } from '../../../lib/api';
+import { endpoints } from '../../../lib/endpoints';
 import type { Guid } from '../../../lib/types';
 import type { McpAuthType, McpServerDto, McpTestResultDto, McpToolDto, McpToolPolicy, SaveMcpServerRequest } from './types';
 
@@ -85,17 +86,13 @@ function toTestResult(value: unknown): McpTestResultDto {
   };
 }
 
-const serverPath = (id: Guid) => `/api/connections/mcp/${encodeURIComponent(id)}`;
-
 export const mcpApi = {
-  list: async (signal?: AbortSignal) => asArray<unknown>(await request<unknown>('/api/connections/mcp', { signal })).map(toServer),
-  create: async (body: SaveMcpServerRequest) => toServer(await request<unknown>('/api/connections/mcp', { method: 'POST', body })),
-  update: async (id: Guid, body: SaveMcpServerRequest) => toServer(await request<unknown>(serverPath(id), { method: 'PATCH', body })),
-  remove: (id: Guid) => request<void>(serverPath(id), { method: 'DELETE' }),
-  /** Tests the saved settings and refreshes the tools. */
-  test: async (id: Guid) => toTestResult(await request<unknown>(`${serverPath(id)}/test`, { method: 'POST' })),
-  /** Tests unsaved settings. */
-  testDraft: async (body: SaveMcpServerRequest) => toTestResult(await request<unknown>('/api/connections/mcp/test', { method: 'POST', body })),
+  list: async (signal?: AbortSignal) => asArray<unknown>(await call(endpoints.mcpServers.list, { signal })).map(toServer),
+  create: async (body: SaveMcpServerRequest) => toServer(await call(endpoints.mcpServers.create, { body })),
+  update: async (id: Guid, body: SaveMcpServerRequest) => toServer(await call(endpoints.mcpServers.update, { params: { id }, body })),
+  remove: (id: Guid): Promise<void> => call(endpoints.mcpServers.remove, { params: { id } }),
+  test: async (id: Guid) => toTestResult(await call(endpoints.mcpServers.test, { params: { id } })),
+  testDraft: async (body: SaveMcpServerRequest) => toTestResult(await call(endpoints.mcpServers.testDraft, { body })),
 };
 
 export function useMcpServers(options: { enabled?: boolean } = {}) {

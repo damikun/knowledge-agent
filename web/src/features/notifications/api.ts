@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { asStrings, isRecord, request } from '../../lib/api';
+import { asStrings, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type {
   EmailSettingsDto,
   IntegrationsDto,
@@ -78,18 +79,16 @@ function toTestResult(value: unknown): IntegrationTestResultDto {
 
 export const integrationsApi = {
   get: async (signal?: AbortSignal): Promise<IntegrationsDto> => {
-    const dto = await request<unknown>('/api/integrations', { signal });
+    const dto = await call(endpoints.integrations.get, { signal });
     const value = isRecord(dto) ? dto : {};
     return { email: toEmailSettings(value.email), slack: toSlackSettings(value.slack) };
   },
-  saveEmail: async (body: SaveEmailSettingsRequest) => toEmailSettings(await request<unknown>('/api/integrations/email', { method: 'PUT', body })),
-  saveSlack: async (body: SaveSlackSettingsRequest) => toSlackSettings(await request<unknown>('/api/integrations/slack', { method: 'PUT', body })),
-  /** `to` overrides the support address; null with no support address only tests the mail server sign-in. */
-  testEmail: async (to: string | null) => toTestResult(await request<unknown>('/api/integrations/email/test', { method: 'POST', body: { to } })),
-  testSlack: async () => toTestResult(await request<unknown>('/api/integrations/slack/test', { method: 'POST' })),
+  saveEmail: async (body: SaveEmailSettingsRequest) => toEmailSettings(await call(endpoints.integrations.saveEmail, { body })),
+  saveSlack: async (body: SaveSlackSettingsRequest) => toSlackSettings(await call(endpoints.integrations.saveSlack, { body })),
+  testEmail: async (to: string | null) => toTestResult(await call(endpoints.integrations.testEmail, { body: { to } })),
+  testSlack: async () => toTestResult(await call(endpoints.integrations.testSlack)),
 };
 
-/** Admin only. */
 export function useIntegrations(enabled = true) {
   return useQuery({ queryKey: integrationKeys.all, queryFn: ({ signal }) => integrationsApi.get(signal), staleTime: 30_000, enabled });
 }

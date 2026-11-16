@@ -22,13 +22,11 @@ export interface FolderTreeProps {
   onNavigate?: () => void;
 }
 
-// Hovering a collapsed folder this long while dragging opens it, as in a file manager.
 const SPRING_OPEN_MS = 700;
 
 const isFolder = (payload: DragPayload) => payload.kind === 'folder';
 const isSources = (payload: DragPayload) => payload.kind !== 'folder';
 
-// Remembered across visits, so a large tree opens the way it was left.
 const EXPANDED_KEY = 'ka.sources.expandedFolders';
 
 function readExpanded(): ReadonlySet<Guid> {
@@ -44,11 +42,9 @@ function saveExpanded(expanded: ReadonlySet<Guid>): void {
   try {
     localStorage.setItem(EXPANDED_KEY, JSON.stringify([...expanded]));
   } catch {
-    // Storage can be blocked, for example in private windows; the tree then opens collapsed next time.
   }
 }
 
-// The open view is filled with a neutral icon, as selected list items are: the accent is kept for the primary action.
 function rowClass(current: boolean, dropping: boolean) {
   return clsx(
     'group flex items-center rounded-md',
@@ -133,7 +129,6 @@ function FolderItem({
   const current = props.view === folder.id;
   const open = expanded.has(folder.id);
   const { dropping, dropHandlers } = useDropTarget(folder.id, props.drop);
-  // The Internal folder stays where it is, so it is not dragged; folders and sources can still be dropped into it.
   const locked = isInternalNode(node);
   const Icon = locked ? FolderLock : current || dropping ? FolderOpen : Folder;
 
@@ -178,7 +173,6 @@ function FolderItem({
         >
           <Icon className={iconClass(current)} strokeWidth={1.75} aria-hidden />
           <span className="truncate">{folder.name}</span>
-          {/* Counted with its subfolders like a folder's size, so a parent that only holds subfolders doesn't read as empty. */}
           <Count value={node.totalCount} />
         </Link>
       </div>
@@ -194,7 +188,6 @@ function FolderItem({
 }
 
 function FoldersHeading({ props, headingId }: { props: FolderTreeProps; headingId: string }) {
-  // A folder dropped on the heading moves to the top level.
   const { dropping, dropHandlers } = useDropTarget(null, props.drop, isFolder);
   return (
     <div
@@ -216,8 +209,6 @@ export function FolderTree(props: FolderTreeProps) {
 
   useEffect(() => saveExpanded(expanded), [expanded]);
 
-  // An opened folder shows its subfolders, and opening one from elsewhere (breadcrumb, subfolder link, URL, a move)
-  // reveals it. This happens once per folder and position, so the user can still collapse them afterwards.
   const path = folderPath(tree, view).map((node) => node.folder.id);
   const pathKey = `${view}:${path.join('/')}`;
   const [revealed, setRevealed] = useState('');

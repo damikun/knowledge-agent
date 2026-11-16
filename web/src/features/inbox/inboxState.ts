@@ -5,9 +5,7 @@ export interface InboxViewDefinition {
   id: InboxView;
   label: string;
   icon: LucideIcon;
-  /** Primary views are the team's work; secondary ones are for looking things up. */
   group: 'primary' | 'secondary';
-  /** One status or a comma-separated list; null for any. */
   status: string | null;
   assignee?: 'me' | 'none';
 }
@@ -24,7 +22,6 @@ export const INBOX_VIEWS: readonly InboxViewDefinition[] = [
   { id: 'all', label: 'All', icon: Inbox, group: 'secondary', status: null },
 ];
 
-// Legacy links: ?status= from the old Conversations page, and the removed With a person and Pinned views.
 const VIEW_BY_STATUS: Readonly<Record<string, InboxView>> = { handover_pending: 'waiting', ai: 'ai', closed: 'closed' };
 const SORTS: readonly ConversationSort[] = ['updated_desc', 'updated_asc', 'created_desc', 'created_asc'];
 
@@ -52,7 +49,6 @@ function viewDefinition(view: InboxView): InboxViewDefinition {
   return INBOX_VIEWS.find((candidate) => candidate.id === view) ?? INBOX_VIEWS.find((candidate) => candidate.id === 'all')!;
 }
 
-/** Legacy ?status= links pick the matching view. */
 export function readInboxState(params: URLSearchParams): InboxState {
   const view = params.get('view');
   const channel = params.get('channel');
@@ -81,10 +77,6 @@ export function readInboxState(params: URLSearchParams): InboxState {
   };
 }
 
-/**
- * Set when another page opened one conversation (or one contact's). The view tabs then step back, so "All"
- * never claims a narrowed list.
- */
 export function inboxContext(state: InboxState): 'only' | 'contact' | null {
   if (state.only) {
     return 'only';
@@ -92,7 +84,6 @@ export function inboxContext(state: InboxState): 'only' | 'contact' | null {
   return state.contactId && !state.viewChosen ? 'contact' : null;
 }
 
-/** For pages without a list of their own: the Inbox shows only this conversation, with a chip to see the rest. */
 export function onlyConversationPath(conversationId: string): string {
   return `/inbox?only=${encodeURIComponent(conversationId)}`;
 }
@@ -100,7 +91,6 @@ export function onlyConversationPath(conversationId: string): string {
 export function toInboxSearch(state: InboxState): URLSearchParams {
   const search = new URLSearchParams();
   const contextual = inboxContext(state) !== null;
-  // "only" already includes the open conversation.
   const open = state.only && state.conversationId?.toLowerCase() === state.only.toLowerCase() ? '' : (state.conversationId ?? '');
   const entries: Array<[string, string]> = [
     ['only', state.only],
@@ -128,7 +118,6 @@ export function toInboxSearch(state: InboxState): URLSearchParams {
   return search;
 }
 
-/** The pin toggle counts as a filter. */
 export function activeFilterCount(state: InboxState): number {
   return [
     state.channel,
@@ -145,7 +134,6 @@ export function activeFilterCount(state: InboxState): number {
   ].filter(Boolean).length;
 }
 
-/** Keeps the view, words, sort and open conversation. */
 export function withoutFilters(state: InboxState): InboxState {
   return {
     ...state,
@@ -173,13 +161,11 @@ function startOfPeriod(period: InboxState['period'], now: number): string | unde
   return start.toISOString();
 }
 
-/** The list's dependencies, so opening a conversation doesn't refetch the list. */
 export function listKey(state: InboxState) {
   const { conversationId: _open, viewChosen: _chosen, ...rest } = state;
   return { ...rest, q: rest.q.trim() };
 }
 
-/** Portal conversations (playground tests) only with the portal channel. */
 export function toSearchQuery(state: InboxState, cursor: string | null, limit: number, now = Date.now()) {
   const [sort, order] = state.sort.split('_');
   const view = viewDefinition(state.view);
@@ -187,7 +173,6 @@ export function toSearchQuery(state: InboxState, cursor: string | null, limit: n
     q: state.q.trim() || undefined,
     status: view.status ?? undefined,
     pinned: state.pinned || undefined,
-    // The view's assignee wins, so Mine always lists the user's own.
     assignee: view.assignee ?? (state.assignee || undefined),
     labelId: state.labelId || undefined,
     channel: state.channel || undefined,

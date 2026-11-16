@@ -44,7 +44,6 @@ export interface HandoverFlowProps {
 function HandoverFlowView({ draft, agents, integrations, className }: HandoverFlowProps) {
   const alerts = useAlerts();
   const navigate = useNavigate();
-  // The editor builds a new draft object on every render, so compare by content.
   const draftKey = JSON.stringify(draft);
   const stableDraft = useMemo(() => draft, [draftKey]);
   const flow = useMemo(() => buildHandoverFlow(stableDraft, { agents, integrations, alerts: alerts.data?.alerts ?? [] }), [stableDraft, agents, integrations, alerts.data]);

@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { asArray, isRecord, request } from '../../lib/api';
+import { asArray, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import { toLabelColor } from '../labels/api';
 import type {
   Analytics,
@@ -13,7 +14,6 @@ import type {
   UnansweredReason,
 } from './types';
 
-// Under the chat's ['conversations'] key, so new conversations refresh the numbers with the conversation lists.
 const analyticsKeys = {
   get: (days: AnalyticsDays) => ['conversations', 'analytics', days] as const,
 };
@@ -133,7 +133,7 @@ function toAnalytics(value: unknown): Analytics {
 }
 
 const analyticsApi = {
-  get: async (days: AnalyticsDays, signal?: AbortSignal) => toAnalytics(await request<unknown>('/api/analytics', { query: { days }, signal })),
+  get: async (days: AnalyticsDays, signal?: AbortSignal) => toAnalytics(await call(endpoints.analytics.get, { query: { days }, signal })),
 };
 
 export function useAnalytics(days: AnalyticsDays) {

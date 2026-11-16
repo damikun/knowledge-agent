@@ -29,11 +29,8 @@ type EditOutcome = 'draft' | 'published';
 export interface PromptEditPanelProps {
   name: string;
   source: EditSource;
-  /** Publishing fails if the live version changed since the edit started. */
   liveVersion: number | null;
-  /** The label the application serves, production by default. */
   label: string;
-  /** Of the live version, for the sample values. */
   variables: string[];
   onDone: (outcome: EditOutcome) => void;
   onCancel: () => void;
@@ -66,10 +63,8 @@ function TemplateInput({ id, label, value, onChange, errors, rows }: { id: strin
   );
 }
 
-// Joins message templates for a single debounce; no template contains this character.
 const TEMPLATE_SEPARATOR = '\u0000';
 
-/** Rendered by the API once typing pauses. */
 function useTemplatePreviews(templates: readonly string[], variablesText: string) {
   const settledTemplates = useDebouncedValue(templates.join(TEMPLATE_SEPARATOR));
   const settledVariables = useDebouncedValue(variablesText);
@@ -133,7 +128,6 @@ function VariablesPanel({ used, sampleKeys }: { used: string[]; sampleKeys: Set<
   );
 }
 
-/** "Save as draft" adds a Langfuse version without the live label; "Publish" also moves the label to it. */
 export function PromptEditPanel({ name, source, liveVersion, label, variables, onDone, onCancel }: PromptEditPanelProps) {
   const chat = source.type === 'chat';
   const [text, setText] = useState(source.text ?? '');
@@ -178,7 +172,6 @@ export function PromptEditPanel({ name, source, liveVersion, label, variables, o
             onDone('draft');
           }
         },
-        // Field errors show beside the template, so the dialog closes; other errors stay in it.
         onError: (failure) => {
           if (failure instanceof ApiError && failure.isValidation) {
             setConfirm(null);

@@ -6,8 +6,6 @@ import { AppLayout } from './AppLayout';
 import { AuthGate } from './AuthGate';
 import { AppLoading, NotFoundPage, RouteErrorPage } from './RouteErrorPage';
 
-// Admins land on Home, support users in the Inbox.
-// AuthGate renders the routes only once the user is known.
 function Landing() {
   return <Navigate to={isAdmin(useMe().data) ? '/home' : '/inbox'} replace />;
 }
@@ -28,7 +26,6 @@ function JobsRedirect() {
   return <Navigate to={`/system${search}${hash}`} state={state} replace />;
 }
 
-// The playground loads eagerly; the other pages are split into their own chunks.
 export const routes: RouteObject[] = [
   {
     path: '/',
@@ -38,12 +35,10 @@ export const routes: RouteObject[] = [
       </AuthGate>
     ),
     errorElement: <RouteErrorPage />,
-    // Shown while the chunk of a lazy route opened directly by URL loads.
     hydrateFallbackElement: <AppLoading />,
     children: [
       { index: true, element: <Landing /> },
       { path: 'chat/:conversationId?', element: <ChatRedirect /> },
-      // Handover emails link to /inbox/{conversationId}, which redirects to ?c=.
       {
         path: 'inbox/:conversationId?',
         lazy: async () => ({ Component: (await import('../features/inbox/InboxPage')).InboxPage }),
@@ -66,10 +61,8 @@ export const routes: RouteObject[] = [
         lazy: async () => ({ Component: (await import('../features/feedback/FeedbackPage')).FeedbackPage }),
       },
       {
-        // Support users get a panel that says the page is for admins.
         element: <RequireAdmin />,
         children: [
-          // One route for both, so the playground keeps its streaming state when a new conversation gets its id.
           { path: 'playground/:conversationId?', element: <ChatPage /> },
           {
             path: 'home',
@@ -88,7 +81,6 @@ export const routes: RouteObject[] = [
             lazy: async () => ({ Component: (await import('../features/agents/AgentsPage')).AgentsPage }),
           },
           {
-            // ?template=, ?from={id} and ?step= survive a reload and going back.
             path: 'agents/new',
             lazy: async () => ({ Component: (await import('../features/agents/NewAgentWizard')).NewAgentPage }),
           },
@@ -101,7 +93,6 @@ export const routes: RouteObject[] = [
             lazy: async () => ({ Component: (await import('../features/tools/ToolsPage')).ToolsPage }),
           },
           {
-            // "new" opens the wizard.
             path: 'widgets/:widgetId?',
             lazy: async () => ({ Component: (await import('../features/widgets/WidgetsPage')).WidgetsPage }),
           },
@@ -138,7 +129,6 @@ export const routes: RouteObject[] = [
             path: 'team',
             lazy: async () => ({ Component: (await import('../features/team/TeamPage')).TeamPage }),
           },
-          // Alert links from the API still use /integrations.
           { path: 'integrations', element: <Navigate to="/notifications" replace /> },
           { path: 'connections', element: <Navigate to="/notifications" replace /> },
         ],

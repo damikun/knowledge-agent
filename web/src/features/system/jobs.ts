@@ -21,7 +21,6 @@ function clock(hour: string, minute: string): string {
   return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
 }
 
-/** Null for uncommon shapes, which show as-is. `atTime` says whether the text names a time of day (UTC). */
 export function describeCron(cron: string): { text: string; atTime: boolean } | null {
   const fields = cron.trim().split(/\s+/);
   if (fields.length !== 5) {

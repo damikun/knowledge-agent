@@ -7,7 +7,6 @@ export const WIDGET_CONVERSATION_ID = '0199c1e2-0000-7000-8000-00000000d001';
 const WIDGET_TURN_ID = '0199c1e2-0000-7000-8000-00000000e001';
 const VISITOR_ID = '0199c1e2-0000-7000-8000-00000000f001';
 
-/** A row of GET /api/conversations?channel=widget. */
 export function inboxConversation(overrides: Partial<InboxConversationDto> = {}): InboxConversationDto {
   return {
     id: WIDGET_CONVERSATION_ID,
@@ -27,7 +26,6 @@ export function inboxConversation(overrides: Partial<InboxConversationDto> = {})
   };
 }
 
-/** A visitor's question, the answer with a tool call, and the system message of a request for a person. */
 export function widgetConversation(overrides: Partial<InboxConversationDetail> = {}): InboxConversationDetail {
   const turn = turnDto({
     id: WIDGET_TURN_ID,
@@ -102,7 +100,6 @@ export function handoverDto(overrides: Partial<HandoverDto> = {}): HandoverDto {
   };
 }
 
-/** A row of GET /api/conversations/search: the conversation of widgetConversation, waiting for a person. */
 export function searchItem(overrides: Partial<ConversationSearchItem> = {}): ConversationSearchItem {
   return {
     id: WIDGET_CONVERSATION_ID,
@@ -128,7 +125,6 @@ export function searchItem(overrides: Partial<ConversationSearchItem> = {}): Con
   };
 }
 
-/** GET /api/conversations/counts as the server sends it. */
 export function countsDto(
   overrides: Partial<{
     handoverPending: number;

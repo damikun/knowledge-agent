@@ -126,10 +126,6 @@ namespace KnowledgeAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(8000)")
                         .HasColumnName("instructions");
 
-                    b.Property<bool>("IsBuiltIn")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_built_in");
-
                     b.Property<string>("Key")
                         .IsRequired()
                         .HasMaxLength(64)
@@ -1363,9 +1359,9 @@ namespace KnowledgeAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("notes");
 
-                    b.Property<int>("SessionCount")
+                    b.Property<int>("VisitCount")
                         .HasColumnType("integer")
-                        .HasColumnName("session_count");
+                        .HasColumnName("visit_count");
 
                     b.HasKey("Id")
                         .HasName("pk_contacts");
@@ -1950,9 +1946,9 @@ namespace KnowledgeAgent.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
-                    b.Property<int>("SessionCount")
+                    b.Property<int>("VisitCount")
                         .HasColumnType("integer")
-                        .HasColumnName("session_count");
+                        .HasColumnName("visit_count");
 
                     b.Property<Guid>("WidgetId")
                         .HasColumnType("uuid")

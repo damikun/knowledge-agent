@@ -16,7 +16,6 @@ import { useReturnState } from '../../lib/returnTo';
 export interface AlertRowProps {
   alert: AlertDto;
   canSnooze: boolean;
-  /** Inline inside a popover, where a menu's own portal would count as a click outside and close it. */
   snoozeStyle: 'menu' | 'inline';
   onNavigate?: () => void;
 }

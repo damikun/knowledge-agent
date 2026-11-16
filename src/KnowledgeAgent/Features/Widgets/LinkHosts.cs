@@ -10,9 +10,6 @@ namespace KnowledgeAgent.Features.Widgets;
 
 public sealed record LinkHostsDto(IReadOnlyList<string> Hosts);
 
-// Answers may only link to hosts the team chose: this installation, the sites a widget runs on and the websites in
-// the knowledge base. Any other address is shown as plain text, so a planted link needs a person to copy it.
-// "example.com" also allows www.example.com; "*.example.com" allows its subdomains.
 internal sealed class LinkHosts(IPublicAddress publicAddress, IWidgetRepository widgets, ISourceRepository sources, IAgentResolver agents)
 {
     public const int MaxSites = 200;
@@ -23,7 +20,7 @@ internal sealed class LinkHosts(IPublicAddress publicAddress, IWidgetRepository 
         var hosts = new SortedSet<string>(StringComparer.Ordinal);
         await AddPublicAddressAsync(hosts, cancellationToken);
         AddOrigins(hosts, widget.Settings.Security.AllowedOrigins);
-        if (await agents.FindAsync(widget.AgentId, cancellationToken) is { IsBuiltIn: false } agent)
+        if (await agents.FindAsync(widget.AgentId, cancellationToken) is { } agent)
         {
             var scope = await agents.ResolveScopeAsync(agent, [], cancellationToken);
             if (scope is not { Count: 0 })
@@ -35,7 +32,6 @@ internal sealed class LinkHosts(IPublicAddress publicAddress, IWidgetRepository 
         return [.. hosts];
     }
 
-    // Staff read answers from every agent, so the portal allows the sites of every widget and source.
     public async Task<IReadOnlyList<string>> ForPortalAsync(CancellationToken cancellationToken)
     {
         var hosts = new SortedSet<string>(StringComparer.Ordinal);

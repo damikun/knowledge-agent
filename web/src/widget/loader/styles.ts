@@ -1,8 +1,21 @@
-// The launcher's styles, inside its shadow root, so nothing leaks into the host page and the page's CSS stays out.
-// Colors come from web/src/widget/shared/theme.ts as --ka-* variables on the host element.
 export const LOADER_CSS = `
 :host {
-  all: initial;
+  all: initial !important;
+}
+:host([popover]) {
+  display: block !important;
+  position: fixed !important;
+  inset: 0 auto auto 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+:host::backdrop {
+  display: none !important;
 }
 .ka-root {
   --ka-gap: 20px;
@@ -17,7 +30,6 @@ export const LOADER_CSS = `
   }
 }
 
-/* The launcher: a glossy gradient with a soft highlight on top. The gradient sits on ::after so the glow can go behind it. */
 .ka-launcher {
   position: fixed;
   z-index: 2147483000;
@@ -59,7 +71,6 @@ export const LOADER_CSS = `
     0 2px 4px rgb(0 0 0 / 0.12),
     0 10px 24px -6px rgb(0 0 0 / 0.3);
 }
-/* A soft, slowly moving halo in the glow colors, behind the launcher at rest. */
 .ka-glow .ka-launcher::before {
   content: '';
   position: absolute;
@@ -141,10 +152,6 @@ export const LOADER_CSS = `
   display: none;
 }
 
-/*
- * The panel opens with a spring. It only moves and scales: fading it would make it a backdrop root, and the glass
- * would lose the page behind it while it opens.
- */
 .ka-panel {
   position: fixed;
   z-index: 2147483000;
@@ -171,7 +178,6 @@ export const LOADER_CSS = `
   transform: none;
   transition: transform 0.5s var(--ka-spring), visibility 0s;
 }
-/* The surface: tinted glass or a solid panel, with a thin highlight on its edge and layered shadows for depth. */
 .ka-surface {
   position: absolute;
   inset: 0;
@@ -207,7 +213,6 @@ export const LOADER_CSS = `
   border: 0;
   background: transparent;
 }
-/* While an answer is written: a ring in the glow colors runs around the panel, with a soft glow behind it. */
 .ka-glow.ka-busy .ka-panel::before,
 .ka-glow.ka-busy .ka-panel::after {
   content: '';

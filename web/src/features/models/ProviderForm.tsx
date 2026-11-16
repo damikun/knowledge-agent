@@ -20,17 +20,14 @@ import type { ProviderDto } from './types';
 import { useFocusFirstInvalid } from '../../lib/hooks/useFocusFirstInvalid';
 
 export interface ProviderFormProps {
-  /** The sheet's footer submits the form through this id. */
   id: string;
   provider: ProviderDto;
   values: ProviderFormValues;
   errors: ProviderFormErrors;
   saveError: unknown;
   saving: boolean;
-  /** Bumped on a failed client-side validation, which moves focus to the first invalid field. */
   invalidAttempts: number;
   initialFocus: ProviderTextField | null;
-  /** Set on the `initialFocus` input, for the sheet to focus on open. */
   focusRef: RefObject<HTMLInputElement | null>;
   onChange: <K extends keyof ProviderFormValues>(field: K, value: ProviderFormValues[K]) => void;
   onSubmit: () => void;
@@ -78,7 +75,6 @@ export function ProviderForm({
     onChange('clearApiKey', !values.clearApiKey);
   };
 
-  // Without portal settings the inputs start empty, so the placeholder shows the configured value.
   const configuredPlaceholder = (value: string | number | null, fallback = 'Configured default') =>
     !provider.hasOverride && value !== null && value !== '' ? String(value) : fallback;
 

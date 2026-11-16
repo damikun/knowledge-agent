@@ -30,7 +30,6 @@ export interface AnswerTraceProps {
   height?: number | string;
 }
 
-/** Load through AnswerTrace, which splits it into its own chunk. */
 function AnswerTraceGraph({ turn, sourceTitle, height = '28rem' }: AnswerTraceProps) {
   const graph = useMemo(() => buildTraceGraph(turn, sourceTitle), [turn, sourceTitle]);
   const positioned = useMemo(() => layoutGraph(graph, { direction: 'TB', nodeSep: 24, rankSep: 36, width: () => TRACE_NODE_WIDTH }), [graph]);

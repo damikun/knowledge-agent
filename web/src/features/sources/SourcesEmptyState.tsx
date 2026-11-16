@@ -35,7 +35,6 @@ function EmptyLibrary({ onAdd }: { onAdd: (kind: AddSourceKind) => void }) {
   );
 }
 
-/** Placeholder rows while the first page loads, so the table does not jump in. */
 export function LoadingRows() {
   return (
     <div role="status" className="divide-y divide-border-subtle">
@@ -55,10 +54,8 @@ export type SourcesEmptyReason = 'linked-missing' | 'folder-missing' | 'library-
 
 export interface SourcesEmptyStateProps {
   reason: SourcesEmptyReason;
-  /** The open folder, if one is open. */
   node: FolderNode | undefined;
   unfiled: boolean;
-  /** The applied search. */
   query: string;
   onShowAll: () => void;
   onShowAllFolders: () => void;
@@ -66,7 +63,6 @@ export interface SourcesEmptyStateProps {
   onAdd: (kind: AddSourceKind) => void;
 }
 
-/** Why the list is empty, and the one thing to do about it. */
 export function SourcesEmptyState({ reason, node, unfiled, query, onShowAll, onShowAllFolders, onClearFilters, onAdd }: SourcesEmptyStateProps) {
   switch (reason) {
     case 'linked-missing':

@@ -38,7 +38,6 @@ import { useLiveConversation } from './useLiveConversation';
 const SCOPE_TOOLTIP_TITLES = 10;
 const BUSY_MESSAGE = 'The previous answer is still being written. Try again in a moment.';
 
-/** /chat still works for old links. */
 function useBasePath(): string {
   const { pathname } = useLocation();
   return pathname.startsWith('/playground') ? '/playground' : '/chat';
@@ -63,7 +62,6 @@ function itemFromDetail(dto: ConversationDto): ConversationListItem {
   });
 }
 
-/** Serialized, so the lookup only changes when a new title appears and memoized messages skip re-rendering on every token. */
 function useCitationTitles(turns: readonly TurnView[]): (id: string) => string | undefined {
   const serialized = useMemo(() => {
     const titles = new Map<string, string>();
@@ -123,7 +121,6 @@ export function ChatPage() {
   const langfuseUrl = useLangfuseUrl(admin);
   const stopAnswer = useStopAnswer();
 
-  // The stream calls the latest of these, so they read the current route.
   const chat = useChatStream({
     onConversation: (event) => {
       if (event.title) {
@@ -142,7 +139,6 @@ export function ChatPage() {
       if (conversationId) {
         void queryClient.invalidateQueries({ queryKey: conversationKeys.detail(conversationId), exact: true });
       }
-      // A conversation this stream created gets its own address, unless a new chat or another one was opened meanwhile.
       if (created && conversationId && routeId === null) {
         navigate(`${basePath}/${conversationId}`, { replace: true });
       }
@@ -150,8 +146,6 @@ export function ChatPage() {
   });
   const { reset } = chat;
 
-  // Switching conversations resets the live stream state, except when navigating to the conversation the stream just
-  // created. A layout effect, so no stale frame is painted.
   const openRoute = useEffectEvent((id: string | null) => {
     if (id !== chat.state.conversationId) {
       reset(id);
@@ -169,7 +163,6 @@ export function ChatPage() {
     () => (conversation.data?.turns ?? []).slice().sort((a, b) => a.sequence - b.sequence).map(turnFromDto),
     [conversation.data],
   );
-  // While this tab's own stream runs it shows the turn, so the conversation's events are not followed then.
   const live = useLiveConversation({
     conversationId: routeId,
     enabled: conversation.data !== undefined && !chat.state.streaming,
@@ -182,8 +175,6 @@ export function ChatPage() {
     [history, live.messages, chat.state.turns, live.turns],
   );
 
-  // An answer this tab only follows (asked in another tab, or before a reload) can be stopped on the server too. The
-  // followed stream then ends with the stopped answer; a failed call leaves it running, and Stop can be pressed again.
   const followedRunning = !chat.state.streaming && live.turns.some((turn) => turn.status === 'pending' || turn.status === 'streaming');
   const stopFollowed = () => {
     if (routeId && !stopAnswer.isPending) {
@@ -197,7 +188,6 @@ export function ChatPage() {
   const isNewConversation = activeConversationId === null;
   const title = chat.state.title ?? conversation.data?.title ?? (routeId ? '' : 'New conversation');
   const notFound = conversation.error instanceof ApiError && conversation.error.status === 404;
-  // A conversation created by the running stream has the scope that was sent with its first message.
   const conversationScope = conversation.data?.sourceIds ?? (routeId === null ? scope : []);
 
   const listItem = useListItem(activeConversationId);
@@ -206,14 +196,12 @@ export function ChatPage() {
   const target = playground.target;
   const agents = useAgents();
   const agentList = agents.data ?? [];
-  const builtInAgent = agentList.find((agent) => agent.isBuiltIn);
   let agentName: string | null = null;
   if (agents.data && conversation.data) {
-    // The API answers with the built-in agent when the conversation's agent no longer exists.
     const agentId = conversation.data.agentId?.toLowerCase();
-    agentName = (agentId ? agentList.find((agent) => agent.id.toLowerCase() === agentId) : undefined)?.name ?? builtInAgent?.name ?? null;
+    agentName = (agentId ? agentList.find((agent) => agent.id.toLowerCase() === agentId) : undefined)?.name ?? agentList[0]?.name ?? null;
   } else if (agents.data && routeId === null && !isNewConversation) {
-    agentName = (target?.agent ?? builtInAgent)?.name ?? null;
+    agentName = (target?.agent ?? agentList[0])?.name ?? null;
   }
 
   const display = useMemo<ChatDisplay>(
@@ -229,7 +217,6 @@ export function ChatPage() {
     setListOpen(false);
     setDraft('');
     setBusy(false);
-    // A new chat starts from the whole list.
     search.clear();
     setFilter(NO_FILTER);
     if (routeId === null) {
@@ -273,7 +260,6 @@ export function ChatPage() {
     }
   });
 
-  // A Confirm or Cancel answers a call the agent asked about; the server runs exactly that call, once.
   const answerConfirmation = (callId: string, approved: boolean) => {
     void chat.send(
       { conversationId: activeConversationId, message: approved ? 'Yes, go ahead.' : 'No, cancel that.', confirmation: { callId, approved } },
@@ -291,7 +277,6 @@ export function ChatPage() {
         conversationId: activeConversationId,
         message,
         sourceIds: sourceIds.length > 0 ? sourceIds : null,
-        // Existing conversations keep the widget or agent they started with.
         ...(isNewConversation ? targetRequest(target) : {}),
       },
       { sentAfterSequence: isNewConversation ? 0 : live.lastSequence },
@@ -390,7 +375,6 @@ export function ChatPage() {
       <SourceTitleContext.Provider value={knownSourceTitle}>
         <Page variant="workspace">
           <div className="flex min-h-0 flex-1">
-            {/* One h1 per page for screen-reader heading navigation; the visible chat headings are h2. */}
             <h1 className="sr-only">Playground</h1>
             {wide ? (
               <aside className="w-[clamp(20rem,28vw,28rem)] shrink-0 border-r border-border-subtle" aria-label="Conversation history">
@@ -404,7 +388,6 @@ export function ChatPage() {
 
             <section className="flex min-w-0 flex-1 flex-col" aria-label="Chat">
               <ChatHeader
-                // A rename or the label picker belongs to one conversation.
                 key={activeConversationId ?? 'new'}
                 title={title}
                 item={activeItem}

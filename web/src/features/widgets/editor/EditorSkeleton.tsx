@@ -4,7 +4,6 @@ import { buttonClass } from '../../../components/ui/Button';
 import { Skeleton } from '../../../components/ui/Skeleton';
 import { useBreadcrumb } from '../../../lib/breadcrumb';
 
-/** Same layout and breakpoint as WidgetEditor, so the editor fills in without a jump. */
 export function EditorSkeleton({ title }: { title?: string | undefined }) {
   useBreadcrumb(title);
   return (

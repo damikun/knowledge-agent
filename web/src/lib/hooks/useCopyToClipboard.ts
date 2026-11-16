@@ -7,7 +7,6 @@ export interface CopyToClipboard {
   copy: (text: string) => void;
 }
 
-/** Copies text, and says so for `resetMs`; a copy within that time starts the wait again. */
 export function useCopyToClipboard(resetMs = 2000): CopyToClipboard {
   const [copies, setCopies] = useState(0);
   const [failed, setFailed] = useState(false);

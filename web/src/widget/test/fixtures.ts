@@ -1,4 +1,5 @@
-// Builders for the public widget API in widget tests (/api/public/widgets/{key}).
+import { WidgetApi } from '../app/api';
+import { createVisitorStore, type VisitorOptions } from '../app/visitor';
 
 export const WIDGET_KEY = 'wk_test';
 export const WIDGET_API = `/api/public/widgets/${WIDGET_KEY}`;
@@ -61,7 +62,6 @@ export function visitorConversation(messages: Array<Record<string, unknown>>, ov
   return { id: 'c1', status: 'ai', rating: null, messages, ...overrides };
 }
 
-// A citation as tool-result events send it.
 export function streamCitation(ref: string, sourceTitle: string, sourceUrl: string | null = null): Record<string, unknown> {
   return {
     ref,
@@ -77,4 +77,11 @@ export function streamCitation(ref: string, sourceTitle: string, sourceUrl: stri
 
 export function problem(status: number, body: Record<string, unknown>, headers: Record<string, string> = {}): Response {
   return new Response(JSON.stringify({ status, ...body }), { status, headers: { 'Content-Type': 'application/problem+json', ...headers } });
+}
+
+export function testVisitor(options: VisitorOptions) {
+  const lifetime = new AbortController();
+  const api: WidgetApi = new WidgetApi(WIDGET_KEY, () => visitor.getState());
+  const visitor = createVisitorStore(api, options, lifetime.signal);
+  return { api, visitor, dispose: () => lifetime.abort() };
 }

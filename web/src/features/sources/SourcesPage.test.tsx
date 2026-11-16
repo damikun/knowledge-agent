@@ -13,7 +13,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Serves `db.sources` (changes are visible to later requests) plus the embedding profile. */
 function serve(db: { sources: SourceDto[] }, extra: Record<string, unknown> = {}) {
   return mockFetch({
     ...sourcesRoutes(() => db.sources),
@@ -24,7 +23,6 @@ function serve(db: { sources: SourceDto[] }, extra: Record<string, unknown> = {}
 
 const sourceRequests = (fetchMock: ReturnType<typeof mockFetch>) => requestUrls(fetchMock, 'GET /api/sources');
 const lastSourceRequest = (fetchMock: ReturnType<typeof mockFetch>) => sourceRequests(fetchMock).at(-1)!;
-/** The library summary under the page title, on one line. */
 const summary = () =>
   within(screen.getByRole('list', { name: 'Library' }))
     .getAllByRole('listitem')
@@ -32,16 +30,13 @@ const summary = () =>
     .join(' · ');
 const expectSummary = (text: string) => waitFor(() => expect(summary()).toBe(text));
 
-/** A status chip by its label; the chips also show counts. */
 const chip = (label: string) => screen.getByRole('radio', { name: new RegExp(`^${label}(,|$)`) });
 
-/** Opens a Select by its name and chooses an option. */
 async function choose(user: ReturnType<typeof userEvent.setup>, select: string, option: string) {
   await user.click(screen.getByRole('combobox', { name: select }));
   await user.click(within(screen.getByRole('listbox', { name: select })).getByRole('option', { name: option }));
 }
 
-/** Opens a row's menu and chooses one of its actions. */
 async function rowAction(user: ReturnType<typeof userEvent.setup>, title: string, action: string) {
   await user.click(await screen.findByRole('button', { name: `Actions for “${title}”` }));
   await user.click(within(screen.getByRole('menu', { name: `Actions for “${title}”` })).getByRole('menuitem', { name: action }));
@@ -71,7 +66,6 @@ describe('SourcesPage', () => {
     expect(rows).toHaveLength(4);
     expect(within(table).getByRole('link', { name: /Leave policy/ })).toHaveAttribute('href', 'https://intranet.example.com/leave');
     expect(within(table).getAllByText('Embedding provider returned 429.').length).toBeGreaterThan(0);
-    // The model, pages and tokens wait in the details, so the list keeps title, status, chunks and date.
     expect(
       within(table)
         .getAllByRole('columnheader')
@@ -79,12 +73,10 @@ describe('SourcesPage', () => {
     ).toEqual(['', 'Title', 'Status', 'Chunks', 'Added', 'Actions']);
     expect(within(table).queryByText('openai:text-embedding-3-small:1536')).toBeNull();
     await expectSummary('3 sources · 2 ready · 1 needs attention');
-    // The status chips carry the same counts.
     expect(chip('All')).toHaveAccessibleName(/^All, ?3$/);
     expect(chip('Ready')).toHaveAccessibleName(/^Ready, ?2$/);
     expect(chip('Needs attention')).toHaveAccessibleName(/^Needs attention, ?1$/);
     expect(screen.getByText('Showing 1–3 of 3')).toBeInTheDocument();
-    // A single page needs no paging controls.
     expect(screen.queryByRole('button', { name: 'Next' })).toBeNull();
   });
 
@@ -129,7 +121,6 @@ describe('SourcesPage', () => {
 
     expect(await screen.findByText('Showing 1–25 of 60')).toBeInTheDocument();
     expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(26);
-    // Newest first.
     expect(within(screen.getByRole('table')).getAllByRole('row')[1]).toHaveTextContent('Source 60');
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
     expect(lastSourceRequest(fetchMock).search).toBe('?limit=25');
@@ -158,7 +149,6 @@ describe('SourcesPage', () => {
     expect(await screen.findByText('Showing 26–41 of 41')).toBeInTheDocument();
 
     await user.type(screen.getByRole('searchbox', { name: 'Search sources' }), 'handbook');
-    // Nothing is sent while typing.
     expect(sourceRequests(fetchMock).filter((url) => url.searchParams.has('query'))).toEqual([]);
 
     expect(await screen.findByText('Showing 1–1 of 1')).toBeInTheDocument();
@@ -226,13 +216,11 @@ describe('SourcesPage', () => {
     serve({ sources: [] });
     renderWithProviders(<SourcesPage />);
     expect(await screen.findByText('Add your first source')).toBeInTheDocument();
-    // Nothing to sum up or filter yet.
     expect(screen.queryByRole('list', { name: 'Library' })).toBeNull();
     expect(screen.queryByRole('searchbox', { name: 'Search sources' })).toBeNull();
     expect(screen.queryByRole('radiogroup', { name: 'Status' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Clear filters' })).toBeNull();
 
-    // Each way to add knowledge opens the sheet on its form.
     await user.click(screen.getByRole('button', { name: /^Files/ }));
     const sheet = screen.getByRole('dialog', { name: 'Add a source' });
     expect(within(sheet).getByRole('radio', { name: 'Files' })).toBeChecked();
@@ -313,7 +301,6 @@ describe('SourcesPage', () => {
     await act(() => vi.advanceTimersByTimeAsync(2000));
     await waitFor(() => expect(counts()).toEqual({ pages: before.pages + 1, stats: before.stats + 1 }));
 
-    // Ingestion finishes: the next poll shows it and polling stops.
     db.sources = [sourceDto()];
     await act(() => vi.advanceTimersByTimeAsync(2000));
     await expectSummary('1 source · 1 ready');
@@ -328,7 +315,6 @@ describe('SourcesPage', () => {
 
   it('keeps polling the page while a visible source is ingesting, even when the stats are already idle', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
-    // The page was read just before ingestion finished, the stats just after.
     const db = { sources: [sourceDto({ status: 'processing', chunkCount: 0, embeddingModel: null })] };
     const fetchMock = serve(db, { 'GET /api/sources/stats': () => jsonResponse(sourceStats([sourceDto()])) });
     renderWithProviders(<SourcesPage />);
@@ -504,7 +490,6 @@ describe('SourcesPage', () => {
     const table = await screen.findByRole('table');
     const badge = within(within(table).getByRole('row', { name: /Travel guide/ })).getByText('Waiting for a model');
     expect(badge).toHaveAttribute('title', reason);
-    // Nothing moves until an embedding model is saved, so the page does not poll.
     expect(screen.queryByText('Refreshing every 2 s')).toBeNull();
 
     await user.click(chip('Needs attention'));

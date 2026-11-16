@@ -11,7 +11,6 @@ export interface SecretValue {
 
 export const NO_SECRET: SecretValue = { value: '', remove: false };
 
-/** null keeps the saved secret, "" removes it, a value replaces it. */
 export function secretRequest(secret: SecretValue): string | null {
   if (secret.remove) {
     return '';

@@ -6,13 +6,11 @@ import type { EditorProblem } from './EditorHeader';
 import type { Registry } from './registry';
 
 export const TEXTS_FIELD: WidgetField = 'settings.behavior.texts';
-// The API reports these for a whole group, so no single control owns them.
 export const GROUP_FIELDS: Readonly<Partial<Record<WidgetField, { label: string; mode?: ColorMode }>>> = {
   'settings.behavior.texts': { label: 'Texts' },
   'settings.appearance.colors.light': { label: 'Colors in light mode', mode: 'light' },
   'settings.appearance.colors.dark': { label: 'Colors in dark mode', mode: 'dark' },
 };
-// Group errors last: they have no field of their own to focus.
 export const ERROR_ORDER: readonly WidgetField[] = [
   ...WIDGET_FIELDS.filter((field) => !GROUP_FIELDS[field]),
   ...WIDGET_FIELDS.filter((field) => GROUP_FIELDS[field]),
@@ -22,7 +20,6 @@ interface EditorErrorsInput {
   registry: Registry;
   values: WidgetFormValues;
   attempted: boolean;
-  /** The values last sent, so the API's errors stay until their field changes. */
   submitted: WidgetFormValues | null;
   error: unknown;
 }

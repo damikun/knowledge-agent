@@ -10,7 +10,6 @@ import { useAlerts } from './api';
 import { AlertRow } from './AlertRow';
 import type { AlertDto } from './types';
 
-// Red only for critical alerts; otherwise ink, which keeps the digits at 4.5:1.
 function badgeClass(alerts: readonly AlertDto[]) {
   return alerts.some((alert) => alert.severity === 'critical') ? 'bg-danger text-fg-on-solid' : 'bg-fg text-canvas';
 }

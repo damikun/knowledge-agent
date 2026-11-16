@@ -7,12 +7,10 @@ import type { GraphEdge, GraphNode } from '../../../components/flow/graph';
 type HandoverStepKind = 'visitor' | 'agent' | 'hours' | 'channel' | 'wait' | 'joined' | 'expired';
 
 export interface HandoverStep extends GraphNode<HandoverStepKind> {
-  /** Null for steps that are settings of this widget. */
   href: string | null;
 }
 
 export interface HandoverFlow {
-  /** Top to bottom; a row of two or more is a branch. */
   rows: HandoverStep[][];
   edges: GraphEdge[];
 }
@@ -20,11 +18,8 @@ export interface HandoverFlow {
 export interface HandoverDraft {
   handoverEnabled: boolean;
   agentId: string;
-  /** portal (Inbox only), email or slack. */
   channel: string;
-  /** Addresses; empty uses the support address of the email integration. */
   emailTo: readonly string[];
-  /** Empty uses the channel of the Slack integration. */
   slackChannelId: string;
   escalateAfterMinutes: number | null;
   waitMinutes: number | null;
@@ -63,7 +58,6 @@ function minutes(value: number | null): string {
   return value === null ? 'a while' : value === 1 ? '1 minute' : `${value} minutes`;
 }
 
-/** Mirrors the server's handover rules; keep the two in step. */
 export function buildHandoverFlow(draft: HandoverDraft, context: HandoverContext): HandoverFlow {
   const edges: GraphEdge[] = [];
   const link = (source: string, target: string, label?: string) => edges.push({ id: `${source}->${target}`, source, target, ...(label ? { label } : {}) });
@@ -74,7 +68,6 @@ export function buildHandoverFlow(draft: HandoverDraft, context: HandoverContext
   const emailWorks = email === 'connected' && emailAddress;
   const slackWorks = slack === 'connected' && Boolean(draft.slackChannelId.trim() || integrations?.slack.channelId);
 
-  // Who asks
   const agent = context.agents.find((candidate) => candidate.id.toLowerCase() === draft.agentId.toLowerCase());
   const visitor: HandoverStep = {
     id: 'visitor',
@@ -102,7 +95,6 @@ export function buildHandoverFlow(draft: HandoverDraft, context: HandoverContext
   const rows: HandoverStep[][] = [[visitor, offers]];
   const askers = ['visitor', 'agent'];
 
-  // When someone is there
   let from = askers;
   if (!draft.alwaysAvailable) {
     const days = draft.openDays;
@@ -124,7 +116,6 @@ export function buildHandoverFlow(draft: HandoverDraft, context: HandoverContext
     from = ['hours'];
   }
 
-  // Where the request goes
   const channels: HandoverStep[] = [
     { id: 'inbox', kind: 'channel', title: 'Inbox', status: 'Always', tone: 'success', lines: ['Every request shows here'], problem: null, href: '/inbox' },
   ];
@@ -171,7 +162,6 @@ export function buildHandoverFlow(draft: HandoverDraft, context: HandoverContext
     }
   }
 
-  // Waiting
   const escalates = draft.channel === 'slack' && slackWorks && email === 'connected';
   rows.push([
     {
@@ -189,7 +179,6 @@ export function buildHandoverFlow(draft: HandoverDraft, context: HandoverContext
     link(channel.id, 'wait');
   }
 
-  // How it ends
   rows.push([
     { id: 'joined', kind: 'joined', title: 'A person joins', status: null, tone: 'success', lines: ['Replies reach the visitor here'], problem: null, href: null },
     {

@@ -4,7 +4,6 @@ const EMBEDDING_PROFILE = 'embedding';
 
 type EmbeddingModel = Pick<EffectiveModelDto, 'providerType' | 'model' | 'dimensions'>;
 
-/** The key the API stores per chunk: `{providerType}:{model}:{dimensions}`. */
 export function embeddingKey(effective: EmbeddingModel): string {
   return `${effective.providerType}:${effective.model}:${effective.dimensions ?? ''}`;
 }
@@ -13,7 +12,6 @@ export function findEmbeddingProfile(profiles: readonly ModelProfileDto[] | unde
   return profiles?.find((p) => p.name === EMBEDDING_PROFILE) ?? profiles?.find((p) => p.kind?.toLowerCase() === 'embedding');
 }
 
-/** Without reported dimensions (provider default), only provider type and model must match. */
 export function isCurrentEmbedding(sourceKey: string, effective: EmbeddingModel): boolean {
   if (effective.dimensions !== null && effective.dimensions !== undefined) {
     return sourceKey === embeddingKey(effective);
@@ -22,13 +20,10 @@ export function isCurrentEmbedding(sourceKey: string, effective: EmbeddingModel)
 }
 
 export interface StaleEmbeddings {
-  /** Ready sources embedded with a model other than the effective one. */
   count: number;
-  /** Most used first. */
   models: string[];
 }
 
-/** From the source stats, so not every source has to be loaded. */
 export function staleEmbeddings(
   readyByEmbeddingModel: Readonly<Record<string, number>> | undefined,
   profile: ModelProfileDto | undefined,

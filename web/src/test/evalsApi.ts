@@ -1,14 +1,12 @@
 import type { EvalDatasetDto, EvalDatasetListDto, EvalItemResultDto, EvalRunConfigDto, EvalRunDto, EvalRunSummaryDto } from '../features/evals/types';
 import { jsonResponse, type FetchHandler } from './utils';
 
-/** A GUID-shaped run id (`n` = 1 → "0199c1e2-0000-7000-8000-000000000001"). */
 export function runGuid(n: number): string {
   return `0199c1e2-0000-7000-8000-${String(n).padStart(12, '0')}`;
 }
 
 export const LANGFUSE_DATASET_URL = 'http://localhost:3000/project/knowledge-agent/datasets/ds-1';
 
-/** The built-in "handbook-golden" set with its own documents. */
 export function evalDataset(overrides: Partial<EvalDatasetDto> = {}): EvalDatasetDto {
   return {
     name: 'handbook-golden',
@@ -23,7 +21,6 @@ export function evalDataset(overrides: Partial<EvalDatasetDto> = {}): EvalDatase
   };
 }
 
-/** A dataset managed in Langfuse (runs against the live knowledge base). */
 function langfuseDataset(overrides: Partial<EvalDatasetDto> = {}): EvalDatasetDto {
   return evalDataset({
     name: 'support-tickets',
@@ -38,7 +35,6 @@ function langfuseDataset(overrides: Partial<EvalDatasetDto> = {}): EvalDatasetDt
   });
 }
 
-/** Both datasets, Langfuse configured and the judge available. */
 export function evalDatasetList(overrides: Partial<EvalDatasetListDto> = {}): EvalDatasetListDto {
   return {
     datasets: [evalDataset(), langfuseDataset()],
@@ -50,7 +46,6 @@ export function evalDatasetList(overrides: Partial<EvalDatasetListDto> = {}): Ev
   };
 }
 
-/** A completed run of handbook-golden with the judge on, a passed gate and 2 min 30 s duration. */
 export function evalRunSummary(overrides: Partial<EvalRunSummaryDto> = {}): EvalRunSummaryDto {
   return {
     id: runGuid(1),
@@ -80,7 +75,6 @@ export function evalRunSummary(overrides: Partial<EvalRunSummaryDto> = {}): Eval
   };
 }
 
-/** A run that is still asking questions (no gate, no completion time yet). */
 export function runningRunSummary(overrides: Partial<EvalRunSummaryDto> = {}): EvalRunSummaryDto {
   return evalRunSummary({ status: 'running', completedItems: 3, gate: null, completedAt: null, startedAt: new Date().toISOString(), ...overrides });
 }
@@ -105,7 +99,6 @@ export function evalRunConfig(overrides: Partial<EvalRunConfigDto> = {}): EvalRu
   };
 }
 
-/** An answered question with valid, unexpected and invalid citations, one missing fact and judge scores. */
 export function evalItem(overrides: Partial<EvalItemResultDto> = {}): EvalItemResultDto {
   return {
     itemId: 'q1',
@@ -155,7 +148,6 @@ export function evalItem(overrides: Partial<EvalItemResultDto> = {}): EvalItemRe
   };
 }
 
-/** GET /api/evals/runs/{id}: `summary` overrides the run summary, `overrides` the other parts. */
 export function evalRunDto(summary: Partial<EvalRunSummaryDto> = {}, overrides: Partial<Omit<EvalRunDto, 'summary'>> = {}): EvalRunDto {
   return {
     summary: evalRunSummary(summary),
@@ -167,7 +159,6 @@ export function evalRunDto(summary: Partial<EvalRunSummaryDto> = {}, overrides: 
   };
 }
 
-/** GET /api/evals/runs as the API answers it: newest first, `dataset` and `limit` (default 20) applied. */
 function evalRunList(runs: readonly EvalRunSummaryDto[], url: URL): EvalRunSummaryDto[] {
   const dataset = url.searchParams.get('dataset');
   const limit = Number(url.searchParams.get('limit') ?? 20);
@@ -177,7 +168,6 @@ function evalRunList(runs: readonly EvalRunSummaryDto[], url: URL): EvalRunSumma
     .slice(0, limit);
 }
 
-/** mockFetch route for GET /api/evals/runs; `getRuns` is read per request, so tests can change the data. */
 export function evalRunsRoutes(getRuns: () => readonly EvalRunSummaryDto[]): Record<string, FetchHandler> {
   return {
     'GET /api/evals/runs': (url) => jsonResponse(evalRunList(getRuns(), url)),

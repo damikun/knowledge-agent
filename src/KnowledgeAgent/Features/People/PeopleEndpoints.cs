@@ -350,7 +350,6 @@ internal static partial class PeopleEndpoints
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
-        // Erasure cannot be undone, so it needs an explicit yes in the body, not only the verb.
         if (request is not { Confirm: true })
         {
             return ApiResults.Validation("confirm", "Erasing a person deletes all their conversations. Send confirm: true to go ahead.");

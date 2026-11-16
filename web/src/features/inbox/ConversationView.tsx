@@ -23,11 +23,9 @@ const NO_TURNS: TurnView[] = [];
 export interface ConversationViewProps {
   conversationId: string;
   widgetNames: ReadonlyMap<string, string> | undefined;
-  /** A column beside the thread, or a sheet over it when the Inbox is narrow. */
   detailsMode: 'inline' | 'sheet';
   detailsOpen: boolean;
   onDetailsOpenChange: (open: boolean) => void;
-  /** Null when the list and the thread show side by side. */
   backTo: To | null;
   canAddToDataset: boolean;
 }
@@ -92,7 +90,6 @@ export function ConversationView({ conversationId, widgetNames, detailsMode, det
   const agentName = data.agentId ? agents.data?.find((agent) => agent.id.toLowerCase() === data.agentId!.toLowerCase())?.name : undefined;
   const visitorName = [...live.messages].reverse().find((message) => message.author === 'visitor' && message.authorName)?.authorName ?? null;
   const title = data.title || 'New conversation';
-  // Nobody joined in time, so the team may follow up even after the conversation closed.
   const followUp = status === 'closed' && handover.data?.status === 'expired';
 
   const details = (

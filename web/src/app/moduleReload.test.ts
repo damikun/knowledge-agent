@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 
 
 const chromiumError = 'Failed to fetch dynamically imported module: http://localhost:5173/src/features/models/ModelsPage.tsx';
 
-// Fresh modules stand for a fresh page load; session storage survives it as it survives a reload.
 async function loadPage() {
   vi.resetModules();
   return import('./moduleReload');
@@ -14,7 +13,6 @@ function stubReload() {
   return reload;
 }
 
-// A null status makes the reachability check fail like a refused connection.
 function stubServer(status: number | null) {
   const server = {
     status,

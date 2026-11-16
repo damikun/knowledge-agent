@@ -57,28 +57,20 @@ export interface ProviderDto {
   defaultChatModel: string | null;
   defaultEmbeddingModel: string | null;
   defaultEmbeddingDimensions: number | null;
-  /** A dedicated reranking API (e.g. Voyage). Chat providers rerank through the LLM instead. */
   supportsRerank?: boolean;
   defaultRerankModel?: string | null;
-  /** From configuration or the portal. */
   endpoint: string | null;
   usesApiKey: boolean;
   usesEndpoint: boolean;
-  /** e.g. Ollama. */
   endpointRequired: boolean;
   apiKeySource: ApiKeySource;
-  /** e.g. "…a1b2". The key itself is never returned. */
   apiKeyHint: string | null;
-  /** Portal settings win over configuration. */
   hasOverride: boolean;
   overrideUpdatedAt: IsoDateTime | null;
 }
 
-/** Null fields fall back to configuration. */
 export interface UpdateProviderRequest {
-  /** Null or omitted keeps the stored key. */
   apiKey?: string | null;
-  /** Removes the stored key so the configured one, if any, applies again. */
   clearApiKey?: boolean;
   endpoint?: string | null;
   defaultChatModel?: string | null;
@@ -90,7 +82,6 @@ export interface ProviderTestResultDto {
   key: string;
   ok: boolean;
   message: string;
-  /** Sorted. */
   models: string[];
   durationMs: number;
 }

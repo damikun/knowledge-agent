@@ -1,8 +1,3 @@
-// Screenshots of every portal route at several widths, in light and dark.
-// Usage:
-//   npm run shots                      (the portal on http://localhost:5173 and Keycloak must be running)
-//   KA_BASE=http://localhost:8080 KA_USER=... KA_PASSWORD=... npm run shots
-//   npm run shots -- --only=/home,/sources --widths=1280,1920
 import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,7 +15,6 @@ const VIEWPORTS = { 680: 900, 1000: 800, 1280: 800, 1440: 900, 1920: 1080, 2560:
 const widths = (arg('widths')?.split(',').map(Number) ?? Object.keys(VIEWPORTS).map(Number)).filter((width) => VIEWPORTS[width]);
 const themes = /** @type {('light' | 'dark')[]} */ (arg('themes')?.split(',') ?? ['light', 'dark']);
 
-// Detail pages are found by following the first card on their list page.
 /** @type {(string | { path: string, from: string, link: string })[]} */
 const ROUTES = [
   '/home',
@@ -52,7 +46,6 @@ async function signIn(browser) {
   const page = await context.newPage();
   await page.goto(`${BASE}/home`);
   await page.waitForLoadState('networkidle').catch(() => undefined);
-  // The portal's own sign-in screen, when it does not send the browser to Keycloak by itself.
   const signInButton = page.getByRole('button', { name: /sign in/i });
   if (page.url().startsWith(BASE) && (await signInButton.isVisible({ timeout: 3000 }).catch(() => false))) {
     await signInButton.click();
@@ -88,7 +81,6 @@ async function resolvePath(page, route) {
   }
   await page.goto(`${BASE}${route.from}`);
   const link = page.locator(route.link).first();
-  // isVisible does not wait, so wait for the list to render first.
   const found = await link
     .waitFor({ state: 'visible', timeout: 10000 })
     .then(() => true)
@@ -127,7 +119,6 @@ async function main() {
         await page.setViewportSize({ width, height: VIEWPORTS[width] });
         await page.goto(`${BASE}${path}`);
         await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => undefined);
-        // Skeletons and fonts settle.
         await page.waitForTimeout(400);
         const file = `${slug(name)}-${width}-${theme}.png`;
         await page.screenshot({ path: join(outDir, file) });
@@ -139,7 +130,6 @@ async function main() {
   }
   await browser.close();
 
-  // The sheet lists every shot of the day, so a run with --only adds to it instead of replacing it.
   const known = new Map(ROUTES.map((route) => (typeof route === 'string' ? route : route.path)).map((route) => [slug(route), route]));
   for (const file of await readdir(outDir)) {
     const match = /^(.+)-(\d+)-(light|dark)\.png$/.exec(file);

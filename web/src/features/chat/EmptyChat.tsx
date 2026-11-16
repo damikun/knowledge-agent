@@ -71,7 +71,6 @@ export function EmptyChat({
   const examples = questions ?? [];
   return (
     <div className="flex h-full overflow-y-auto px-4 py-10">
-      {/* Auto margins center it while it fits and let it scroll from the top when it does not. */}
       <div className="m-auto w-full max-w-2xl">
         <div className="flex flex-col items-center text-center">
           <div className="flex size-10 items-center justify-center rounded-xl border border-border bg-surface text-fg-muted">

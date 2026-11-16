@@ -65,7 +65,6 @@ const DETAIL_TABS: TabItem<DetailTab>[] = [
   { id: 'variables', label: 'Variables and config' },
 ];
 
-// Versions exist only in Langfuse; built-in defaults have just one.
 const LANGFUSE_TABS: TabItem<DetailTab>[] = [...DETAIL_TABS, { id: 'versions', label: 'Versions' }];
 
 interface EditState {
@@ -75,7 +74,6 @@ interface EditState {
   label: string;
 }
 
-/** Re-rendered whenever typing pauses. */
 function PromptPreview({ detail }: { detail: PromptDetailDto }) {
   const sample = useMemo(() => formatJson(sampleVariables(detail.name, detail.variables ?? [])), [detail.name, detail.variables]);
   const [text, setText] = useState(sample);
@@ -200,7 +198,6 @@ function BackLink({ to }: { to: string }) {
   );
 }
 
-// Mirrors the loaded layout to avoid a jump.
 function LoadingPrompt({ backTo }: { backTo?: string | undefined }) {
   return (
     <div role="status" className="flex h-full flex-col">
@@ -230,7 +227,6 @@ export interface PromptDetailProps {
   name: string;
   tab: DetailTab;
   onTabChange: (tab: DetailTab) => void;
-  /** Only on narrow windows, where the list isn't beside the detail. */
   backTo?: string | undefined;
 }
 
@@ -238,7 +234,6 @@ export function PromptDetail({ name, tab: requestedTab, onTabChange, backTo }: P
   const titleId = useId();
   const prompt = usePrompt(name);
   const [editState, setEditState] = useState<EditState | null>(null);
-  // Choosing another prompt leaves edit mode.
   const editing = editState?.name === name ? editState : null;
 
   if (prompt.isPending) {
@@ -272,7 +267,6 @@ export function PromptDetail({ name, tab: requestedTab, onTabChange, backTo }: P
       label: detail.labels.includes('production') ? 'production' : (detail.labels.find((label) => label !== 'latest') ?? 'production'),
     });
 
-  // Panels stay mounted while hidden, so sample variables survive a tab switch.
   const panel = (id: DetailTab, children: ReactNode, className = 'h-full overflow-y-auto p-4 lg:p-5') => (
     <div hidden={tab !== id} className="h-full">
       <TabPanel idPrefix="prompt-detail" id={id} className={clsx('rounded-none', className)}>

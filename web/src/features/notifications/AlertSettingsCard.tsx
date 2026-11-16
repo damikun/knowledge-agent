@@ -50,7 +50,6 @@ function alertStatus(settings: AlertSettingsDto): IntegrationStatus {
   return { tone: 'success', label: slack && email ? 'Slack and email' : slack ? 'Slack' : 'Email' };
 }
 
-/** Mounted once settings load, so the choices start from what is saved. */
 function AlertSettingsForm({ settings }: { settings: AlertSettingsDto }) {
   const prefix = useId();
   const headingId = `${prefix}-heading`;
@@ -65,7 +64,6 @@ function AlertSettingsForm({ settings }: { settings: AlertSettingsDto }) {
   const send = ({ slack, email, kinds, waitingMinutes }: AlertChoices) =>
     save.mutate({ slack, email, waitingMinutes, kinds: ALERT_KINDS.map((item) => item.kind).filter((kind) => kinds.has(kind)) });
 
-  // Saves queue up, so the last change wins.
   const change = (update: Partial<AlertChoices>) => {
     const next = { ...choices, ...update };
     setChoices(next);

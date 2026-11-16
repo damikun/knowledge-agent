@@ -13,14 +13,12 @@ export function useCitation(ref: string): CitationDto | undefined {
 
 export type SourceTitleLookup = (sourceId: string) => string | undefined;
 
-/** Titles already known on the page, e.g. from citations; tool cards fetch the others by id. */
 export const SourceTitleContext = createContext<SourceTitleLookup>(() => undefined);
 
 export function useSourceTitleLookup(): SourceTitleLookup {
   return useContext(SourceTitleContext);
 }
 
-/** Earlier sources take precedence. */
 export function createCitationLookup(...sources: Array<ReadonlyMap<string, CitationDto> | readonly CitationDto[]>): CitationLookup {
   const maps = sources.map((source) =>
     source instanceof Map ? source : new Map((source as readonly CitationDto[]).map((c) => [c.ref.toUpperCase(), c] as const)),

@@ -7,7 +7,6 @@ export function createQueryClient(): QueryClient {
       queries: {
         staleTime: 10_000,
         refetchOnWindowFocus: true,
-        // Client errors (4xx) will not fix themselves; transient failures get two retries.
         retry: (failureCount, error) =>
           !(error instanceof ApiError && error.status >= 400 && error.status < 500) && failureCount < 2,
       },

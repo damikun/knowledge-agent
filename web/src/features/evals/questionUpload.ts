@@ -1,7 +1,5 @@
 import type { EvalTurn, SaveEvalItemRequest } from './types';
 
-// Limits mirror the API's (CustomDatasetService), which checks them again.
-
 export const MAX_UPLOAD_ROWS = 1000;
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 const MAX_QUESTION = 4000;
@@ -28,21 +26,16 @@ export const UPLOAD_FIELD_LABELS: Readonly<Record<UploadField, string>> = {
 };
 
 export interface UploadRow {
-  /** 1-based line of the file (CSV: the data row, after the header). */
   line: number;
   request: SaveEvalItemRequest | null;
   errors: string[];
-  /** The dataset, or an earlier row of the file, already has the question. */
   duplicate: boolean;
 }
 
 export interface ParsedFile {
   format: UploadFormat;
-  /** CSV only: the header row. */
   columns: string[];
-  /** CSV only: the data rows as cells. */
   cells: string[][];
-  /** JSONL only: each line as parsed, or the reason it could not be. */
   records: Array<{ line: number; value: unknown; error: string | null }>;
   error: string | null;
 }
@@ -58,12 +51,10 @@ export function formatOf(fileName: string): UploadFormat | null {
   return null;
 }
 
-// Excel saves CSV with a byte order mark, which would stick to the first header.
 function withoutBom(text: string): string {
   return text.charCodeAt(0) === 0xfeff ? text.slice(1) : text;
 }
 
-/** Comma, semicolon (Excel in many locales) or tab, whichever the header line has most of. */
 export function detectDelimiter(text: string): string {
   const firstLine = withoutBom(text).split(/\r?\n/, 1)[0] ?? '';
   let best = ',';
@@ -86,7 +77,6 @@ export function detectDelimiter(text: string): string {
   return best;
 }
 
-/** RFC 4180 CSV: quoted cells may hold delimiters, quotes ("") and line breaks. Blank lines are dropped. */
 export function parseCsv(text: string, delimiter = detectDelimiter(text)): string[][] {
   const source = withoutBom(text);
   const rows: string[][] = [];
@@ -139,7 +129,6 @@ const HEADER_GUESSES: ReadonlyArray<[UploadField, readonly string[]]> = [
   ['answerable', ['answerable', 'shouldanswer', 'answer?']],
 ];
 
-/** Unknown columns, and second columns for the same field, map to nothing. */
 export function guessMapping(columns: readonly string[]): UploadField[] {
   const used = new Set<UploadField>();
   return columns.map((column) => {
@@ -199,7 +188,6 @@ export function parseFile(text: string, format: UploadFormat): ParsedFile {
   };
 }
 
-// Facts use "|" for alternatives ("30 days|thirty days"), so lists in a cell are separated by semicolons or lines.
 function listOf(value: unknown, splitCommas = false): string[] {
   const parts = Array.isArray(value)
     ? value.map((entry) => (typeof entry === 'string' || typeof entry === 'number' ? String(entry) : ''))
@@ -331,7 +319,6 @@ function pick(record: Record<string, unknown>, keys: readonly string[]): unknown
   return undefined;
 }
 
-// The portal's field names, the built-in datasets' snake_case, and common short names.
 function rawFromJson(value: unknown): RawQuestion | null {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return null;
@@ -348,7 +335,6 @@ function rawFromJson(value: unknown): RawQuestion | null {
   };
 }
 
-/** Case- and whitespace-insensitive, the way the API compares questions. */
 export function duplicateKey(question: string, history: readonly EvalTurn[] = []): string {
   return [...history.filter((turn) => turn.role === 'user').map((turn) => turn.content), question]
     .map((text) => text.split(/\s+/).filter(Boolean).join(' ').toLowerCase())
@@ -388,7 +374,6 @@ export function readRows(file: ParsedFile, mapping: readonly UploadField[], exis
   });
 }
 
-/** Quote every cell so commas stay inside it. */
 function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }

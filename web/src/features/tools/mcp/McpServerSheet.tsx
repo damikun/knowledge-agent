@@ -50,7 +50,6 @@ function initialValues(server: McpServerDto | null): Values {
   };
 }
 
-/** Mirrors the API's checks so errors show next to the field. */
 export function validateMcpServer(
   values: Values,
   server: McpServerDto | null,
@@ -91,13 +90,11 @@ export function validateMcpServer(
 }
 
 export interface McpServerSheetProps {
-  /** Null adds a new server. */
   server: McpServerDto | null;
   onClose: () => void;
   onSaved?: (server: McpServerDto) => void;
 }
 
-/** Mount it only while open. */
 export function McpServerSheet({ server, onClose, onSaved }: McpServerSheetProps) {
   const queryClient = useQueryClient();
   const prefix = useId();
@@ -113,7 +110,6 @@ export function McpServerSheet({ server, onClose, onSaved }: McpServerSheetProps
 
   const save = useMutation({
     mutationFn: (body: SaveMcpServerRequest) => (server ? mcpApi.update(server.id, body) : mcpApi.create(body)),
-    // The request may carry a token, so don't keep it in the mutation cache.
     gcTime: 0,
     onSuccess: (saved) => {
       refresh();
@@ -178,7 +174,6 @@ export function McpServerSheet({ server, onClose, onSaved }: McpServerSheetProps
 
   const runTest = () => {
     setTestResult(null);
-    // Unchanged settings test with the saved token; changed ones are tested as typed, before saving.
     if (server && !dirty) {
       test.mutate(null);
       return;

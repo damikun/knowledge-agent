@@ -1,6 +1,5 @@
 namespace KnowledgeAgent.Features.Widgets;
 
-// Talks to one agent, never the built-in one.
 public sealed class Widget
 {
     public const int MaxNameLength = 100;
@@ -15,7 +14,6 @@ public sealed class Widget
     public bool Enabled { get; set; } = true;
     public WidgetSettings Settings { get; set; } = new();
 
-    // Encrypted with Data Protection and kept out of Settings, so saving the widget never sends or replaces it.
     public string? ProtectedIdentitySecret { get; set; }
     public DateTimeOffset? IdentitySecretCreatedAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
@@ -74,7 +72,6 @@ public sealed record WidgetBehavior
 
 public sealed record WidgetSecurity
 {
-    // Sites that may embed the widget, such as https://www.example.com or https://*.example.com. Empty means any site.
     public List<string> AllowedOrigins { get; init; } = [];
     public int MessagesPerMinute { get; init; } = 6;
     public int DailyMessageCap { get; init; } = 500;
@@ -84,7 +81,6 @@ public sealed record WidgetSecurity
     public bool RequireVerifiedUsers { get; init; }
 }
 
-// Older stored settings may still carry offerWhenUnsure; the agent's HandoverPolicy decides when to offer a person.
 public sealed record WidgetHandover
 {
     public string Channel { get; init; } = WidgetChoices.HandoverPortal;
@@ -106,7 +102,6 @@ public sealed record WidgetConversations
 
     public int AiIdleMinutes { get; init; } = 30;
 
-    // A conversation with a person closes this long after the team wrote last, never while the visitor waits for them.
     public int HumanIdleHours { get; init; } = 24;
 }
 
@@ -142,7 +137,6 @@ public static class WidgetChoices
     public static readonly IReadOnlyList<string> Themes = [ThemeAuto, ThemeLight, ThemeDark];
     public static readonly IReadOnlyList<string> Presets = [PresetGlow, PresetGlass, PresetSolid];
 
-    // Every color of a preset that can be overridden; web/src/widget/shared/theme.ts derives them.
     public static readonly IReadOnlyList<string> ColorTokens =
     [
         "accent", "onAccent", "panel", "text", "muted", "border", "header", "headerText", "userBubble", "userBubbleText",
@@ -160,6 +154,7 @@ public static class WidgetChoices
         "feedbackPrompt", "feedbackThanks", "feedbackComment", "ratingPrompt", "contactTitle", "contactName", "contactEmail",
         "contactSubmit", "sources", "offline", "rateLimited", "dailyCap", "error", "poweredBy", "message", "messages",
         "placeholder", "menu", "thinking", "searching", "helpful", "notHelpful", "skip", "cancel", "dismiss", "ended", "busy",
-        "charactersLeft", "you", "team", "rating", "unavailable", "retry", "loading", "newTab", "source",
+        "charactersLeft", "you", "team", "rating", "unavailable", "retry", "loading", "newTab", "source", "conversations",
+        "backToChat", "conversationEnded",
     ];
 }

@@ -22,7 +22,7 @@ export interface Column {
 }
 
 export const BUILT_IN_COLUMNS: readonly Column[] = [
-  { key: 'sessions', label: 'Sessions', type: 'number', value: (person) => person.sessionCount },
+  { key: 'sessions', label: 'Visits', type: 'number', value: (person) => person.visitCount },
   { key: 'returning', label: 'Returning', type: 'boolean', value: (person) => person.returning },
   { key: 'language', label: 'Language', type: 'string', value: (person) => person.language },
   { key: 'last_page', label: 'Last page', type: 'string', value: (person) => person.lastPageUrl },
@@ -43,7 +43,6 @@ export function storeColumns(columns: string[]): void {
   try {
     window.localStorage.setItem(COLUMNS_KEY, JSON.stringify(columns));
   } catch {
-    // Blocked storage only forgets the choice.
   }
 }
 
@@ -90,12 +89,10 @@ function PersonRow({ person, columns, onOpen }: { person: PersonSummary; columns
   return (
     <TableRow className="cursor-pointer" onClick={onOpen}>
       <TableCell className="max-w-0 w-[40%]">
-        {/* 40px content plus cell padding gives the 56px row that fits a name over an email. */}
         <div className="flex min-h-10 min-w-0 items-center gap-3">
           <Avatar name={person.name} size="md" {...(person.identified || person.email ? {} : { icon: UserRound })} />
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
-              {/* The link makes the row keyboard-reachable; the row click is a larger mouse target. */}
               <Link to={personPath(person.id)} className="truncate font-medium text-fg hover:underline" onClick={(event) => event.stopPropagation()}>
                 {person.name}
               </Link>
@@ -126,7 +123,6 @@ function PersonRow({ person, columns, onOpen }: { person: PersonSummary; columns
 export interface PeopleTableProps {
   people: ReturnType<typeof usePeople>;
   columns: readonly Column[];
-  /** Makes an empty list offer to clear the search and filters. */
   filtered: boolean;
   onClearFilters: () => void;
 }

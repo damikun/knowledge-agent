@@ -52,7 +52,7 @@ public static class ContactFilterAttributes
         Built("returning", "Returning", AttributeTypes.Boolean),
         Built("first_seen", "First seen", AttributeTypes.Date),
         Built("last_seen", "Last seen", AttributeTypes.Date),
-        Built("sessions", "Sessions", AttributeTypes.Number),
+        Built("sessions", "Visits", AttributeTypes.Number),
         Built("conversations", "Conversations", AttributeTypes.Number),
         Built("last_page", "Last page", AttributeTypes.String),
         Built("referrer", "Referrer", AttributeTypes.String),
@@ -93,8 +93,6 @@ public static class ContactFilters
     public static string Encode(IReadOnlyList<ContactCondition> conditions) =>
         Convert.ToBase64String(Encoding.UTF8.GetBytes(Serialize(conditions))).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 
-    // filter= is base64url JSON of the conditions ([{"attr":"plan","op":"is","value":"pro"}]); f= repeats attr:op:value
-    // (between as from..to, within_days as a number), handy by hand: f=plan:is:pro&f=seats:between:5..10.
     public static bool TryParse(string? filter, IReadOnlyList<string>? f, out List<ContactCondition> conditions, out string? error)
     {
         conditions = [];
@@ -145,7 +143,6 @@ public static class ContactFilters
         return true;
     }
 
-    // Strict for request input; lenient for saved segments, whose keys may have been deleted since (they match nobody).
     public static List<ResolvedCondition> Resolve(
         IReadOnlyList<ContactCondition> conditions,
         IReadOnlyDictionary<string, ContactAttributeDefinition> registry,
@@ -317,7 +314,7 @@ public static class ContactFilters
                 case "returning":
                     return contact.Returning == (condition.Op == ContactFilterOps.True);
                 case "sessions":
-                    return CompareNumber(contact.SessionCount, condition);
+                    return CompareNumber(contact.VisitCount, condition);
                 case "conversations":
                     return CompareNumber(contact.ConversationCount, condition);
                 case "first_seen":
@@ -386,9 +383,6 @@ public static class ContactFilters
         _ => value >= Cutoff(condition, now),
     };
 
-    // PostgreSQL. Keys are validated against ^[a-z][a-z0-9_]*$ before they get here and values are parameters.
-    // JSON path keeps types apart (a number never equals a text), and the jsonb_path_ops GIN index serves equality.
-
     public static (string Sql, List<NpgsqlParameter> Parameters) ToSql(IReadOnlyList<ResolvedCondition> conditions, DateTimeOffset now)
     {
         var parameters = new List<NpgsqlParameter>();
@@ -415,10 +409,10 @@ public static class ContactFilters
                 case "identified":
                     return condition.Op == ContactFilterOps.True ? "contacts.external_id IS NOT NULL" : "contacts.external_id IS NULL";
                 case "returning":
-                    const string returning = "(contacts.session_count > 1 OR contacts.conversation_count > 1)";
+                    const string returning = "(contacts.visit_count > 1 OR contacts.conversation_count > 1)";
                     return condition.Op == ContactFilterOps.True ? returning : $"NOT {returning}";
                 case "sessions":
-                    return NumberClause("contacts.session_count", condition, Add);
+                    return NumberClause("contacts.visit_count", condition, Add);
                 case "conversations":
                     return NumberClause("contacts.conversation_count", condition, Add);
                 case "first_seen":

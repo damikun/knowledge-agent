@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { buildUrl, isRecord, request, toApiError } from '../../lib/api';
+import { call, isRecord, toApiError, urlOf } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import { sseRequest } from '../../lib/sse';
 import { parseChatEvent } from '../chat/api';
 import type { ChatEvent } from '../chat/types';
@@ -9,7 +10,6 @@ export const helpKeys = {
   status: ['help', 'status'] as const,
 };
 
-/** Only portal paths, so a link from the API never leaves the portal. */
 export function portalPath(value: unknown): string | null {
   return typeof value === 'string' && value.startsWith('/') && !value.startsWith('//') ? value : null;
 }
@@ -38,8 +38,8 @@ export function toHelpStatus(value: unknown): HelpStatusDto {
 }
 
 const helpApi = {
-  status: async (signal?: AbortSignal) => toHelpStatus(await request<unknown>('/api/help', { signal })),
-  saveSettings: async (enabled: boolean) => toHelpStatus(await request<unknown>('/api/help/settings', { method: 'PUT', body: { enabled } })),
+  status: async (signal?: AbortSignal) => toHelpStatus(await call(endpoints.help.status, { signal })),
+  saveSettings: async (enabled: boolean) => toHelpStatus(await call(endpoints.help.saveSettings, { body: { enabled } })),
 };
 
 export function useHelpStatus() {
@@ -54,10 +54,10 @@ export function useSaveHelpSettings() {
   });
 }
 
-/** Same event types as the chat stream, so the chat's parser reads it. */
 export async function* streamHelp(body: HelpChatRequest, signal?: AbortSignal): AsyncGenerator<ChatEvent, void, undefined> {
-  const stream = sseRequest(buildUrl('/api/help/chat'), {
-    method: 'POST',
+  const target = endpoints.help.chat;
+  const stream = sseRequest(urlOf(target), {
+    method: target.method,
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     ...(signal ? { signal } : {}),

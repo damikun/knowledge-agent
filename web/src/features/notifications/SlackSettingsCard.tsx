@@ -33,7 +33,6 @@ function slackStatus(slack: SlackSettingsDto): IntegrationStatus {
   return slack.connected ? { tone: 'success', label: 'On' } : { tone: 'warning', label: 'Not connected' };
 }
 
-/** Mounted while open, so each opening starts from the saved settings. */
 function SlackSettingsSheet({ slack, onClose }: { slack: SlackSettingsDto; onClose: () => void }) {
   const queryClient = useQueryClient();
   const prefix = useId();
@@ -44,7 +43,6 @@ function SlackSettingsSheet({ slack, onClose }: { slack: SlackSettingsDto; onClo
 
   const save = useMutation({
     mutationFn: (body: SaveSlackSettingsRequest) => integrationsApi.saveSlack(body),
-    // The request may carry tokens, so don't keep it in the mutation cache.
     gcTime: 0,
     onSuccess: (saved) => {
       queryClient.setQueryData<IntegrationsDto>(integrationKeys.all, (old) => (old ? { ...old, slack: saved } : old));
@@ -145,7 +143,6 @@ function SlackSettingsSheet({ slack, onClose }: { slack: SlackSettingsDto; onClo
   );
 }
 
-/** Mounted while open, so a failed run from an earlier opening isn't shown again. */
 function TestSlackDialog({
   slack,
   onDone,

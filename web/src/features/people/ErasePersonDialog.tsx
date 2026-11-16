@@ -10,7 +10,6 @@ import { formatNumber } from '../../lib/format';
 import { useErasePerson } from './api';
 import type { Person } from './types';
 
-// Erasure also deletes every conversation and can't be undone, so the name must be typed to confirm.
 export function ErasePersonDialog({ person, open, onClose }: { person: Person; open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const erase = useErasePerson(person.id);

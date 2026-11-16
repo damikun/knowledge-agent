@@ -149,7 +149,6 @@ export function HelpPanel({ status, page, admin, onNavigate, inputRef }: HelpPan
     endRef.current?.scrollIntoView?.({ block: 'end' });
   }, [chat.turns.length, chat.live?.text]);
 
-  // Refocus the box once an answer is done.
   useOnChange(chat.busy, (busy) => {
     if (!busy) {
       inputRef.current?.focus({ preventScroll: true });
@@ -172,7 +171,6 @@ export function HelpPanel({ status, page, admin, onNavigate, inputRef }: HelpPan
   };
 
   const searching = chat.live?.tools.some((tool) => tool.status === 'running') ?? false;
-  // Answers already there when the panel opened are not announced; while one is written the region empties.
   const answered = chat.turns.length > 0 && chat.turns.at(-1)?.id !== openedWith;
 
   return (

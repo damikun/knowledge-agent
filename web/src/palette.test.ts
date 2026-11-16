@@ -3,11 +3,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-/* Tailwind's palette is off in tokens.css, so a raw color produces no CSS and a dark: variant bypasses the tokens. */
-
 const SRC = resolve(process.cwd(), 'src');
 
-// The widget has its own theme, tests may name any class, and the tokens are where the colors live.
 const SKIPPED = [/^widget\//, /^test\//, /\.test\.tsx?$/, /^styles\/tokens\.css$/];
 
 const FAMILIES = 'red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone|mauve|olive|mist|taupe';
@@ -17,7 +14,6 @@ const PALETTE = new RegExp(
   `(?<![\\w-])(?:(?:${UTILITIES})-(?:(?:${FAMILIES})-(?:${SHADES})|white|black)(?:/\\d+)?|--color-(?:(?:${FAMILIES})-(?:${SHADES})|white|black))(?![\\w-])`,
   'g',
 );
-// A variant runs straight into its class; `dark: Moon` is an object key.
 const DARK = /(?<![\w-])dark:[\w[!-][^\s'"`]*/g;
 
 function sourceFiles(directory: string): string[] {

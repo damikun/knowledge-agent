@@ -6,20 +6,15 @@ import { SideSheet } from '../ui/SideSheet';
 export interface GraphPanelProps {
   title: string;
   description?: string;
-  /** Height of the small graph, in pixels. */
   height?: number;
-  /** The small view sizes to fit this, never zoomed past 100%, up to `maxHeight`. */
   naturalSize?: { width: number; height: number };
   maxHeight?: number;
-  /** A header that opens and closes the graph, for narrow screens where it sits in the form's flow. */
   collapsible?: boolean;
   defaultOpen?: boolean;
-  /** The graph; `large` is true in the side sheet, where it can pan and zoom. */
   children: (large: boolean) => ReactNode;
   className?: string;
 }
 
-// The fit view leaves about 8% around the graph.
 const PADDING = 1.16;
 
 function fittedHeight(size: { width: number; height: number }, width: number, maxHeight: number): number {

@@ -44,7 +44,6 @@ function rememberDataset(id: string): void {
   try {
     window.localStorage.setItem(LAST_DATASET_KEY, id);
   } catch {
-    // Best effort; storage may be unavailable.
   }
 }
 
@@ -66,7 +65,6 @@ export function AddToDatasetDialog({ source, onClose }: AddToDatasetDialogProps)
     history: [],
   });
 
-  // Feedback has the rated answer but not the question.
   const lookup = useConversation(!source.question && source.conversationId && source.messageId ? source.conversationId : null);
   const [filledFrom, setFilledFrom] = useState<typeof lookup.data>(undefined);
   if (lookup.data && lookup.data !== filledFrom) {
@@ -92,7 +90,6 @@ export function AddToDatasetDialog({ source, onClose }: AddToDatasetDialogProps)
         const created = await evalsApi.createDataset({ name: newName.trim() });
         datasetId = created.id ?? null;
         datasetName = created.name;
-        // A retry adds to this dataset instead of creating another one.
         setChosen(datasetId);
         void queryClient.invalidateQueries({ queryKey: evalKeys.datasets });
       }

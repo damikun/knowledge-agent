@@ -13,7 +13,6 @@ const MODEL_NOT_CONFIGURED = 'model_not_configured';
 
 export interface HelpChat {
   turns: HelpTurn[];
-  /** The streaming answer, folded by the chat reducer. */
   live: TurnView | null;
   busy: boolean;
   ask: (question: string) => void;
@@ -28,13 +27,11 @@ function history(turns: readonly HelpTurn[]): HelpHistoryMessage[] {
   ]);
 }
 
-/** On a no-model error the help status is refetched, so the panel shows it as disabled. */
 export function useHelpChat(page: string): HelpChat {
   const queryClient = useQueryClient();
   const [thread, setThread] = useState(loadThread);
   const [live, setLive] = useState<TurnView | null>(null);
   const [busy, setBusy] = useState(false);
-  // Lets a new question, Stop or New chat abort the running request.
   const controllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => saveThread(thread), [thread]);
@@ -73,7 +70,6 @@ export function useHelpChat(page: string): HelpChat {
           state = chatReducer(state, isAbortError(error) ? { type: 'aborted', at: Date.now() } : { type: 'failed', message: errorMessage(error), at: Date.now() });
         }
         const turn = state.turns[0];
-        // Superseded by a newer request.
         if (controllerRef.current !== controller) {
           return;
         }

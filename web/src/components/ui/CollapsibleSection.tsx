@@ -5,16 +5,13 @@ import type { ReactNode } from 'react';
 export interface CollapsibleSectionProps {
   title: ReactNode;
   description?: ReactNode;
-  /** Opens or closes it from outside, such as to show a field with an error; pair it with `onOpenChange`. */
   open?: boolean;
   defaultOpen?: boolean;
-  /** Also fires when find in page opens it. */
   onOpenChange?: (open: boolean) => void;
   children: ReactNode;
   className?: string;
 }
 
-/** A native <details>, so keyboards, screen readers and find in page open it without help. */
 export function CollapsibleSection({ title, description, open, defaultOpen = false, onOpenChange, children, className }: CollapsibleSectionProps) {
   return (
     <details

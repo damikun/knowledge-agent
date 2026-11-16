@@ -28,21 +28,17 @@ export interface MenuItem {
 export type MenuTriggerProps = ComponentProps<'button'>;
 
 export interface MenuProps {
-  /** Names the menu, and the default trigger, such as "Actions for “Handbook”". */
   label: string;
   items: readonly MenuItem[];
-  /** The button that opens the menu. Without it, a ghost "more" icon button named by `label`. */
   trigger?: (props: MenuTriggerProps) => ReactNode;
   busy?: boolean;
   align?: 'start' | 'end';
-  /** Sets the width, such as w-80; the menu is at least 192 px wide and otherwise fits its items. */
   className?: string;
 }
 
 const GAP = 6;
 const MARGIN = 8;
 
-/** A WAI-ARIA menu, rendered in a portal next to its trigger. */
 export function Menu({ label, items, trigger, busy = false, align = 'end', className }: MenuProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -50,18 +46,14 @@ export function Menu({ label, items, trigger, busy = false, align = 'end', class
 
   const { refs, floatingStyles, context, placement } = useFloating<HTMLButtonElement>({
     open,
-    // Tab has already moved focus on; every other way of closing returns it to the trigger.
     onOpenChange: (next, _event, reason) => (next ? setOpen(true) : close(reason !== 'focus-out')),
     placement: align === 'end' ? 'bottom-end' : 'bottom-start',
     strategy: 'fixed',
-    // Top and left instead of a transform, so the opening scale centers on the menu rather than the viewport corner.
     transform: false,
     middleware: [offset(GAP), flip({ padding: MARGIN }), shift({ padding: MARGIN })],
     whileElementsMounted: autoUpdate,
   });
 
-  // Floating UI restores focus a microtask after unmount and would pull it back out of a dialog an item opened,
-  // so the menu restores focus itself, before the item's action runs.
   const close = (returnFocus: boolean) => {
     setOpen(false);
     if (returnFocus) {
@@ -92,7 +84,6 @@ export function Menu({ label, items, trigger, busy = false, align = 'end', class
         <Button {...triggerProps} variant="ghost" size="icon-sm" icon={Ellipsis} loading={busy} aria-label={label} />
       )}
       {open ? (
-        // No focus guards: they are focusable but hidden, which screen readers trip over. Tab is handled below instead.
         <FloatingPortal preserveTabOrder={false}>
           <FloatingFocusManager context={context} modal={false} returnFocus={false} guards={false}>
             <div
@@ -103,18 +94,15 @@ export function Menu({ label, items, trigger, busy = false, align = 'end', class
                 className,
               )}
               {...getFloatingProps({
-                // React passes events up through portals, so Esc would also reach whatever surrounds the trigger.
                 onKeyDown: (event) => {
                   if (event.key === 'Escape') {
                     event.stopPropagation();
                     close(true);
                   } else if (event.key === 'Tab') {
-                    // Back on the trigger before the browser moves focus, so Tab goes on from there as a menu button's does.
                     close(true);
                   }
                 },
               })}
-              // Named by `label` rather than by the trigger, whose text may be a count such as "2 to fix".
               aria-labelledby={undefined}
               aria-label={label}
             >
@@ -130,7 +118,6 @@ export function Menu({ label, items, trigger, busy = false, align = 'end', class
                     role="menuitem"
                     tabIndex={activeIndex === index ? 0 : -1}
                     className={clsx(
-                      // The item under the pointer takes focus, so one fill marks it for the mouse and the keyboard, as in Select.
                       'flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left outline-none forced-colors:focus:outline-2 forced-colors:focus:outline-[Highlight]',
                       item.danger ? 'text-danger-text focus:bg-danger-subtle' : 'text-fg focus:bg-fill-hover',
                     )}

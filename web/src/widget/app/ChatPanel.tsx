@@ -1,19 +1,20 @@
 import { clsx } from 'clsx';
 import { Headset } from 'lucide-react';
-import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { AccentButton } from './AccentButton';
-import { ActivityAnnouncer, useHostPanel } from './ChatActivity';
+import { ActivityAnnouncer } from './ChatActivity';
 import { Composer } from './Composer';
+import { isAnswering, isBusy } from './chatState';
 import { ContactForm } from './ContactForm';
-import { useWidget } from './context';
-import type { ChatSession, FieldErrors } from './controller';
+import { ConversationList } from './ConversationList';
+import { useChat, useChatState, useHost, useHostOpen, useVisitorState, useWidget } from './context';
+import type { FieldErrors } from './errors';
 import { ConversationRating } from './Feedback';
 import { Header, type MenuItem } from './Header';
 import { PRESET_EFFECTS } from '../shared/theme';
-import { postToHost, type HostIdentity } from './host';
 import { MessageList } from './MessageList';
 import { StatusBars } from './StatusBars';
-import { useChatController, useChatState } from './useChatController';
 import { useStickToBottom } from './useStickToBottom';
 import { useWindowEvent } from './useWindowEvent';
 
@@ -23,31 +24,15 @@ function prefersFinePointer(): boolean {
   return typeof window.matchMedia !== 'function' || window.matchMedia('(pointer: fine)').matches;
 }
 
-function closeFrame(): void {
-  postToHost({ type: 'close' });
-}
-
-function tellBusy(busy: boolean): void {
-  postToHost({ type: 'busy', busy });
-}
-
-export function LiveChat({ widgetKey, retryDelaysMs, identity }: { widgetKey: string; retryDelaysMs?: readonly number[]; identity?: HostIdentity }) {
-  const controller = useChatController(widgetKey, retryDelaysMs, identity);
-  return controller ? <ChatPanel session={controller} onClose={closeFrame} onBusy={tellBusy} /> : null;
-}
-
-export interface ChatPanelProps {
-  session: ChatSession;
-  onClose: () => void;
-  // The glow around the panel is drawn outside the chat.
-  onBusy?: (busy: boolean) => void;
-}
-
-export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
+export function ChatPanel() {
   const { config, t, mark } = useWidget();
-  const state = useChatState(session);
+  const session = useChat();
+  const host = useHost();
+  const state = useChatState();
+  const visitor = useVisitorState();
   const [draft, setDraft] = useState('');
   const [contactPrompt, setContactPrompt] = useState<ContactPrompt | null>(null);
+  const [listShown, setListShown] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { scrollRef, contentRef, onScroll, stick } = useStickToBottom([
     state.messages,
@@ -64,34 +49,25 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
     }
   };
 
-  useHostPanel(session, focusComposer);
+  useHostOpen(focusComposer);
   useWindowEvent('keydown', (event) => {
     if (event.key === 'Escape' && !event.defaultPrevented) {
-      onClose();
+      host.close();
     }
   });
   useWindowEvent('online', () => session.reconnect());
 
   const { pending, messages, status } = state;
-  const answering = session.isAnswering;
-  const busy = answering || state.followed !== null;
+  const answering = isAnswering(state);
+  const busy = isBusy(state);
 
-  const reportBusy = useEffectEvent((value: boolean) => {
-    onBusy?.(value);
-  });
-  useEffect(() => {
-    reportBusy(busy);
-  }, [busy]);
-
-  const needsContact = config.contactCapture === 'before_chat' && !state.visitor.email && !state.conversationId && state.phase === 'ready';
+  const needsContact = config.contactCapture === 'before_chat' && !visitor.email && !state.conversationId && state.phase === 'ready';
   const chatContact = contactPrompt?.reason === 'chat' || needsContact;
   const showSuggestions = config.suggestedQuestions.length > 0 && messages.length === 0 && !pending && !state.followed && !needsContact;
   const canHandOver =
     config.handoverEnabled && state.conversationId !== null && status === 'ai' && state.phase === 'ready' && !answering && !contactPrompt;
-  // The offer bar has the same button.
   const showHandoverButton = canHandOver && !state.handoverOffered;
 
-  // Stable, so typing doesn't re-render the message list.
   const send = useCallback(
     async (text: string) => {
       stick();
@@ -114,7 +90,7 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
   };
 
   const askForPerson = async () => {
-    if (config.contactCapture === 'before_handover' && !state.visitor.email) {
+    if (config.contactCapture === 'before_handover' && !visitor.email) {
       setContactPrompt({ reason: 'handover' });
       return;
     }
@@ -124,12 +100,42 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
     }
   };
 
+  const showList = () => {
+    setContactPrompt(null);
+    setListShown(true);
+    void session.loadConversations();
+  };
+
+  const leaveList = () => {
+    flushSync(() => setListShown(false));
+    stick();
+    const composer = prefersFinePointer() ? textareaRef.current : null;
+    (composer ?? scrollRef.current)?.focus({ preventScroll: true });
+  };
+
+  const openConversation = (conversationId: string) => {
+    leaveList();
+    void session.showConversation(conversationId);
+  };
+
+  const earlier = state.conversations?.some((conversation) => conversation.id !== state.conversationId) ?? false;
   const menuItems: MenuItem[] = [];
-  if (state.conversationId || messages.length > 0 || pending) {
+  if (earlier && state.phase === 'ready' && !answering && !listShown) {
+    menuItems.push({
+      key: 'conversations',
+      label: t('conversations'),
+      onSelect: showList,
+    });
+  }
+  if (!listShown && (state.conversationId || messages.length > 0 || pending)) {
     menuItems.push({ key: 'new', label: t('newChat'), onSelect: startNewChat });
   }
-  if (state.conversationId && status !== 'closed') {
-    menuItems.push({ key: 'end', label: t('endChat'), onSelect: () => void session.endChat() });
+  if (!listShown && state.conversationId && status !== 'closed') {
+    menuItems.push({
+      key: 'end',
+      label: t('endChat'),
+      onSelect: () => void session.endChat(),
+    });
   }
 
   let bottom;
@@ -147,8 +153,8 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
     bottom = (
       <ContactForm
         autoFocus
-        initialName={state.visitor.name}
-        initialEmail={state.visitor.email}
+        initialName={visitor.name}
+        initialEmail={visitor.email}
         {...(contactPrompt.errors ? { initialErrors: contactPrompt.errors } : {})}
         onCancel={() => setContactPrompt(null)}
         onSubmit={async (contact) => {
@@ -164,8 +170,8 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
     bottom = (
       <ContactForm
         autoFocus={contactPrompt !== null}
-        initialName={state.visitor.name}
-        initialEmail={state.visitor.email}
+        initialName={visitor.name}
+        initialEmail={visitor.email}
         {...(contactPrompt?.errors ? { initialErrors: contactPrompt.errors } : {})}
         onSubmit={async (contact) => {
           const result = await session.saveContact(contact);
@@ -179,7 +185,7 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
   } else if (state.phase === 'failed') {
     bottom = (
       <div className="px-4 pt-3 text-center">
-        <AccentButton onClick={() => void session.start()}>{t('retry')}</AccentButton>
+        <AccentButton onClick={() => void session.retry()}>{t('retry')}</AccentButton>
       </div>
     );
   } else {
@@ -195,11 +201,12 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
     );
   }
 
-  // The chat is the frame's whole page, so it is the main landmark, named apart from the host page's own.
   return (
     <main aria-label={config.title} className="flex h-full min-h-0 flex-col text-ink">
-      <Header menuItems={menuItems} onClose={onClose} />
+      <Header menuItems={menuItems} onClose={() => host.close()} />
+      {listShown ? <ConversationList onOpen={openConversation} onBack={leaveList} /> : null}
       <div
+        hidden={listShown}
         ref={scrollRef}
         {...mark('behavior.messages')}
         role="region"
@@ -209,17 +216,11 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 focus-visible:outline-offset-[-2px]"
       >
         <div ref={contentRef}>
-          <MessageList state={state} session={session} showSuggestions={showSuggestions} onAsk={send} />
+          <MessageList showSuggestions={showSuggestions} onAsk={send} />
         </div>
       </div>
-      <div className={clsx('shrink-0', !config.showFooter && 'pb-3')}>
-        <StatusBars
-          state={state}
-          session={session}
-          answering={answering}
-          onLeftQueue={focusComposer}
-          {...(canHandOver ? { onAskForPerson: () => void askForPerson() } : {})}
-        />
+      <div hidden={listShown} className={clsx('shrink-0', !config.showFooter && 'pb-3')}>
+        <StatusBars answering={answering} onLeftQueue={focusComposer} {...(canHandOver ? { onAskForPerson: () => void askForPerson() } : {})} />
         {showHandoverButton ? (
           <div className="px-4 pt-2">
             <button
@@ -240,7 +241,7 @@ export function ChatPanel({ session, onClose, onBusy }: ChatPanelProps) {
           </p>
         ) : null}
       </div>
-      <ActivityAnnouncer session={session} />
+      <ActivityAnnouncer />
     </main>
   );
 }

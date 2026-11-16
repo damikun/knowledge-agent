@@ -1,4 +1,3 @@
-// Rebuilds the embeddable widget (chat frame and loader) into dist-widget on every change.
 import { spawn } from 'node:child_process';
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -7,7 +6,6 @@ const webDir = join(import.meta.dirname, '..');
 const viteCli = join(webDir, 'node_modules', 'vite', 'bin', 'vite.js');
 let stopping = false;
 
-// Watch builds never empty dist-widget (see vite.widget.config.ts), so old hashed assets are removed once here.
 rmSync(join(webDir, 'dist-widget'), { recursive: true, force: true });
 
 const builds = [
@@ -19,7 +17,6 @@ const children = builds.map(({ name, config }) => {
   const prefix = `[widget:${name}]`;
   const child = spawn(process.execPath, [viteCli, 'build', '--watch', '--config', config], {
     cwd: webDir,
-    // The output is piped, so Vite only keeps its colors when asked; any FORCE_COLOR value turns them on.
     env: process.stdout.isTTY && process.env.FORCE_COLOR === undefined ? { ...process.env, FORCE_COLOR: '1' } : process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
   });

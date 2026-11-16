@@ -68,7 +68,6 @@ internal sealed class WidgetRepository(KnowledgeDbContext db, DbContextGate gate
                 return false;
             }
 
-            // The in-memory provider does not cascade, so the dependents go explicitly.
             db.WidgetAssets.RemoveRange(await db.WidgetAssets.Where(asset => asset.WidgetId == id).ToListAsync(cancellationToken));
             db.WidgetVisitors.RemoveRange(await db.WidgetVisitors.Where(visitor => visitor.WidgetId == id).ToListAsync(cancellationToken));
             db.WidgetDailyUsage.RemoveRange(await db.WidgetDailyUsage.Where(usage => usage.WidgetId == id).ToListAsync(cancellationToken));
@@ -147,7 +146,6 @@ internal sealed class WidgetRepository(KnowledgeDbContext db, DbContextGate gate
         using var _ = await gate.EnterAsync(cancellationToken);
         if (db.Database.IsNpgsql())
         {
-            // One statement, so instances counting at the same time never lose a message.
             var counts = await db.Database
                 .SqlQuery<int>($"""
                     INSERT INTO widget_daily_usage (widget_id, day, messages) VALUES ({widgetId}, {day}, 1)

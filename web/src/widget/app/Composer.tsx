@@ -9,7 +9,6 @@ export interface ComposerProps {
   value: string;
   onChange: (value: string) => void;
   onSubmit: (message: string) => void;
-  // Typing goes on while an answer is written; sending waits.
   sendBlocked: boolean;
   glowing?: boolean;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
@@ -24,7 +23,6 @@ export function Composer({ value, onChange, onSubmit, sendBlocked, glowing = fal
   const showCount = remaining <= Math.min(100, Math.ceil(maxLength * 0.1));
   const canSend = value.trim() !== '' && !sendBlocked && remaining >= 0;
 
-  // Grows with its text, also when the text is set from outside; measured before paint.
   useLayoutEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {

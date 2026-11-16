@@ -5,7 +5,6 @@ export { PageHeader } from './feedback';
 
 type PageWidth = 'full' | 'narrow';
 
-// Lists, tables and grids use the full width; forms and editors stay at a readable 768px.
 const widths: Record<PageWidth, string> = {
   full: '',
   narrow: 'max-w-3xl',
@@ -31,13 +30,11 @@ export function Page({ variant = 'content', width = 'full', className, children 
 
 
 export interface CardGridProps {
-  /** Names the list of cards. Without it the grid is decoration hidden from screen readers, such as a loading skeleton. */
   label?: string;
   className?: string;
   children: ReactNode;
 }
 
-/** auto-fill keeps empty tracks, so a single card stays one column wide instead of stretching. */
 export function CardGrid({ label, className, children }: CardGridProps) {
   const Grid = label ? 'ul' : 'div';
   return (

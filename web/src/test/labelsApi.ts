@@ -1,4 +1,3 @@
-/** Labels as GET /api/labels returns them. */
 export const QUESTION_LABEL_ID = '01a1ab53-0000-7000-8000-000000000001';
 export const PROBLEM_LABEL_ID = '01a1ab53-0000-7000-8000-000000000002';
 

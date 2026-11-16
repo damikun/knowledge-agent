@@ -1,4 +1,3 @@
-/* base.css has only layout rules; colors come from --ka-* tokens so light and dark both work. */
 @import '@xyflow/react/dist/base.css';
 
 .ka-flow.react-flow {
@@ -30,7 +29,6 @@
   fill: var(--ka-border-strong);
 }
 
-/* The cards draw their own frame; the wrapper only carries focus. */
 .ka-flow .react-flow__node {
   border-radius: 0.75rem;
   cursor: pointer;
@@ -41,7 +39,6 @@
   outline-offset: 2px;
 }
 
-/* Handles only anchor the edges; nothing can be connected. */
 .ka-flow .react-flow__handle {
   opacity: 0;
   width: 1px;

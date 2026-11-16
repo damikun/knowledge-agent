@@ -19,9 +19,9 @@ internal sealed partial class PeopleRepository
                 return;
             }
 
-            if (visit.NewSession && now - contact.LastSeenAt >= VisitorSessions.IdleTime)
+            if (visit.NewVisit && now - contact.LastSeenAt >= Visits.IdleTime)
             {
-                contact.SessionCount++;
+                contact.VisitCount++;
             }
 
             contact.LastPageUrl = visit.PageUrl ?? contact.LastPageUrl;
@@ -58,7 +58,6 @@ internal sealed partial class PeopleRepository
             var result = await MergeAsync(contact, attributes, source, now, cancellationToken);
             if (!hadContact && contact.Attributes.Count == 0)
             {
-                // Nothing was stored, so the visitor stays without a contact.
                 db.ChangeTracker.Clear();
                 return result;
             }
@@ -182,7 +181,6 @@ internal sealed partial class PeopleRepository
             int contacts;
             if (db.Database.IsNpgsql())
             {
-                // One transaction, retried as a whole, so the key never stays on some contacts without its registry row.
                 return await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
                 {
                     await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -322,7 +320,6 @@ internal sealed partial class PeopleRepository
         return result;
     }
 
-    // A concurrent write may add the same new key first; the next attempt sees it.
     private async Task<T> WithRetryAsync<T>(Func<Task<T>> write)
     {
         for (var attempt = 1; ; attempt++)
@@ -359,7 +356,7 @@ internal sealed partial class PeopleRepository
     private IQueryable<Contact> ContactsMatching(IReadOnlyList<ResolvedCondition> conditions, DateTimeOffset now)
     {
         var (where, parameters) = ContactFilters.ToSql(conditions, now);
-#pragma warning disable EF1002 // The clause is built from checked keys and operators; every value is a parameter.
+#pragma warning disable EF1002
         return db.Contacts.FromSqlRaw($"SELECT * FROM contacts WHERE {where}", parameters.Cast<object>().ToArray()).AsNoTracking();
 #pragma warning restore EF1002
     }

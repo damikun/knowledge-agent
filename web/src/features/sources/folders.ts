@@ -9,10 +9,8 @@ export type FolderView = 'all' | typeof UNFILED | Guid;
 
 export interface FolderNode {
   folder: SourceFolderDto;
-  // 1 for a top-level folder.
   depth: number;
   children: FolderNode[];
-  // Includes the sources of every subfolder, unlike folder.sourceCount.
   totalCount: number;
 }
 
@@ -41,7 +39,6 @@ export function buildFolderTree(folders: readonly SourceFolderDto[]): FolderNode
   };
 
   const roots = (children.get(null) ?? []).sort(compareFolderNames).map((folder) => build(folder, 1));
-  // Folders caught in a parent cycle are not below any root; listing them at the top keeps them reachable.
   for (const folder of [...folders].sort(compareFolderNames)) {
     if (!placed.has(folder.id)) {
       roots.push(build(folder, 1));
@@ -77,7 +74,6 @@ export function folderPathLabel(nodes: readonly FolderNode[], id: Guid): string 
     .join(' / ');
 }
 
-// 1 for a folder without subfolders.
 export function subtreeHeight(node: FolderNode): number {
   return 1 + Math.max(0, ...node.children.map(subtreeHeight));
 }
@@ -86,34 +82,28 @@ export function subtreeIds(node: FolderNode): Set<Guid> {
   return new Set(flattenTree([node]).map((child) => child.folder.id));
 }
 
-/** The Internal folder, which only the help assistant searches, with everything filed below it. */
 export function isInternalNode(node: FolderNode): boolean {
   return node.folder.isInternal === true;
 }
 
-/** The tree without the Internal folder, which no agent searches. Internal is always a top-level folder. */
 export function withoutInternal(nodes: readonly FolderNode[]): FolderNode[] {
   return nodes.filter((node) => !isInternalNode(node));
 }
 
-/** Sources in the Internal folder and its subfolders. */
 export function internalSourceCount(nodes: readonly FolderNode[]): number {
   return nodes.filter(isInternalNode).reduce((sum, node) => sum + node.totalCount, 0);
 }
 
-/** Folders an agent can be limited to: every folder but Internal and its subfolders. */
 export function pickableFolderIds(folders: readonly SourceFolderDto[]): Set<Guid> {
   return new Set(flattenTree(withoutInternal(buildFolderTree(folders))).map((node) => node.folder.id));
 }
 
 export const INTERNAL_FOLDER_NOTE = 'Only the help assistant searches these, for your team.';
 
-// The reasons label disabled destinations in a list, so they stay short.
 export function newFolderBlocker(parent: FolderNode): string | null {
   return parent.depth >= MAX_FOLDER_DEPTH ? 'Too deep' : null;
 }
 
-// A null target is the top level.
 export function moveFolderBlocker(folder: FolderNode, target: FolderNode | null): string | null {
   if (isInternalNode(folder)) {
     return 'Built in';

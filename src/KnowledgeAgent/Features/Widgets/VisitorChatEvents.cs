@@ -2,7 +2,6 @@ using KnowledgeAgent.Features.Chat;
 
 namespace KnowledgeAgent.Features.Widgets;
 
-// Models, token counts, reasoning, raw tool arguments and the researcher's work stay internal.
 internal static class VisitorChatEvents
 {
     public static ChatStreamEvent? ToVisitor(ChatStreamEvent streamEvent, string citationMode)
@@ -20,7 +19,6 @@ internal static class VisitorChatEvents
             ToolResultEvent { ToolName: Chat.Tools.ToolNames.TransferToAgent or Chat.Tools.ToolNames.TransferBack } => null,
             ToolCallEvent call => call with { Arguments = null },
 
-            // The details are built by the server from the arguments, so the visitor sees what they confirm.
             ConfirmationRequiredEvent confirmation => confirmation with { Arguments = null, ToolName = string.Empty },
             ToolResultEvent result => result with
             {
@@ -59,7 +57,6 @@ internal static class VisitorChatEvents
                 Score = 0,
             };
 
-    // Only web pages are linked; uploaded files have no public address.
     private static string? WebUrl(string? url) =>
         Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp) ? url : null;
 }

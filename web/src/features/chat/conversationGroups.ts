@@ -12,7 +12,6 @@ function startOfDay(date: Date): number {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
 }
 
-/** Whole calendar days between the date and today, in local time. */
 function daysAgo(date: Date, now: Date): number {
   return Math.round((startOfDay(now) - startOfDay(date)) / DAY_MS);
 }
@@ -49,7 +48,6 @@ function bucketFor(item: ConversationListItem, now: Date): Bucket {
   }
   const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   const label = date.getFullYear() === now.getFullYear() ? monthFormat.format(date) : monthYearFormat.format(date);
-  // Later months sort first: invert the digits so a plain string sort works.
   const inverted = month.replace(/\d/g, (digit) => String(9 - Number(digit)));
   return { key: month, label, order: `5${inverted}` };
 }
@@ -75,7 +73,6 @@ const weekdayFormat = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
 const dayMonthFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' });
 const fullDateFormat = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
-/** Short enough for the end of a row: the time today, the weekday this week, else the date. */
 export function formatRowTime(value: string, now: Date = new Date()): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {

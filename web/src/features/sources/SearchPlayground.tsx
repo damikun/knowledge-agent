@@ -130,7 +130,6 @@ function OptionField({ id, label, children }: { id: string; label: string; child
   );
 }
 
-/** Test retrieval as a visitor would ask; the Sources page shows it in a side sheet titled "Test search". */
 export function SearchPlayground({ queryRef }: { queryRef?: RefObject<HTMLInputElement | null> } = {}) {
   const [query, setQuery] = useState('');
   const [topK, setTopK] = useState(5);

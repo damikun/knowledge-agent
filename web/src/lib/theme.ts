@@ -2,7 +2,6 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
-// Keep in sync with the inline script in index.html.
 const THEME_STORAGE_KEY = 'knowledge-agent.theme';
 
 const listeners = new Set<() => void>();
@@ -32,10 +31,8 @@ export function applyTheme(preference: ThemePreference = readPreference()): void
   if (root.classList.contains('dark') === dark) {
     return;
   }
-  // Switch at once: index.css turns transitions off for a frame, or hover fades would trail behind.
   root.setAttribute('data-switching-theme', '');
   root.classList.toggle('dark', dark);
-  // Force a reflow so the new colors apply while transitions are still off.
   void root.offsetWidth;
   requestAnimationFrame(() => root.removeAttribute('data-switching-theme'));
 }
@@ -48,7 +45,6 @@ function setThemePreference(preference: ThemePreference): void {
       localStorage.setItem(THEME_STORAGE_KEY, preference);
     }
   } catch {
-    // Storage unavailable (private mode): the choice lasts for this page view.
   }
   applyTheme(preference);
   listeners.forEach((listener) => listener());

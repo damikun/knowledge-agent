@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { isRecord, request } from '../../lib/api';
+import { call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import { PLACEHOLDER_ORIGIN, publicOrigin } from '../../lib/publicOrigin';
 import { systemInfoQueryKey } from '../../lib/queryKeys';
 import { useReturnState } from '../../lib/returnTo';
@@ -17,7 +18,6 @@ export function toPublicAddress(value: unknown): PublicAddressDto {
   return { url: typeof dto.url === 'string' && dto.url !== '' ? dto.url : null, source };
 }
 
-/** The public address once known, else the portal's own origin, else a placeholder while running on localhost. */
 export function usePublicOrigin(): { origin: string; placeholder: boolean } {
   const info = useSystemInfo();
   const origin = publicOrigin(toPublicAddress(info.data?.publicAddress).url);
@@ -28,7 +28,7 @@ export function useSavePublicAddress() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (url: string | null) =>
-      toPublicAddress(await request<unknown>('/api/system/public-address', { method: 'PUT', body: { url } })),
+      toPublicAddress(await call(endpoints.system.savePublicAddress, { body: { url } })),
     onSuccess: (publicAddress) => {
       queryClient.setQueryData<SystemInfoDto>(systemInfoQueryKey, (info) => (info ? { ...info, publicAddress } : info));
     },

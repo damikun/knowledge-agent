@@ -8,14 +8,12 @@ export type DragPayload =
   | { kind: 'folder'; id: Guid };
 
 export interface FolderDrop {
-  // A null folder is Unfiled for sources and the top level for folders.
   canDrop: (payload: DragPayload, folderId: Guid | null) => boolean;
   drop: (payload: DragPayload, folderId: Guid | null) => void;
 }
 
 const PAYLOAD_TYPE = 'application/x-knowledge-agent';
 
-// Browsers reveal dragged data only on drop, so targets check the payload kept here while the drag is under way.
 let current: DragPayload | null = null;
 
 export function startDrag(event: DragEvent, payload: DragPayload, label: string): void {
@@ -44,7 +42,6 @@ function draggedPayload(dataTransfer: DataTransfer | null): DragPayload | null {
   }
 }
 
-// A small pill instead of the browser's snapshot of a whole table row.
 function showDragLabel(dataTransfer: DataTransfer, label: string): void {
   if (typeof dataTransfer.setDragImage !== 'function') {
     return;

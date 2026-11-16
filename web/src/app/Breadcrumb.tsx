@@ -41,7 +41,6 @@ export function Breadcrumb({ section, item, returnTo }: { section: NavItem | und
             </li>
           </>
         ) : (
-          // The section name is short, so the origin truncates first.
           <li className="flex shrink-0 items-center gap-1.5">
             {separator}
             {current(item ?? section?.label ?? PRODUCT)}

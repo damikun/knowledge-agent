@@ -9,7 +9,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const me = useMe();
 
-  // A lost session shows the sign-in screen instead of redirecting, so nothing typed is lost.
   const signedIn = Boolean(me.data);
   const [wasSignedIn, setWasSignedIn] = useState(false);
   if (signedIn && !wasSignedIn) {
@@ -21,8 +20,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
     }
   }, [signedIn]);
 
-  // 401: the session ended. 403: the last check may have dropped a role. Refetch /me in both cases; an
-  // in-flight /me fetch is reused, so a 401 from /me itself can't start another round.
   useEffect(() => {
     const askAgain = () => void queryClient.invalidateQueries({ queryKey: authKeys.me }, { cancelRefetch: false });
     const stopUnauthorized = onUnauthorized(askAgain);

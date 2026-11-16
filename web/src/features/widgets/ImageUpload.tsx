@@ -11,7 +11,6 @@ import { IMAGE_TYPES, MAX_IMAGE_BYTES } from './widgetForm';
 export interface ImageUploadProps {
   id: string;
   label: string;
-  /** Null until the widget is saved; uploads belong to a widget. */
   widgetId: Guid | null;
   assetId: Guid | null;
   onChange: (assetId: Guid | null) => void;

@@ -6,18 +6,13 @@ import { Button } from '../../../components/ui/Button';
 export type SheetSnap = 'collapsed' | 'half' | 'full';
 
 export const SHEET_HANDLE_HEIGHT = 28;
-// Gap above a full sheet, so the preview still peeks out.
 const TOP_GAP = 12;
-// px of movement before a drag starts, so a tap stays a tap.
 const DRAG_THRESHOLD = 6;
-// px/ms; a faster release goes on to the next snap point.
 const FLING = 0.5;
 const SIZES: readonly SheetSnap[] = ['collapsed', 'half', 'full'];
 
-/** The next snap point in the fling's direction, else the nearest one. */
 export function snapAfterDrag(heights: Record<SheetSnap, number>, height: number, velocity: number): SheetSnap {
   if (Math.abs(velocity) >= FLING) {
-    // Positive velocity is downward, toward smaller.
     const ahead = velocity > 0 ? [...SIZES].reverse().filter((snap) => heights[snap] < height) : SIZES.filter((snap) => heights[snap] > height);
     if (ahead[0]) {
       return ahead[0];
@@ -43,7 +38,6 @@ export interface BottomSheetProps {
   children: ReactNode;
 }
 
-/** Resizes rather than moves, so its content always scrolls within the visible part. */
 export function BottomSheet({ label, snap, onSnapChange, peek, children }: BottomSheetProps) {
   const sheetRef = useRef<HTMLElement>(null);
   const handleRef = useRef<HTMLButtonElement>(null);
@@ -62,7 +56,6 @@ export function BottomSheet({ label, snap, onSnapChange, peek, children }: Botto
     if (event.button !== 0) {
       return;
     }
-    // Capture at once, or a quick flick leaves the strip for the iframe before the drag starts.
     event.currentTarget.setPointerCapture(event.pointerId);
     gesture.current = {
       pointerId: event.pointerId,
@@ -97,7 +90,6 @@ export function BottomSheet({ label, snap, onSnapChange, peek, children }: Botto
     }
     gesture.current = null;
     if (!current.dragging) {
-      // The strip holds the pointer capture, so a tap toggles here rather than as a click on the handle.
       if (event.type === 'pointerup') {
         toggle();
       }
@@ -132,12 +124,10 @@ export function BottomSheet({ label, snap, onSnapChange, peek, children }: Botto
         if (event.key === 'Escape' && snap !== 'collapsed') {
           event.preventDefault();
           onSnapChange('collapsed');
-          // The focused content goes out of view, so keep focus on the handle.
           handleRef.current?.focus();
         }
       }}
       className={clsx(
-        // An upward shadow, which no elevation token has.
         'absolute inset-x-0 bottom-0 z-20 flex flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-raised shadow-[0_-16px_40px_-16px_rgb(0_0_0/0.28)]',
         dragHeight === null && 'transition-[height] duration-300 ease-(--ease-hero) motion-reduce:transition-none',
       )}
@@ -160,7 +150,6 @@ export function BottomSheet({ label, snap, onSnapChange, peek, children }: Botto
           aria-describedby={hintId}
           title="Drag, or use the arrow keys"
           onClick={(event) => {
-            // Keyboard activation only; pointer taps are handled on pointerup.
             if (event.detail === 0) {
               toggle();
             }

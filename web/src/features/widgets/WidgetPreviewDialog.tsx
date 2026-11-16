@@ -31,7 +31,6 @@ export interface WidgetPreviewDialogProps {
   unsaved?: boolean;
 }
 
-/** The widget build in a frame on the portal's origin. Its preview session counts nowhere and contacts no one. */
 export function WidgetPreviewDialog({ widget, onClose, unsaved = false }: WidgetPreviewDialogProps) {
   const open = widget !== null;
   const panelRef = useRef<HTMLDivElement>(null);
@@ -39,7 +38,6 @@ export function WidgetPreviewDialog({ widget, onClose, unsaved = false }: Widget
   const descriptionId = useId();
   const [colorScheme, setColorScheme] = useState<ColorScheme>(portalScheme);
   const [device, setDevice] = useState<Device>('desktop');
-  // Bumping this remounts the frame, which starts a fresh preview session.
   const [run, setRun] = useState(0);
   const [frame, setFrame] = useState<HTMLIFrameElement | null>(null);
   const [connected, setConnected] = useState(0);
@@ -49,7 +47,6 @@ export function WidgetPreviewDialog({ widget, onClose, unsaved = false }: Widget
   useFocusTrap(panelRef, { active: open, onEscape: onClose });
   useScrollLock(open);
 
-  // The frame posts "ready" on every load, so it gets the widget each time.
   useEffect(() => {
     const preview = frame?.contentWindow;
     if (!preview) {

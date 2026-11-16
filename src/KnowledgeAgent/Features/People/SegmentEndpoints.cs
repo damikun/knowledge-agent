@@ -12,7 +12,6 @@ internal static class SegmentEndpoints
 {
     public static RouteGroupBuilder MapSegmentEndpoints(this IEndpointRouteBuilder routes)
     {
-        // Staff read, create and edit segments (their own and shared ones); only admins delete them.
         var group = routes.MapGroup("/segments").WithTags("Segments");
 
         group.MapGet("/", ListAsync)

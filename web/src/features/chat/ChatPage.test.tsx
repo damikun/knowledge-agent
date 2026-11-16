@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { agentDto, agentGuid, agentsRoutes, builtInAgent } from '../../test/agentsApi';
+import { agentDto, agentGuid, agentsRoutes, assistantAgent } from '../../test/agentsApi';
 import {
   citationS1,
   citationS2,
@@ -46,7 +46,6 @@ const doneEvent = {
 
 const encoder = new TextEncoder();
 
-/** An event stream that stays open until the test closes it or the client aborts. */
 function openStream(start: (controller: ReadableStreamDefaultController<Uint8Array>) => void): Response {
   return new Response(new ReadableStream<Uint8Array>({ start }), { headers: { 'Content-Type': 'text/event-stream' } });
 }
@@ -345,7 +344,7 @@ describe('ChatPage', () => {
     let posts = 0;
     const fetchMock = mockFetch({
       ...sourcesRoutes(() => [sourceDto()]),
-      ...agentsRoutes(() => [builtInAgent, helper, support]),
+      ...agentsRoutes(() => [assistantAgent, helper, support]),
       'GET /api/conversations': [],
       [`GET /api/conversations/${CONVERSATION_ID}`]: conversationDto({ agentId: support.id }),
       'POST /api/chat': () => {
@@ -358,10 +357,7 @@ describe('ChatPage', () => {
     renderWithProviders(<ChatPage />, { route: '/chat', path: '/chat/:conversationId?' });
 
     const picker = await screen.findByRole('combobox', { name: 'Test as' });
-    expect(picker).toHaveTextContent('Website helper');
-    await user.click(picker);
-    expect(screen.queryByRole('option', { name: /Knowledge Agent/ })).toBeNull();
-    await user.keyboard('{Escape}');
+    expect(picker).toHaveTextContent('Assistant');
     await pickOption(user, picker, /Support desk/);
     await user.type(screen.getByRole('textbox', { name: 'Message' }), 'Where is my order?{Enter}');
     await waitFor(() => expect(posts).toBe(1));
@@ -375,18 +371,24 @@ describe('ChatPage', () => {
     expect(chatBody(fetchMock, 1)).toEqual({ conversationId: CONVERSATION_ID, message: 'And the delivery date?', sourceIds: null });
   });
 
-  it('names the built-in agent for its old conversations, and leads to New agent while there is no agent of your own', async () => {
-    const user = userEvent.setup();
+  it('names the first agent for a conversation without one', async () => {
     mockFetch({
       ...sourcesRoutes(() => [sourceDto()]),
-      ...agentsRoutes(() => [builtInAgent]),
+      ...agentsRoutes(() => [assistantAgent, agentDto()]),
       'GET /api/conversations': [],
       [`GET /api/conversations/${CONVERSATION_ID}`]: conversationDto({ agentId: null }),
     });
     renderWithProviders(<ChatPage />, { route: `/chat/${CONVERSATION_ID}`, path: '/chat/:conversationId?' });
-    expect(await screen.findByTitle('Agent')).toHaveTextContent('Knowledge Agent');
+    expect(await screen.findByTitle('Agent')).toHaveTextContent('Assistant');
+  });
 
-    await user.click(screen.getByRole('button', { name: 'New chat' }));
+  it('leads to New agent while there is no agent', async () => {
+    mockFetch({
+      ...sourcesRoutes(() => [sourceDto()]),
+      ...agentsRoutes(() => []),
+      'GET /api/conversations': [],
+    });
+    renderWithProviders(<ChatPage />, { route: '/chat', path: '/chat/:conversationId?' });
     expect(await screen.findByText('No agent to test yet')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'New agent' })).toHaveAttribute('href', '/agents/new');
     expect(screen.getByRole('textbox', { name: 'Message' })).toBeDisabled();

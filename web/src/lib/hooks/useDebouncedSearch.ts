@@ -5,7 +5,6 @@ const SEARCH_DEBOUNCE_MS = 300;
 export interface DebouncedSearch {
   input: string;
   setInput: (value: string) => void;
-  /** The trimmed input once typing pauses; an emptied input applies at once. */
   query: string;
   flush: () => void;
   clear: () => void;

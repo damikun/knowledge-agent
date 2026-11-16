@@ -5,7 +5,6 @@ import { Spinner } from '../../components/ui/feedback';
 import { useDebouncedValue } from '../../lib/hooks/useDebouncedValue';
 import { usePeople, usePerson } from './api';
 
-/** Falls back to the id's start while loading or when the person is gone. */
 export function usePersonName(personId: string): string {
   const person = usePerson(personId);
   if (!personId) {
@@ -15,7 +14,6 @@ export function usePersonName(personId: string): string {
 }
 
 export interface PersonFilterProps {
-  /** Empty for anyone. */
   value: string;
   onChange: (personId: string) => void;
 }

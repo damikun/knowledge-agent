@@ -116,7 +116,6 @@ describe('request', () => {
     for (const [, init] of calls) {
       expect(init.headers).toMatchObject({ 'X-KA-Request': '1' });
     }
-    // The browser sets the multipart boundary itself.
     expect(calls[2]![1].headers).not.toHaveProperty('Content-Type');
   });
 

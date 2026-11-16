@@ -13,9 +13,7 @@ import type { EvalRunSummaryDto } from './types';
 
 export interface RunsTableProps {
   runs: EvalRunSummaryDto[];
-  /** Fetch time; running runs measure elapsed time up to it. */
   now: number;
-  /** Runs with a cancel request in flight. */
   busyIds: ReadonlySet<string>;
   onCancel: (run: EvalRunSummaryDto) => void;
   onDelete: (run: EvalRunSummaryDto) => void;
@@ -55,7 +53,6 @@ export function RunsTable({ runs, now, busyIds, onCancel, onDelete }: RunsTableP
             <TableRow
               key={run.id}
               onClick={(event) => {
-                // Links and buttons in the row handle their own clicks.
                 if (!(event.target as HTMLElement).closest('a, button')) {
                   navigate(runPath(run.id));
                 }
@@ -106,7 +103,6 @@ export function RunsTable({ runs, now, busyIds, onCancel, onDelete }: RunsTableP
                 <div className="text-xs text-fg-muted tabular-nums">{formatDuration(runDurationMs(run, now))}</div>
               </TableCell>
               <TableCell className="py-1">
-                {/* Always visible on devices that can't hover. */}
                 <div className="flex justify-end gap-0.5 opacity-0 group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:none)]:opacity-100">
                   {langfuseUrl ? (
                     <a

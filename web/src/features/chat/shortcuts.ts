@@ -4,7 +4,6 @@ function isApple(): boolean {
   return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent);
 }
 
-/** "⌘" on Apple devices, "Ctrl+" elsewhere, for shortcut hints. */
 export function modKey(): string {
   return isApple() ? '⌘' : 'Ctrl+';
 }
@@ -16,7 +15,6 @@ export const SEARCH_SHORTCUT = {
   aria: 'Meta+K Control+K',
 };
 
-// Same keys as ChatGPT.
 export const NEW_CHAT_SHORTCUT = {
   get label() {
     return isApple() ? '⌘⇧O' : 'Ctrl+Shift+O';

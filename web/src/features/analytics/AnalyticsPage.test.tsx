@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { agentsRoutes, builtInAgent } from "../../test/agentsApi";
+import { agentsRoutes, assistantAgent } from "../../test/agentsApi";
 import { evalDataset, evalDatasetList } from "../../test/evalsApi";
 import { WIDGET_CONVERSATION_ID } from "../../test/inboxApi";
 import { QUESTION_LABEL_ID } from "../../test/labelsApi";
@@ -117,7 +117,7 @@ describe("AnalyticsPage", () => {
       "GET /api/analytics": (url: URL) =>
         jsonResponse(analytics(Number(url.searchParams.get("days")))),
       ...widgetsRoutes(() => [widgetDto()]),
-      ...agentsRoutes(() => [builtInAgent]),
+      ...agentsRoutes(() => [assistantAgent]),
     });
     renderWithProviders(<AnalyticsPage />, {
       route: "/analytics?days=7",
@@ -197,7 +197,7 @@ describe("AnalyticsPage", () => {
         init: RequestInit,
       ) => jsonResponse({ id: "i1", ...JSON.parse(String(init.body)) }, 201),
       ...widgetsRoutes(() => [widgetDto()]),
-      ...agentsRoutes(() => [builtInAgent]),
+      ...agentsRoutes(() => [assistantAgent]),
     });
     renderWithProviders(<AnalyticsPage />, {
       route: "/analytics",

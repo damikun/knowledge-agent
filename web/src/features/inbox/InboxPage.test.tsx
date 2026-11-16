@@ -2,7 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { agentDto, agentsRoutes, builtInAgent } from '../../test/agentsApi';
+import { agentDto, agentsRoutes, assistantAgent } from '../../test/agentsApi';
 import { currentUser, supportUser } from '../../test/apiFixtures';
 import { evalDatasetList } from '../../test/evalsApi';
 import { messageDto } from '../../test/fixtures';
@@ -18,7 +18,6 @@ import { InboxPage } from './InboxPage';
 import { tabsThatFit } from './views/ViewTabs';
 import type { InboxConversationDetail } from './types';
 
-/** + Filter, the kind, then its value in the popover. */
 async function addFilter(user: ReturnType<typeof userEvent.setup>, kind: string, value?: string) {
   await user.click(screen.getByRole('button', { name: 'Add filter' }));
   await user.click(await screen.findByRole('menuitem', { name: kind }));
@@ -78,7 +77,7 @@ const baseRoutes = {
   [SEARCH]: { items: [waiting, withAssistant], nextCursor: null },
   [COUNTS]: countsDto({ handoverPending: 3, human: 1, ai: 7, closed: 4, all: 15, labels: [{ labelId: QUESTION_LABEL_ID, count: 5 }] }),
   ...widgetsRoutes(() => [widgetDto(), widgetDto({ id: widgetGuid(2), name: 'Docs help' })]),
-  ...agentsRoutes(() => [builtInAgent, agentDto()]),
+  ...agentsRoutes(() => [assistantAgent, agentDto()]),
 };
 
 function setup(

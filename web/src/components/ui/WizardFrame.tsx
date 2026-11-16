@@ -5,7 +5,6 @@ import { Button } from './Button';
 import { Page } from './Page';
 
 export interface WizardFrameProps {
-  /** The current step's id: a new step is announced by moving focus to its title. */
   step: string;
   progress: ReactNode;
   onCancel: () => void;
@@ -14,7 +13,6 @@ export interface WizardFrameProps {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
   title: ReactNode;
   description: ReactNode;
-  /** A step opened for a refused field focuses that field instead of the title. */
   invalidControl?: () => HTMLElement | null | undefined;
   onBack?: () => void;
   last: boolean;
@@ -42,7 +40,6 @@ export function WizardFrame({
   children,
 }: WizardFrameProps) {
   const headingRef = useRef<HTMLHeadingElement>(null);
-  // The step a page opens on keeps the browser's focus.
   useOnChange(step, () => (invalidControl?.() ?? headingRef.current)?.focus());
 
   return (

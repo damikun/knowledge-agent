@@ -14,7 +14,7 @@ import { useBreadcrumb } from '../../lib/breadcrumb';
 import { readReturnTo } from '../../lib/returnTo';
 import { useEscapeToLeave } from '../../lib/hooks/useKeydown';
 import { resolveTheme } from '../../widget/shared/theme';
-import { ownAgents, useAgents } from '../agents/api';
+import { useAgents } from '../agents/api';
 import type { AgentDto } from '../agents/types';
 import { useIntegrations } from '../notifications/api';
 import type { IntegrationsDto } from '../notifications/types';
@@ -44,7 +44,6 @@ import {
   type WidgetWizardStep,
 } from './widgetWizard';
 
-// For a radio group, its first choice.
 function invalidControl(form: HTMLFormElement | null): HTMLElement | null {
   return form?.querySelector<HTMLElement>('[aria-invalid="true"] input, [aria-invalid="true"]:not([role="radiogroup"])') ?? null;
 }
@@ -67,8 +66,7 @@ export function NewWidgetPage() {
   const agents = useAgents();
   const integrations = useIntegrations();
   useBreadcrumb('New widget');
-  // The API rejects the built-in agent for widgets.
-  const usable = useMemo(() => ownAgents(agents.data ?? []).sort((a, b) => a.name.localeCompare(b.name)), [agents.data]);
+  const usable = useMemo(() => [...(agents.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)), [agents.data]);
 
   const error = options.error ?? agents.error;
   if (error) {
@@ -111,7 +109,6 @@ function WidgetWizard({ options, agents, integrations }: WidgetWizardProps) {
   const create = useMutation({
     mutationFn: (body: SaveWidgetRequest) => widgetsApi.createWidget(body),
     onSuccess: (saved) => {
-      // Seed the list cache so the editor finds the new widget right away.
       queryClient.setQueryData<WidgetDto[]>(widgetKeys.list, (old) => (old ? [...old.filter((item) => item.id !== saved.id), saved] : old));
       void queryClient.invalidateQueries({ queryKey: widgetKeys.list });
       toast({ title: 'Widget created', tone: 'success' });
@@ -133,7 +130,6 @@ function WidgetWizard({ options, agents, integrations }: WidgetWizardProps) {
   });
 
   const requested = parseWidgetStep(search.get('step')) ?? 'agent';
-  // A deep link, or a reload that lost the values, falls back to the first open step.
   const open = firstOpenWidgetStepBefore(requested, values);
   const step = open ?? requested;
   const index = widgetStepIndex(step);
@@ -209,7 +205,6 @@ function WidgetWizard({ options, agents, integrations }: WidgetWizardProps) {
       return;
     }
     if (Object.keys(widgetStepErrors(step, values)).length > 0) {
-      // Render the errors synchronously so the first one can take focus.
       flushSync(() => setChecked((current) => new Set(current).add(step)));
       invalidControl(formRef.current)?.focus();
       return;

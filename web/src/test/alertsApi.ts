@@ -51,7 +51,6 @@ export function alertSettings(overrides: Partial<AlertSettingsDto> = {}): AlertS
   };
 }
 
-/** GET /api/alerts from a getter, so a test can change the alerts between requests. */
 export function alertsRoutes(get: () => AlertListDto = () => ({ alerts: [], snoozed: 0 })) {
   return {
     'GET /api/alerts': () => jsonResponse(get()),

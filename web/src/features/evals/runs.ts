@@ -42,10 +42,6 @@ function sameDataset(a: Pick<EvalRunSummaryDto, 'dataset' | 'datasetSource'>, b:
   return a.dataset === b.dataset && (a.datasetSource ?? '').toLowerCase() === (b.datasetSource ?? '').toLowerCase();
 }
 
-/**
- * Newest completed run of the same dataset before `run`. Source and question count must match too: a synced
- * builtin set keeps its name but runs on another knowledge base, and a 3-question check isn't comparable.
- */
 export function previousCompletedRun<T extends EvalRunSummaryDto>(run: RunIdentity, runs: readonly T[] | undefined): T | null {
   const created = timestamp(run.createdAt);
   if (Number.isNaN(created)) {
@@ -72,7 +68,6 @@ export function previousCompletedRun<T extends EvalRunSummaryDto>(run: RunIdenti
   return best;
 }
 
-/** From start to completion, or to `now` while running; null when the run never started. */
 export function runDurationMs(run: Pick<EvalRunSummaryDto, 'status' | 'startedAt' | 'completedAt'>, now: number = Date.now()): number | null {
   const start = timestamp(run.startedAt);
   if (Number.isNaN(start)) {

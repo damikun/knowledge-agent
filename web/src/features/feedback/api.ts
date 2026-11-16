@@ -1,5 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { asArray, asStrings, isRecord, request } from '../../lib/api';
+import { asArray, asStrings, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { FeedbackDays, FeedbackDto, FeedbackFilters, FeedbackKind, FeedbackSummaryDto } from './types';
 
 const feedbackKeys = {
@@ -60,10 +61,10 @@ function toFeedback(value: unknown): FeedbackDto {
 
 const feedbackApi = {
   summary: async (days: FeedbackDays, signal?: AbortSignal) =>
-    asArray<unknown>(await request<unknown>('/api/feedback/summary', { query: { days }, signal })).map(toSummary),
+    asArray<unknown>(await call(endpoints.feedback.summary, { query: { days }, signal })).map(toSummary),
   list: async (filters: FeedbackFilters, signal?: AbortSignal) =>
     asArray<unknown>(
-      await request<unknown>('/api/feedback', {
+      await call(endpoints.feedback.list, {
         query: {
           widgetId: filters.widgetId,
           agentId: filters.agentId,

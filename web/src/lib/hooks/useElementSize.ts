@@ -5,7 +5,6 @@ export interface ElementSize {
   height: number;
 }
 
-/** Null where there is no layout (tests). Read before the first paint, so a size-dependent layout doesn't jump. */
 export function useElementSize(element: HTMLElement | null): ElementSize | null {
   const [size, setSize] = useState<ElementSize | null>(null);
 

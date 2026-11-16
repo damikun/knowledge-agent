@@ -1,34 +1,22 @@
 import type { Guid, IsoDateTime, JsonValue } from '../../lib/types';
 
 export const ToolNames = {
-  /** Args: query (required), top_k, source_ids. */
   SearchKnowledgeBase: 'search_knowledge_base',
-  /** Args: text (required), match_case, whole_words, output (passages or sources), source_ids, limit, offset. */
   GrepSources: 'grep_sources',
-  /** Args: query (words in title, URL or file name), type, status (ready by default, or "any"), limit, offset. */
   FindSources: 'find_sources',
-  /** Args: source_id (required), offset, max_chars. */
   ReadSource: 'read_source',
-  /** Args: task (required), source_ids. Runs the researcher sub-agent. */
   DelegateResearch: 'delegate_research',
-  /** Args: agent (a specialist's key), reason. The specialist answers from here on. */
   TransferToAgent: 'transfer_to_agent',
-  /** Args: reason. A specialist hands the conversation back to the front agent. */
   TransferBack: 'transfer_back',
 } as const;
 
 export interface ChatRequestDto {
   conversationId: Guid | null;
   message: string;
-  /** Restricts retrieval to these sources (new conversations only). */
   sourceIds?: Guid[] | null;
-  /** Chat model profile to use instead of the agent's default. */
   profile?: string | null;
-  /** Extra Handlebars variables for the system prompt (new conversations only). */
   variables?: Record<string, JsonValue> | null;
-  /** Key of the agent to chat with (new conversations only); empty means the built-in agent. */
   agent?: string | null;
-  /** Answers a tool call of the latest turn that waits for Confirm or Cancel; the message may then be empty. */
   confirmation?: { callId: string; approved: boolean } | null;
 }
 
@@ -49,9 +37,7 @@ export const ChatEventTypes = {
 export type ChatEventType = (typeof ChatEventTypes)[keyof typeof ChatEventTypes];
 
 interface ChatStreamEvent {
-  /** "orchestrator" or a sub-agent such as "researcher". */
   agent: string;
-  /** For sub-agent events: the orchestrator tool call that started the sub-agent. */
   parentCallId: string | null;
 }
 
@@ -68,11 +54,9 @@ export interface AgentStartedEvent extends ChatStreamEvent {
 
 interface TextDeltaEvent extends ChatStreamEvent {
   text: string;
-  /** The model call that wrote it, numbered per turn. */
   step?: number;
 }
 
-/** interim: tools run next, so the text of that step was a note on the way, not the answer. */
 export interface StepFinishedEvent extends ChatStreamEvent {
   step: number;
   kind: 'interim' | 'final';
@@ -110,10 +94,8 @@ export interface AgentCompletedEvent extends ChatStreamEvent {
   iterations: number;
 }
 
-/** Shadows the DOM `ErrorEvent` type where it is imported. */
 export interface ErrorEvent extends ChatStreamEvent {
   message: string;
-  /** e.g. model_not_configured, provider_error, refusal, cancelled, internal_error */
   code: string | null;
 }
 
@@ -133,7 +115,6 @@ interface ConfirmationRequiredEvent extends ChatStreamEvent {
   details?: ConfirmationDetail[];
 }
 
-/** One argument of an action that waits for Confirm, as the server put it. */
 export interface ConfirmationDetail {
   label: string;
   value: string;
@@ -159,7 +140,6 @@ export type ChatEvent = {
 }[ChatEventType];
 
 export interface CitationDto {
-  /** Tag used in answers, e.g. "S3" for [S3]. */
   ref: string;
   sourceId: Guid;
   chunkId: Guid;
@@ -181,7 +161,6 @@ export interface ToolCallDto {
   durationMs: number;
   result?: string | null;
   confirmation?: ToolConfirmation | null;
-  /** What the agent wrote before this call, on the first call of a step. */
   preamble?: string | null;
 }
 
@@ -193,7 +172,6 @@ export interface ToolConfirmation {
   details?: ConfirmationDetail[] | null;
 }
 
-/** api and mcp: the agent's HTTP API and MCP server, used by other software with an API key. */
 export type ConversationChannel = 'portal' | 'widget' | 'api' | 'mcp';
 
 export type ConversationStatus = 'ai' | 'handover_pending' | 'human' | 'closed';
@@ -206,12 +184,9 @@ export interface ConversationSummaryDto {
   updatedAt: IsoDateTime;
   channel: ConversationChannel;
   status: ConversationStatus;
-  /** Null for the built-in agent. */
   agentId: Guid | null;
-  /** Missing from API versions before labels. */
   pinned?: boolean;
   labels?: ConversationLabelDto[];
-  /** The specialist answering now; null while the front agent (agentId) answers. */
   activeAgent?: ActiveAgentDto | null;
 }
 
@@ -231,7 +206,6 @@ export interface ConversationLabelDto {
   id: Guid;
   name: string;
   color: LabelColor;
-  /** auto: a rule added it, not a person. */
   source: 'manual' | 'auto';
 }
 
@@ -240,14 +214,12 @@ export interface LabelDto {
   name: string;
   color: LabelColor;
   description: string | null;
-  /** Added to matching conversations on its own. */
   autoApply: boolean;
   conversationCount: number;
 }
 
 export interface ConversationPage {
   items: ConversationListItem[];
-  /** Null on the last page. */
   nextCursor: string | null;
 }
 
@@ -263,13 +235,10 @@ export interface ConversationDto {
   createdAt: IsoDateTime;
   updatedAt: IsoDateTime;
   turns: ConversationTurnDto[];
-  /** Null for the built-in agent. */
   agentId: Guid | null;
   channel: ConversationChannel;
   status: ConversationStatus;
-  /** The timeline, by sequence. A question is stored when its turn starts, the answer when it ends. */
   messages: ConversationMessageDto[];
-  /** The specialist answering now; null while the front agent (agentId) answers. */
   activeAgent?: ActiveAgentDto | null;
 }
 
@@ -277,7 +246,6 @@ type MessageAuthor = 'user' | 'visitor' | 'assistant' | 'staff' | 'system';
 
 export interface ConversationMessageDto {
   id: Guid;
-  /** Increasing within the conversation; the event stream resumes after it. */
   sequence: number;
   author: MessageAuthor;
   authorName: string | null;
@@ -285,14 +253,11 @@ export interface ConversationMessageDto {
   citations: CitationDto[];
   turnId: Guid | null;
   createdAt: IsoDateTime;
-  /** A notice visitors never see, such as a hand-off to a specialist whose name is hidden. */
   staffOnly?: boolean;
 }
 
-/** An event of `GET /api/conversations/{id}/events`. */
 export type ConversationLiveEvent =
   | { type: 'message'; message: ConversationMessageDto }
-  /** An event of the turn being written, as the POST /api/chat stream sends it. */
   | { type: 'turn'; event: ChatEvent }
   | { type: 'status'; conversationId: Guid; status: ConversationStatus };
 

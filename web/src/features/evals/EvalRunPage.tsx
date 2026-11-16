@@ -26,7 +26,6 @@ function RunDetails({ run, now }: { run: EvalRunDto; now: number }) {
   const { summary } = run;
   const status = normalizeRunStatus(summary.status);
   const active = isRunActive(summary.status);
-  // Not polled; the run itself is.
   const history = useEvalRuns({ dataset: summary.dataset, limit: RUNS_LIMIT }, { poll: false });
   const previous = previousCompletedRun(summary, history.data);
   const [itemFilter, setItemFilter] = useState<ItemFilter>('all');
@@ -44,7 +43,6 @@ function RunDetails({ run, now }: { run: EvalRunDto; now: number }) {
     itemsRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' });
   };
 
-  // The run lists may still show it as running.
   useOnChange(active, (stillActive) => {
     if (!stillActive) {
       void queryClient.invalidateQueries({ queryKey: evalKeys.runLists });

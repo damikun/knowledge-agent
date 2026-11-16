@@ -8,7 +8,6 @@ import { useConversationEvents, type ConversationEventOptions } from './useConve
 
 export interface LiveConversationOptions extends ConversationEventOptions {
   conversationId: string | null;
-  /** Off while this tab's own POST /api/chat stream renders the turn, so it isn't shown twice. */
   enabled: boolean;
   conversation: ConversationDto | undefined;
   history: readonly TurnView[];
@@ -16,7 +15,6 @@ export interface LiveConversationOptions extends ConversationEventOptions {
 }
 
 export interface LiveConversation {
-  /** Turns written elsewhere (another tab, or before a reload). */
   turns: TurnView[];
   messages: ConversationMessageDto[];
   lastSequence: number;
@@ -26,7 +24,6 @@ const NO_MESSAGES: ConversationMessageDto[] = [];
 
 interface LiveState {
   conversationId: string | null;
-  /** Bumped per conversation switch so sequence state from an earlier visit is ignored. */
   session: number;
   followed: ChatState;
   received: ConversationMessageDto[];
@@ -51,7 +48,6 @@ function initialState(conversationId: string | null, session = 0): LiveState {
   return { conversationId, session, followed: createChatState(conversationId), received: NO_MESSAGES, replay: false };
 }
 
-// Each event depends on the state the previous ones left, so the reducer owns the followed turn, not render.
 function liveReducer(state: LiveState, action: LiveAction): LiveState {
   switch (action.type) {
     case 'switch':
@@ -59,7 +55,6 @@ function liveReducer(state: LiveState, action: LiveAction): LiveState {
     case 'open':
       return state.replay ? state : { ...state, replay: true };
     case 'message': {
-      // Only one turn runs at a time, so a new question ends the one still streaming.
       const last = state.followed.turns.at(-1);
       const ended = isQuestion(action.message) && last?.status === 'streaming' && last.id !== action.message.turnId;
       return {
@@ -75,7 +70,6 @@ function liveReducer(state: LiveState, action: LiveAction): LiveState {
       }
       const unchanged = { ...state, followed, replay: false };
       if (followed.turns.at(-1)?.status !== 'streaming') {
-        // A turn's first event arrives before its question is stored.
         if (action.event.event === 'conversation') {
           return state.replay ? unchanged : state;
         }
@@ -83,7 +77,6 @@ function liveReducer(state: LiveState, action: LiveAction): LiveState {
         const known = knownTurnIds({ history: action.history, messages, own: action.ownTurns, followed: followed.turns });
         const question = pendingQuestion(messages, known);
         if (!question?.turnId) {
-          // Already shown, e.g. a turn this tab stopped.
           return state.replay ? unchanged : state;
         }
         followed = chatReducer(followed, { type: 'follow', turnId: question.turnId, message: question.text, at: action.at });
@@ -93,7 +86,6 @@ function liveReducer(state: LiveState, action: LiveAction): LiveState {
   }
 }
 
-/** Follows the open conversation and feeds turns started elsewhere through the chat reducer. */
 export function useLiveConversation({
   conversationId,
   enabled,
@@ -104,11 +96,9 @@ export function useLiveConversation({
 }: LiveConversationOptions): LiveConversation {
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(liveReducer, conversationId, (id) => initialState(id));
-  // Reset before the previous conversation's turns get painted.
   if (state.conversationId !== conversationId) {
     dispatch({ type: 'switch', conversationId });
   }
-  // Last sequence seen, for resuming after a reconnect.
   const lastSeenRef = useRef({ session: state.session, sequence: 0 });
   const refetchTimerRef = useRef<number | null>(null);
 
@@ -120,7 +110,6 @@ export function useLiveConversation({
     lastSeenRef.current = { session: state.session, sequence };
   };
 
-  // Debounced: a reconnect replays a burst of messages.
   const refetch = () => {
     if (refetchTimerRef.current !== null) {
       return;

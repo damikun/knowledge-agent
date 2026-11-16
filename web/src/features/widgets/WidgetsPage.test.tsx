@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, onTestFinished, vi } from 'vitest';
-import { agentDto, agentGuid, agentsRoutes, builtInAgent } from '../../test/agentsApi';
+import { agentDto, agentGuid, agentsRoutes, assistantAgent } from '../../test/agentsApi';
 import { emailSettings, integrationsRoutes, slackSettings, workingEmail } from '../../test/integrationsApi';
 import { chooseOption } from '../../test/select';
 import { systemInfoFixture } from '../../test/apiFixtures';
@@ -24,7 +24,7 @@ const shop = widgetDto();
 function routes(getWidgets: () => readonly WidgetDto[], extra: Record<string, unknown> = {}) {
   return {
     ...widgetsRoutes(getWidgets),
-    ...agentsRoutes(() => [builtInAgent, helper]),
+    ...agentsRoutes(() => [assistantAgent, helper]),
     ...integrationsRoutes(() => ({ email: emailSettings(), slack: slackSettings() })),
     ...extra,
   };
@@ -43,12 +43,10 @@ function settings() {
   return screen.getByRole('region', { name: 'Settings' });
 }
 
-// The theme's Mode has radios with the same names.
 function previewScheme(name: 'Light' | 'Dark') {
   return within(screen.getByRole('region', { name: 'Preview' })).getByRole('radio', { name });
 }
 
-// The tabs only show with the element list.
 async function showTab(name: 'Elements' | 'Theme' | 'Settings') {
   const back = within(settings()).queryByRole('button', { name: 'All elements' });
   if (back) {
@@ -243,7 +241,7 @@ describe('WidgetsPage', () => {
           return jsonResponse(created, 201);
         },
       }),
-      ...agentsRoutes(() => [builtInAgent, other, helper]),
+      ...agentsRoutes(() => [assistantAgent, other, helper]),
     });
     onTestFinished(dismissAllToasts);
     renderWithProviders(
@@ -258,11 +256,11 @@ describe('WidgetsPage', () => {
     expect(screen.getByText('Step 1 of 4')).toBeInTheDocument();
     const agents = screen.getByRole('radiogroup', { name: 'Agent' });
     const choices = within(agents).getAllByRole('radio');
-    expect(choices).toHaveLength(2);
-    expect(choices[0]).toHaveAccessibleName('Docs guide');
-    expect(choices[1]).toHaveAccessibleName('Website helper');
+    expect(choices).toHaveLength(3);
+    expect(choices[0]).toHaveAccessibleName('Assistant');
+    expect(choices[1]).toHaveAccessibleName('Docs guide');
+    expect(choices[2]).toHaveAccessibleName('Website helper');
     expect(choices.every((radio) => !(radio as HTMLInputElement).checked)).toBe(true);
-    expect(within(agents).queryByRole('radio', { name: /Knowledge Agent/ })).toBeNull();
     expect(within(agents).getByRole('radio', { name: 'Website helper' })).toHaveAccessibleDescription('Answers visitors of the public website.');
     expect(screen.getByRole('link', { name: 'Create an agent' })).toHaveAttribute('href', '/agents');
 
@@ -401,8 +399,8 @@ describe('WidgetsPage', () => {
     });
   });
 
-  it('points to the Agents page when there is no agent a widget may use', async () => {
-    mockFetch({ ...routes(() => []), ...agentsRoutes(() => [builtInAgent]) });
+  it('points to the Agents page when there is no agent', async () => {
+    mockFetch({ ...routes(() => []), ...agentsRoutes(() => []) });
     renderAt('/widgets/new');
 
     expect(await screen.findByText('No agent to answer yet')).toBeInTheDocument();
@@ -574,7 +572,6 @@ describe('WidgetsPage', () => {
     expect(within(header).queryByRole('textbox', { name: 'Brand color' })).toBeNull();
     await user.click(within(header).getByRole('button', { name: 'Theme' }));
     const color = within(settings()).getByRole('textbox', { name: 'Brand color' });
-    // The widget picks dark text on yellow.
     await user.clear(color);
     await user.type(color, '#facc15');
     expect(screen.queryByText('Text on this color is hard to read')).toBeNull();
@@ -963,7 +960,6 @@ describe('WidgetsPage', () => {
   });
 
   it('puts the panel in a bottom sheet on a narrow window, which opens at half height on a clicked element', async () => {
-    // Too narrow for the preview and the panel side by side.
     vi.stubGlobal(
       'ResizeObserver',
       class {

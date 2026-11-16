@@ -1,5 +1,6 @@
 using System.Text.Json;
 using KnowledgeAgent.Features.Chat;
+using KnowledgeAgent.Features.Chat.Agents;
 using KnowledgeAgent.Features.Chat.Live;
 using KnowledgeAgent.Features.Feedback;
 using KnowledgeAgent.Features.People;
@@ -8,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Widgets;
 
-public sealed record VisitorContext(Widget Widget, WidgetVisitor Visitor, bool Verified = false, bool Preview = false);
+public sealed partial record VisitorContext(Widget Widget, WidgetVisitor Visitor, bool Verified = false, bool Preview = false);
 
 internal sealed partial class VisitorService(
     IWidgetRepository widgets,
@@ -20,6 +21,9 @@ internal sealed partial class VisitorService(
     TimeProvider timeProvider,
     ILogger<VisitorService> logger)
 {
+    private const int MaxListedConversations = 20;
+    private const int MaxPreviewLength = 160;
+
     public async Task<Widget?> FindWidgetAsync(string key, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(key) || key.Length > 40 || !key.StartsWith(Widget.KeyPrefix, StringComparison.Ordinal))
@@ -51,7 +55,7 @@ internal sealed partial class VisitorService(
     {
         var now = timeProvider.GetUtcNow();
         var visitor = await widgets.AddVisitorAsync(
-            new WidgetVisitor { Id = Guid.CreateVersion7(), WidgetId = widget.Id, CreatedAt = now, LastSeenAt = now, SessionCount = 1 },
+            new WidgetVisitor { Id = Guid.CreateVersion7(), WidgetId = widget.Id, CreatedAt = now, LastSeenAt = now, VisitCount = 1 },
             cancellationToken);
         var (issued, expiresAt) = tokens.Issue(new VisitorIdentity(widget.Id, visitor.Id, Preview: true));
         return new WidgetPreviewSessionDto(new VisitorSessionDto(issued, visitor.Id, null, expiresAt, null, null), ToConfig(widget));
@@ -89,8 +93,6 @@ internal sealed partial class VisitorService(
         };
     }
 
-    // Signing in as someone else, or a page without the user on a widget that verifies them, starts a new visitor,
-    // so nobody sees the previous user's chats on a shared computer.
     public async Task<VisitorSessionDto> StartSessionAsync(
         Widget widget,
         string? token,
@@ -107,7 +109,6 @@ internal sealed partial class VisitorService(
         }
 
         WidgetVisitor? visitor = null;
-        // A preview token never resumes anything here: the public gets a visitor of its own.
         var previous = tokens.Read(token) is { Preview: false } read && read.WidgetId == widget.Id ? read : null;
         if (previous is not null)
         {
@@ -123,7 +124,7 @@ internal sealed partial class VisitorService(
             }
         }
 
-        var visit = VisitOf(page, newSession: visitor is null || now - visitor.LastSeenAt >= VisitorSessions.IdleTime);
+        var visit = VisitOf(page, newVisit: visitor is null || now - visitor.LastSeenAt >= Visits.IdleTime);
         if (visitor is null)
         {
             visitor = await widgets.AddVisitorAsync(
@@ -133,7 +134,7 @@ internal sealed partial class VisitorService(
                     WidgetId = widget.Id,
                     CreatedAt = now,
                     LastSeenAt = now,
-                    SessionCount = 1,
+                    VisitCount = 1,
                     LastPageUrl = visit.PageUrl,
                     LastReferrer = visit.Referrer,
                     Language = visit.Language,
@@ -144,7 +145,7 @@ internal sealed partial class VisitorService(
         else
         {
             visitor.LastSeenAt = now;
-            visitor.SessionCount += visit.NewSession ? 1 : 0;
+            visitor.VisitCount += visit.NewVisit ? 1 : 0;
             visitor.LastPageUrl = visit.PageUrl ?? visitor.LastPageUrl;
             visitor.LastReferrer = visit.PageUrl is null ? visitor.LastReferrer : visit.Referrer;
             visitor.Language = visit.Language ?? visitor.Language;
@@ -191,8 +192,8 @@ internal sealed partial class VisitorService(
             timeProvider.GetUtcNow(),
             cancellationToken);
 
-    internal static VisitorVisit VisitOf(VisitorPageRequest? page, bool newSession) =>
-        new(newSession, CleanUrl(page?.Url), CleanUrl(page?.Referrer), CleanLanguage(page?.Language));
+    internal static VisitorVisit VisitOf(VisitorPageRequest? page, bool newVisit) =>
+        new(newVisit, CleanUrl(page?.Url), CleanUrl(page?.Referrer), CleanLanguage(page?.Language));
 
     private static string? CleanUrl(string? value)
     {
@@ -210,7 +211,6 @@ internal sealed partial class VisitorService(
             ? language
             : null;
 
-    // A preview token is only accepted with an admin's portal session (asAdmin).
     public async Task<VisitorContext?> AuthenticateAsync(Widget widget, string? token, CancellationToken cancellationToken, bool asAdmin = false)
     {
         if (tokens.Read(token) is not { } identity || identity.WidgetId != widget.Id || (identity.Preview && !asAdmin))
@@ -218,8 +218,6 @@ internal sealed partial class VisitorService(
             return null;
         }
 
-        // Tokens issued before the widget required verified users are refused; the frame starts a new session.
-        // A preview stands in for a signed-in visitor, as the admin has no account on the website.
         if (!identity.Verified && !identity.Preview && widget.Settings.Security.RequireVerifiedUsers && widget.ProtectedIdentitySecret is not null)
         {
             return null;
@@ -238,7 +236,6 @@ internal sealed partial class VisitorService(
         return contactId;
     }
 
-    // Null when the conversation does not exist or belongs to someone else; both look the same to the visitor.
     public async Task<Conversation?> FindOwnConversationAsync(VisitorContext context, Guid conversationId, bool includeTurns, CancellationToken cancellationToken)
     {
         var conversation = await conversations.GetAsync(conversationId, includeTurns, cancellationToken);
@@ -256,7 +253,6 @@ internal sealed partial class VisitorService(
             return null;
         }
 
-        // The timeline only: the turns hold model messages a visitor never sees.
         conversation.Messages = (await conversations.ListMessagesAsync(conversationId, cancellationToken: cancellationToken)).ToList();
         var ratings = await feedback.RatingsByAsync(conversationId, AuthorKey(context), cancellationToken);
         var history = ToVisitorDto(conversation, context.Widget);
@@ -265,6 +261,21 @@ internal sealed partial class VisitorService(
             Messages = history.Messages.Select(message => message with { Rating = ratings.TryGetValue(message.Id, out var rating) ? rating : null }).ToList(),
             Rating = ratings.TryGetValue(Guid.Empty, out var conversationRating) ? conversationRating : null,
         };
+    }
+
+    public async Task<VisitorConversationListDto> ListConversationsAsync(VisitorContext context, CancellationToken cancellationToken)
+    {
+        var contactId = context.Verified ? context.Visitor.ContactId : null;
+        var summaries = await conversations.ListForVisitorAsync(context.Widget.Id, context.Visitor.Id, contactId, MaxListedConversations, cancellationToken);
+        return new VisitorConversationListDto(summaries
+            .Select(summary => new VisitorConversationSummaryDto(
+                summary.Id,
+                ConversationStatuses.ToText(summary.Status),
+                summary.UpdatedAt,
+                summary.LastMessage is { } last && ToVisitorDto(last.ToDto(), context.Widget) is { } message
+                    ? new VisitorMessagePreviewDto(message.Author, message.AuthorName, TextUtil.Shorten(TextUtil.CollapseWhitespace(message.Text), MaxPreviewLength), message.CreatedAt)
+                    : null))
+            .ToList());
     }
 
     public static string AuthorKey(VisitorContext context) => context.Visitor.Id.ToString();
@@ -321,7 +332,6 @@ internal sealed partial class VisitorService(
 
         var citationMode = widget.Settings.Behavior.CitationMode;
 
-        // Widget turns store their failure in visitor words; anything else from a failed turn stays internal.
         var text = message.Author == "system" && message.TurnId is not null && !VisitorErrorTexts.All.Contains(message.Text)
             ? VisitorErrorTexts.Failed
             : message.Text;

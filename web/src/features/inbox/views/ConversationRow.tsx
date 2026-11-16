@@ -46,13 +46,11 @@ interface RowProps {
   item: ConversationSearchItem;
   words: readonly string[];
   active: boolean;
-  /** A string path rather than an object, so memoized rows stay equal across refreshes. */
   to: string;
   widgetNames: ReadonlyMap<string, string> | undefined;
   byCreated: boolean;
 }
 
-/** Memoized: the list refreshes every few seconds and only changed rows should render. */
 export const ConversationRow = memo(function ConversationRow({ item, words, active, to, widgetNames, byCreated }: RowProps) {
   const kept = useKeptReturnState();
   const waiting = item.status === 'handover_pending';
@@ -139,7 +137,6 @@ export interface RowActionsProps {
   assign: (variables: { id: string; assignee: { id: string; name: string } | null }) => void;
 }
 
-/** Beside the link rather than inside it, so the row stays a single link. */
 export const RowActions = memo(function RowActions({ item, me, pin, setUnread, assign }: RowActionsProps) {
   return (
     <span className="absolute right-2 bottom-2 flex items-center rounded-md bg-surface opacity-0 group-hover:opacity-100 focus-within:opacity-100 has-[[aria-expanded=true]]:opacity-100">

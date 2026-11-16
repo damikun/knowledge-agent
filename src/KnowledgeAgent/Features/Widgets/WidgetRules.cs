@@ -27,7 +27,6 @@ internal static class ImageTypes
 
 internal static class WidgetOrigins
 {
-    // scheme://host[:port], lower case, no path; the host may start with *. for every subdomain.
     public static string? Normalize(string? origin)
     {
         var trimmed = origin?.Trim().TrimEnd('/') ?? string.Empty;

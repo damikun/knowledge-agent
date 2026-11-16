@@ -4,7 +4,6 @@ import type { Guid } from '../../lib/types';
 import { mediaUrl } from './api';
 import type { SaveWidgetRequest, Weekday, WidgetColors, WidgetDto, WidgetPreviewConfig, WidgetSettings } from './types';
 
-// API limits.
 export const MAX_NAME_LENGTH = 100;
 export const MAX_TITLE_LENGTH = 60;
 export const MAX_SUBTITLE_LENGTH = 120;
@@ -32,7 +31,6 @@ export const NUMBER_LIMITS = {
 
 export type NumberField = keyof typeof NUMBER_LIMITS;
 
-/** Field paths as the API names them in validation problems. */
 export const WIDGET_FIELDS = [
   'name',
   'agentId',
@@ -74,10 +72,8 @@ export type WidgetField = (typeof WIDGET_FIELDS)[number];
 export type WidgetFormErrors = Partial<Record<WidgetField, string>>;
 
 export interface HoursRow {
-  /** For React keys only. */
   key: string;
   day: Weekday;
-  /** "09:00", as a time input has it. */
   opens: string;
   closes: string;
 }
@@ -94,7 +90,6 @@ export interface WidgetFormValues {
   brandColor: string;
   theme: string;
   preset: string;
-  /** An empty color keeps the preset's. */
   colors: WidgetColors;
   position: string;
   launcherLabel: string;
@@ -107,7 +102,6 @@ export interface WidgetFormValues {
   handoverEnabled: boolean;
   contactCapture: string;
   texts: Record<string, string>;
-  /** One site per line. */
   allowedOrigins: string;
   messagesPerMinute: string;
   dailyMessageCap: string;
@@ -115,7 +109,6 @@ export interface WidgetFormValues {
   retentionDays: string;
   requireVerifiedUsers: boolean;
   channel: string;
-  /** One address per line. */
   emailTo: string;
   slackChannelId: string;
   escalateAfterMinutes: string;
@@ -197,7 +190,6 @@ function optional(value: string): string | null {
   return value.trim() || null;
 }
 
-/** scheme://host[:port], where the host may start with *. for every subdomain. The API checks the rest. */
 const ORIGIN = /^https?:\/\/(\*\.)?[^\s/:?#*]+(:\d{1,5})?\/?$/i;
 
 export function isSiteOrigin(value: string): boolean {
@@ -232,7 +224,6 @@ export interface SaveWidgetResult {
 
 export type ColorMode = keyof WidgetColors;
 
-/** Set overrides only, trimmed and lower-cased as the API stores them. */
 function colorsOf(colors: WidgetColors): WidgetColors {
   const set = (overrides: Record<string, string>) =>
     Object.fromEntries(
@@ -303,7 +294,6 @@ export function validateWidget(values: WidgetFormValues): WidgetFormErrors {
   return check(values).errors;
 }
 
-/** PUT replaces the whole widget, so `base` keeps settings this form has no control for. */
 export function toSaveRequest(values: WidgetFormValues, base: WidgetSettings): SaveWidgetResult {
   const { errors, numbers } = check(values);
   if (Object.keys(errors).length > 0) {
@@ -367,7 +357,6 @@ export function toSaveRequest(values: WidgetFormValues, base: WidgetSettings): S
       availability: {
         ...base.handover.availability,
         always: values.alwaysAvailable,
-        // The API checks the zone even when the widget is always available.
         timeZone: isTimeZone(timeZone) ? timeZone : base.handover.availability.timeZone,
         hours: values.hours.map((row) => ({ day: row.day, opens: toApiTime(row.opens), closes: toApiTime(row.closes) })),
       },
@@ -382,14 +371,12 @@ export function toSaveRequest(values: WidgetFormValues, base: WidgetSettings): S
   return { request: { name, agentId: values.agentId, enabled: values.enabled, settings }, errors };
 }
 
-// A half-typed color keeps the theme's in the preview until it is valid.
 function validColors(colors: WidgetColors): WidgetColors {
   const valid = colorsOf(colors);
   const keep = (overrides: Record<string, string>) => Object.fromEntries(Object.entries(overrides).filter(([, color]) => isHexColor(color)));
   return { light: keep(valid.light), dark: keep(valid.dark) };
 }
 
-/** Values that don't validate fall back to the saved ones. */
 export function toPreviewConfig(values: WidgetFormValues, publicKey: string, saved: WidgetSettings): WidgetPreviewConfig {
   const maxMessageLength = parseNumber(values.maxMessageLength, NUMBER_LIMITS.maxMessageLength) ?? saved.security.maxMessageLength;
   return {
@@ -429,18 +416,23 @@ export function embedSnippet(origin: string, publicKey: string): string {
   return `<script async src="${origin}/widget/v1/loader.js" data-widget="${publicKey}"></script>`;
 }
 
-/** USER_HASH is HMAC-SHA256(identity secret, USER_ID) as hex, computed on the website's server. */
 export function identifySnippet(origin: string, publicKey: string): string {
   return [
     '<!-- Pages rendered on your server -->',
     `<script async src="${origin}/widget/v1/loader.js" data-widget="${publicKey}"`,
-    '  data-user-id="USER_ID" data-user-hash="USER_HASH" data-user-name="Ada Lovelace" data-user-email="ada@example.com"></script>',
+    '  data-user-id="USER_ID" data-user-hash="USER_HASH"',
+    '  data-user-name="Ada Lovelace" data-user-email="ada@example.com"></script>',
     '',
-    '<!-- Single-page apps, once the loader has loaded -->',
+    '<!-- Single-page apps, after sign-in and on sign-out -->',
     '<script>',
-    '  // After sign-in:',
-    "  window.KnowledgeAgent.identify({ userId: 'USER_ID', userHash: 'USER_HASH', name: 'Ada Lovelace', email: 'ada@example.com', attributes: { plan: 'pro', seats: 5 } });",
-    '  // On sign-out:',
+    '  window.KnowledgeAgent.identify({',
+    "    userId: 'USER_ID',",
+    "    userHash: 'USER_HASH',",
+    "    name: 'Ada Lovelace',",
+    "    email: 'ada@example.com',",
+    "    attributes: { plan: 'pro', seats: 5 },",
+    '  });',
+    '',
     '  window.KnowledgeAgent.logout();',
     '</script>',
   ].join('\n');
@@ -449,16 +441,21 @@ export function identifySnippet(origin: string, publicKey: string): string {
 export function updateSnippet(): string {
   return [
     '<script>',
-    '  // A key you send is saved (it replaces the old value), a key you leave out keeps its value, null clears it.',
-    "  // Text, numbers, true or false, and dates as ISO text. Keys: lowercase letters, digits and _, such as trial_ends.",
-    "  window.KnowledgeAgent.update({ attributes: { plan: 'pro', seats: 5, beta: true, trial_ends: '2026-12-01', coupon: null } });",
+    '  window.KnowledgeAgent.update({',
+    '    attributes: {',
+    "      plan: 'pro',",
+    '      seats: 5,',
+    '      beta: true,',
+    "      trial_ends: '2026-12-01',",
+    '      coupon: null,',
+    '    },',
+    '  });',
     '</script>',
   ].join('\n');
 }
 
 export type ServerLanguage = 'node' | 'csharp' | 'python';
 
-/** PUT /api/public/widgets/{key}/contacts/{userId} from the website's backend, signed with the identity secret. */
 export function serverSnippet(origin: string, publicKey: string, language: ServerLanguage): string {
   const url = `${origin}/api/public/widgets/${publicKey}/contacts/`;
   switch (language) {

@@ -6,7 +6,7 @@ import { PageHeader } from '../components/ui/feedback';
 import { AnalyticsPage } from '../features/analytics/AnalyticsPage';
 import { InboxPage } from '../features/inbox/InboxPage';
 import { PersonPage } from '../features/people/PersonPage';
-import { agentsRoutes, builtInAgent } from '../test/agentsApi';
+import { agentsRoutes, assistantAgent } from '../test/agentsApi';
 import { systemInfoFixture } from '../test/apiFixtures';
 import { countsDto, handoverDto, searchItem, WIDGET_CONVERSATION_ID, widgetConversation } from '../test/inboxApi';
 import { controlledEventStream, jsonResponse, mockFetch, renderWithProviders } from '../test/utils';
@@ -31,7 +31,7 @@ const profile = {
   notes: null,
   firstSeenAt: '2026-10-01T08:00:00Z',
   lastSeenAt: '2026-11-04T09:00:00Z',
-  sessionCount: 1,
+  visitCount: 1,
   returning: false,
   attributes: [],
   widgets: [],
@@ -84,7 +84,7 @@ function setup(route: string) {
     [`${DETAIL}/history`]: { feedback: [], handovers: [handoverDto()], labels: [] },
     'GET /api/analytics': analytics(),
     ...widgetsRoutes(() => [widgetDto()]),
-    ...agentsRoutes(() => [builtInAgent]),
+    ...agentsRoutes(() => [assistantAgent]),
   });
   renderWithProviders(
     <>

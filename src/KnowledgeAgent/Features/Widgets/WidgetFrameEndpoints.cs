@@ -40,7 +40,6 @@ internal static class WidgetFrameEndpoints
         return Results.Content(html, "text/html; charset=utf-8");
     }
 
-    // Preview mode shows only the settings the editor posts and calls no API; only the portal may embed it.
     private static IResult Preview(HttpResponse response, WidgetAssetFiles files)
     {
         response.Headers.XContentTypeOptions = "nosniff";
@@ -62,7 +61,6 @@ internal static class WidgetFrameEndpoints
             return Results.NotFound();
         }
 
-        // An image never changes under its id: a new upload gets a new one.
         response.Headers.CacheControl = "public, max-age=31536000, immutable";
         response.Headers.XContentTypeOptions = "nosniff";
         response.Headers.ContentSecurityPolicy = "default-src 'none'";
@@ -80,7 +78,6 @@ internal static class WidgetFrameEndpoints
         response.Headers.XContentTypeOptions = "nosniff";
         response.Headers["Cross-Origin-Resource-Policy"] = "cross-origin";
 
-        // Built assets have content hashes in their names; the loader keeps its name, so host pages pick up new versions.
         response.Headers.CacheControl = path.StartsWith("assets/", StringComparison.Ordinal)
             ? "public, max-age=31536000, immutable"
             : "public, max-age=300";
@@ -89,7 +86,6 @@ internal static class WidgetFrameEndpoints
 
     internal static readonly string PreviewContentSecurityPolicy = Policy("'self'");
 
-    // No allowed origins means any site may embed the widget. The portal shows the preview, never this frame.
     internal static string ContentSecurityPolicy(IReadOnlyList<string> allowedOrigins) =>
         Policy(allowedOrigins.Count == 0 ? "*" : string.Join(' ', allowedOrigins));
 
@@ -105,7 +101,6 @@ internal static class WidgetFrameEndpoints
 
 internal sealed record WidgetFile(string PhysicalPath, string ContentType, DateTimeOffset LastModified);
 
-// frame.html is cached until the file changes, so a watch build shows up without a restart.
 internal sealed partial class WidgetAssetFiles
 {
     private const string FrameFile = "frame.html";
@@ -159,7 +154,6 @@ internal sealed partial class WidgetAssetFiles
         return html;
     }
 
-    // Only the loader and the built assets; the frame goes through FrameAsync for its security headers.
     public WidgetFile? Find(string path)
     {
         if (string.IsNullOrEmpty(path) || (path != "loader.js" && !path.StartsWith("assets/", StringComparison.Ordinal)) || !Directory.Exists(_root))

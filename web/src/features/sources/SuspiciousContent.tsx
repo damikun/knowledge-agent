@@ -3,7 +3,6 @@ import { Badge } from '../../components/ui/Badge';
 import { pluralize } from '../../lib/format';
 import type { SourceDto } from './types';
 
-/** How many passages look written to the assistant rather than the reader; set at ingestion. */
 export function suspiciousChunks(source: Pick<SourceDto, 'metadata'>): number {
   const count = Number.parseInt(source.metadata?.suspiciousChunks ?? '', 10);
   return Number.isFinite(count) && count > 0 ? count : 0;

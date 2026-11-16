@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { Badge } from '../../components/ui/Badge';
 import { Select, type SelectOption } from '../../components/ui/Select';
-import { ownAgents, useAgents } from '../agents/api';
+import { useAgents } from '../agents/api';
 import type { AgentDto } from '../agents/types';
 import { useWidgets } from '../widgets/api';
 import type { WidgetDto } from '../widgets/types';
@@ -20,12 +20,10 @@ export interface PlaygroundTarget {
   empty: boolean;
 }
 
-/** "Demo shop's", or "Help desks'" for a name that ends in s. */
 function possessive(name: string): string {
   return /s$/i.test(name.trim()) ? `${name}'` : `${name}'s`;
 }
 
-/** The option runs the widget's agent with the widget's scope and handover, not the widget itself. */
 function widgetRulesLabel(widget: Pick<WidgetDto, 'name'>): string {
   return `Agent with ${possessive(widget.name)} rules`;
 }
@@ -43,14 +41,13 @@ function channelNames(channel: string): string[] {
   ];
 }
 
-/** ?widgetId= or ?agentId= picks the target; otherwise the first enabled widget, then the first own agent. */
 export function usePlaygroundTarget(admin: boolean): PlaygroundTarget {
   const [params] = useSearchParams();
   const widgets = useWidgets(admin);
   const agents = useAgents();
   const [picked, setPicked] = useState<string | null>(null);
   const widgetList = useMemo(() => widgets.data ?? [], [widgets.data]);
-  const agentList = useMemo(() => ownAgents(agents.data ?? []), [agents.data]);
+  const agentList = useMemo(() => agents.data ?? [], [agents.data]);
 
   const defaultValue = useMemo(() => {
     const widgetId = params.get('widgetId')?.toLowerCase();
@@ -95,7 +92,6 @@ export function usePlaygroundTarget(admin: boolean): PlaygroundTarget {
   return { target, options, value, setValue: setPicked, reset: () => setPicked(null), empty };
 }
 
-/** Also sends the agent, for API versions that don't know widgets. */
 export function targetRequest(target: TestTarget | null): { widgetId?: string; agent?: string } {
   if (!target) {
     return {};

@@ -7,7 +7,6 @@ import { useSystemInfo } from './api';
 import { isApiUnreachable, setupMessage } from './status';
 import { useReturnState } from '../../lib/returnTo';
 
-/** At most one banner, for the most blocking problem: an unreachable API, then a missing model. */
 export function SystemBanners() {
   const returnState = useReturnState();
   const info = useSystemInfo();

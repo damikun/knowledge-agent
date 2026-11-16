@@ -60,7 +60,6 @@ export interface RenderTemplateResponse {
   variables: string[];
 }
 
-/** Live: has the label the application serves (production by default). */
 export interface PromptVersionDto {
   version: number;
   type: PromptType;
@@ -72,7 +71,6 @@ export interface PromptVersionDto {
   live: boolean;
 }
 
-/** editable is false when prompts aren't stored in Langfuse. */
 export interface PromptVersionsDto {
   name: string;
   editable: boolean;
@@ -82,7 +80,6 @@ export interface PromptVersionsDto {
   versions: PromptVersionDto[];
 }
 
-/** baseVersion is the version the edit started from. */
 export interface SavePromptDraftRequest {
   text?: string | null;
   messages?: PromptMessageDto[] | null;
@@ -90,7 +87,6 @@ export interface SavePromptDraftRequest {
   baseVersion?: number | null;
 }
 
-/** expectedLiveVersion guards against overwriting a publish made in between. */
 export interface PublishPromptRequest {
   version: number;
   expectedLiveVersion?: number | null;

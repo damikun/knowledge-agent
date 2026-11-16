@@ -1,13 +1,9 @@
-/* The only file with color values: --ka-* tokens, light in :root and dark in .dark, mapped by @theme inline. */
-
 @theme {
-  /* No Tailwind palette: raw colors such as bg-zinc-100 or text-white produce no CSS, so colors come only from here. */
   --color-*: initial;
 
   --font-sans: 'Geist Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Geist Mono Variable', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
-  /* Caption and body are Tailwind's text-xs (12/16) and text-sm (14/20); these are the other roles. */
   --text-small: 0.8125rem;
   --text-small--line-height: 1.125rem;
   --text-section: 1rem;
@@ -23,8 +19,6 @@
   --text-kpi--letter-spacing: -0.02em;
   --text-kpi--font-weight: 600;
 
-  /* sm: checkboxes, kbd, inline code. md: controls, nav and menu items. lg: alerts, tracks. xl: menus, popovers.
-     2xl: cards, dialogs, the panel. xl and 2xl are smaller than Tailwind's defaults. */
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
@@ -32,17 +26,14 @@
   --radius-2xl: 0.75rem;
 
   --ease-enter: cubic-bezier(0.23, 1, 0.32, 1);
-  /* The widget editor's bottom sheet. */
   --ease-hero: cubic-bezier(0.2, 0.75, 0.15, 1);
 
-  /* Menus and popovers grow from 97%, never from zero; dialogs take a little longer. */
   --animate-fade-in: ka-fade-in 200ms ease-out;
   --animate-pop-in: ka-pop-in 150ms var(--ease-enter);
   --animate-dialog-in: ka-pop-in 200ms var(--ease-enter);
   --animate-drawer-in: ka-drawer-in 200ms var(--ease-enter);
   --animate-sheet-in: ka-sheet-in 200ms var(--ease-enter);
 
-  /* Individual scale and translate properties add to any transform the element already has. */
   @keyframes ka-fade-in {
     from {
       opacity: 0;
@@ -94,7 +85,6 @@
   --color-fg-on-accent: var(--ka-fg-on-accent);
   --color-fg-on-solid: var(--ka-fg-on-solid);
 
-  /* Petrol, the brand: the primary action, progress, selection and the active nav item. */
   --color-accent: var(--ka-accent);
   --color-accent-hover: var(--ka-accent-hover);
   --color-accent-active: var(--ka-accent-active);
@@ -103,12 +93,10 @@
   --color-accent-icon: var(--ka-accent-icon);
   --color-accent-edge: var(--ka-accent-edge);
   --color-selection: var(--ka-selection);
-  /* Checked checkboxes, radios and switches. */
   --color-control: var(--ka-control);
   --color-fg-on-control: var(--ka-fg-on-control);
   --color-focus: var(--ka-focus);
 
-  /* Status hues sit far from the petrol: green, amber and red. */
   --color-info: var(--ka-info);
   --color-info-subtle: var(--ka-info-subtle);
   --color-info-text: var(--ka-info-text);
@@ -123,7 +111,6 @@
   --color-danger-subtle: var(--ka-danger-subtle);
   --color-danger-text: var(--ka-danger-text);
 
-  /* Category colors for labels: muted, one lightness band, so none shouts or passes for a status. */
   --color-tag-gray: var(--ka-tag-gray);
   --color-tag-gray-subtle: var(--ka-tag-gray-subtle);
   --color-tag-gray-text: var(--ka-tag-gray-text);
@@ -174,16 +161,13 @@
 
     --ka-border-subtle: #EBEBEE;
     --ka-border: #E0E0E5;
-    /* Clickable cards on hover. */
     --ka-border-hover: #CBCBD2;
-    /* Input, select, checkbox and switch edges: at least 3:1 (WCAG 1.4.11). */
     --ka-border-strong: #898993;
 
     --ka-fg: #18181B;
     --ka-fg-secondary: #46464F;
     --ka-fg-muted: #5D5D67;
     --ka-fg-disabled: #A1A1AA;
-    /* White on the petrol and on status solids. */
     --ka-fg-on-accent: #FFFFFF;
     --ka-fg-on-solid: #FFFFFF;
 
@@ -192,16 +176,13 @@
     --ka-accent-active: #00485E;
     --ka-accent-subtle: #E9F6FB;
     --ka-accent-text: #045C72;
-    /* The active nav icon, 3:1 on the active fill. */
     --ka-accent-icon: #216D84;
     --ka-accent-edge: var(--ka-accent);
     --ka-selection: #10627833;
     --ka-control: var(--ka-accent);
     --ka-fg-on-control: #FFFFFF;
-    /* Neutral, so the petrol is left for the one primary action per page and small indicators. */
     --ka-focus: #52525B;
 
-    /* Info is the brand at low emphasis; the three alarms (success, warning, danger) never are. */
     --ka-info: var(--ka-accent);
     --ka-info-subtle: var(--ka-accent-subtle);
     --ka-info-text: var(--ka-accent-text);
@@ -241,12 +222,10 @@
     --ka-tag-pink-subtle: #FEECE1;
     --ka-tag-pink-text: #744A2C;
 
-    /* The edge of a swatch of a customer color, which must show on any color and on the surface around it. */
     --ka-swatch-edge: #0000001A;
 
     --ka-shadow-control: 0 1px 2px #0000000D;
     --ka-shadow-panel: 0 1px 2px #0000000A;
-    /* Cards lift a hair off the tinted canvas, so regions separate without heavier borders. */
     --ka-shadow-card: 0 1px 2px #18181B0D, 0 1px 1px #18181B05;
     --ka-shadow-menu: 0 1px 1px #00000005, 0 4px 8px -4px #0000000A, 0 16px 24px -8px #0000000F;
     --ka-shadow-dialog: 0 1px 1px #00000005, 0 8px 16px -4px #0000000A, 0 24px 32px -8px #0000000F;
@@ -330,7 +309,6 @@
 
     --ka-swatch-edge: #FFFFFF26;
 
-    /* Dark surfaces separate by border and lightness; a transparent shadow keeps the shadow utilities valid. */
     --ka-shadow-control: 0 0 #0000;
     --ka-shadow-panel: 0 0 #0000;
     --ka-shadow-card: 0 0 #0000;

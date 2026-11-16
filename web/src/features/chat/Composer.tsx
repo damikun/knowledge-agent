@@ -51,13 +51,10 @@ export function Composer({
   useLayoutEffect(fitHeight, [value, fitHeight]);
 
   useEffect(() => {
-    // The wrapped height depends on the width, so re-measure when the viewport changes.
     window.addEventListener('resize', fitHeight);
     return () => window.removeEventListener('resize', fitHeight);
   }, [fitHeight]);
 
-  // Focus the input when an answer finishes, and on first render on devices with a fine pointer: on touch devices that
-  // would open the on-screen keyboard unasked.
   const focusOnMount = useEffectEvent(() => {
     const finePointer = typeof window.matchMedia !== 'function' || window.matchMedia('(pointer: fine)').matches;
     if (!streaming && finePointer) {

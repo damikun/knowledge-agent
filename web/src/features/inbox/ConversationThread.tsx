@@ -55,14 +55,12 @@ function SystemEvent({ children, time }: { children: ReactNode; time: string }) 
   );
 }
 
-/** The last question asked before the answer. */
 function questionBefore(messages: readonly ConversationMessageDto[], answer: ConversationMessageDto): string {
   return [...messages].reverse().find((message) => message.sequence < answer.sequence && isQuestion(message))?.text ?? '';
 }
 
 type Entry = { kind: 'item'; item: InboxItem } | { kind: 'event'; key: string; at: string; node: ReactNode };
 
-// Ratings and missed requests aren't messages, so they're merged in by time.
 function historyEvents(history: ConversationHistory | undefined): Array<Extract<Entry, { kind: 'event' }>> {
   if (!history) {
     return [];
@@ -142,7 +140,6 @@ function MessageItem({ item, citations, assistantName, rating, onAddToDataset }:
     case 'assistant':
       return (
         <div className="space-y-1.5">
-          {/* Staff see which specialist answered, whatever name the visitor saw. */}
           <Author name={message.authorName ?? assistantName} time={message.createdAt} ai>
             {rating ? (
               <Badge tone={rating.rating > 0 ? 'success' : 'danger'}>{rating.rating > 0 ? 'Rated helpful' : 'Rated not helpful'}</Badge>
@@ -187,7 +184,6 @@ export function ConversationThread({ items, messages, history, assistantName, co
   const turns = items.flatMap((item) => (item.turn ? [item.turn] : []));
   const finished = turns.filter((turn) => turn.status !== 'streaming');
   const finishedKey = finished.map((turn) => `${turn.key}:${turn.citations.length}`).join('|');
-  // Keyed on finished answers, so earlier answers don't re-render on every streamed token.
   const citations = useMemo(() => citationIndex(finished), [finishedKey]);
   const ratings = useMemo(
     () =>
@@ -236,10 +232,8 @@ export function ConversationThread({ items, messages, history, assistantName, co
   );
 }
 
-/** What a screen reader hears when the visitor writes or the assistant answers while the conversation is open. */
 function useIncomingAnnouncement(messages: readonly ConversationMessageDto[], assistantName: string): string {
   const latest = messages.at(-1);
-  // Everything up to the first loaded message was there before; only what arrives later is news.
   const [seenUpTo, setSeenUpTo] = useState<number | null>(latest?.sequence ?? null);
   if (seenUpTo === null && latest) {
     setSeenUpTo(latest.sequence);
@@ -253,10 +247,6 @@ function useIncomingAnnouncement(messages: readonly ConversationMessageDto[], as
   return latest.author === 'assistant' ? `${assistantName}: ${latest.text.slice(0, 200)}` : '';
 }
 
-/**
- * Follows new entries while scrolled to the end and stays put once scrolled up. Holds that state itself so
- * scrolling re-renders only this wrapper, not the messages.
- */
 function FollowingScroll({ changes, children }: { changes: unknown; children: ReactNode }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [following, setFollowing] = useState(true);

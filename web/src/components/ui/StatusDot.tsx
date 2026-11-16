@@ -5,12 +5,10 @@ import { TONES, type Tone } from './tone';
 export interface StatusDotProps {
   tone: Tone;
   pulse?: boolean;
-  /** Names the state for screen readers. Without it the dot is decorative, and text next to it must say the same. */
   label?: string;
   className?: string;
 }
 
-// Warnings and errors differ in shape as well as color, so they read apart without color (WCAG 1.4.1).
 const shapes: Record<Tone, string> = {
   neutral: 'rounded-full',
   info: 'rounded-full',

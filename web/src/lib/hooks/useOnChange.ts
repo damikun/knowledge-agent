@@ -1,6 +1,5 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 
-/** Calls `onChange` after a render in which `value` changed, never on mount. */
 export function useOnChange<T>(value: T, onChange: (value: T) => void): void {
   const [first] = useState(value);
   const [changed, setChanged] = useState(false);

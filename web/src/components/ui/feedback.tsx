@@ -22,7 +22,6 @@ export interface AlertProps {
   action?: ReactNode;
   className?: string;
   icon?: LucideIcon;
-  /** role="alert" announces immediately; use for errors that appear after an action. */
   live?: boolean;
 }
 
@@ -78,7 +77,6 @@ export function EmptyState({
   description?: ReactNode;
   action?: ReactNode;
   className?: string;
-  /** When the empty state is the whole page, such as Page not found, its title is the page's heading. */
   headingLevel?: 1 | 2;
 }) {
   const Title = headingLevel ? (`h${headingLevel}` as const) : 'div';

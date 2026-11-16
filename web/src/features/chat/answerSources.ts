@@ -4,14 +4,12 @@ import type { CitationLookup } from './citationContext';
 import type { CitationDto } from './types';
 
 export interface AnswerSource {
-  /** What the answer's markers show: 1, 2, 3 in order of first citation. */
   number: number;
   sourceId: string;
   title: string;
   url: string | null;
   host: string | null;
   citations: CitationDto[];
-  /** Whether the answer text cites it, rather than only a tool or a sub-agent. */
   cited: boolean;
 }
 
@@ -20,7 +18,6 @@ export interface AnswerSources {
   byRef: (ref: string) => AnswerSource | undefined;
 }
 
-/** Passages of one source share a marker. Text citations come first, then ones only tools or a sub-agent cited. */
 export function numberSources(textRefs: readonly string[], lookup: CitationLookup, extra: readonly CitationDto[] = []): AnswerSources {
   const bySource = new Map<string, AnswerSource>();
   const byRef = new Map<string, AnswerSource>();
@@ -68,7 +65,6 @@ export function useAnswerSources(): AnswerSources {
   return useContext(AnswerSourcesContext);
 }
 
-/** "Page 4", "Pages 4, 9", or nothing for sources without pages. */
 export function pagesLabel(citations: readonly CitationDto[]): string | null {
   const pages = [...new Set(citations.map((citation) => citation.page).filter((page): page is number => page != null))].sort((a, b) => a - b);
   if (pages.length === 0) {

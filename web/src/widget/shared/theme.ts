@@ -14,13 +14,10 @@ import {
   type Rgb,
 } from './color';
 
-// A preset derives every color from the brand color, per mode; any color can be overridden per mode.
-
 export const THEME_PRESETS = ['glow', 'glass', 'solid'] as const;
 export type ThemePreset = (typeof THEME_PRESETS)[number];
 export const DEFAULT_PRESET: ThemePreset = 'glow';
 
-/** Mirrors WidgetChoices.ColorTokens of the API. */
 export const COLOR_TOKENS = [
   'accent',
   'onAccent',
@@ -44,11 +41,8 @@ export type ColorMode = 'light' | 'dark';
 type ColorOverrides = Partial<Record<ColorToken, string>>;
 
 export interface PresetEffects {
-  /** A translucent panel that blurs the page behind it. */
   glass: boolean;
-  /** The animated gradient glow around the launcher, and around the chat while it answers. */
   glow: boolean;
-  /** Of the panel, in pixels. */
   radius: number;
 }
 
@@ -58,7 +52,6 @@ export const PRESET_EFFECTS: Readonly<Record<ThemePreset, PresetEffects>> = {
   solid: { glass: false, glow: false, radius: 20 },
 };
 
-/** Text on a background, which the editor checks against WCAG 2.2 AA. The launcher may carry a label, so it is text. */
 const COLOR_PAIRS: ReadonlyArray<{ text: ColorToken; background: ColorToken }> = [
   { text: 'onAccent', background: 'accent' },
   { text: 'text', background: 'panel' },
@@ -71,10 +64,8 @@ const COLOR_PAIRS: ReadonlyArray<{ text: ColorToken; background: ColorToken }> =
 
 const MIN_CONTRAST = 4.5;
 
-// A glass header has no color of its own: the panel shows through.
 export const TRANSPARENT = 'transparent';
 
-// Opaque enough that text keeps 4.5:1 even when the page behind the glass is black or white.
 const GLASS_OPACITY: Readonly<Record<ColorMode, number>> = { light: 0.84, dark: 0.82 };
 
 const NEUTRALS: Readonly<Record<ColorMode, { panel: Rgb; text: Rgb; muted: Rgb; danger: Rgb }>> = {
@@ -86,7 +77,6 @@ function hex(value: string | undefined): Rgb | null {
   return value ? parseHexColor(value) : null;
 }
 
-/** The colors a widget's panel shows behind its text: the tint itself, or, for glass, the tint over a black and a white page. */
 export function panelBackdrops(panel: Rgb, mode: ColorMode, glass: boolean): Rgb[] {
   if (!glass) {
     return [panel];
@@ -95,7 +85,6 @@ export function panelBackdrops(panel: Rgb, mode: ColorMode, glass: boolean): Rgb
   return [mix(BLACK, panel, opacity), mix(WHITE, panel, opacity)];
 }
 
-// A second gradient stop beside `color`, as far along the hue circle as its text allows.
 function gradientEnd(color: Rgb, text: Rgb): Rgb {
   const [hue, saturation, lightness] = toHsl(color);
   const turned = fromHsl(hue + 32, saturation, Math.min(0.9, lightness + 0.04));
@@ -108,21 +97,17 @@ function gradientEnd(color: Rgb, text: Rgb): Rgb {
   return color;
 }
 
-// The glow color and three neighbors on the hue circle, so the glow stays in the brand's family instead of
-// running through unrelated hues (a purple brand glows violet, pink and blue, never yellow or green).
 function glowStops(glow: Rgb): Rgb[] {
   const [hue, saturation, lightness] = toHsl(glow);
   return [0, 34, -18, -42].map((turn) => fromHsl(hue + turn, saturation, lightness));
 }
 
-/** What a preset makes of the brand color in a mode, before overrides. */
 export function themeColors(preset: ThemePreset, brandColor: string, mode: ColorMode): Record<ColorToken, string> {
   const palette = brandPalette(brandColor);
   const neutral = NEUTRALS[mode];
   const accent = parseHexColor(palette.brand)!;
   const onAccent = parseHexColor(palette.onBrand)!;
   const [hue, saturation] = toHsl(parseHexColor(brandColor) ?? accent);
-  // A vivid glow for a colorful brand; a gray, black or white brand keeps a gray one rather than turning red (hue 0).
   const glowSaturation = saturation < 0.12 ? saturation : Math.min(0.95, Math.max(0.75, saturation));
   const glow = fromHsl(hue, glowSaturation, mode === 'light' ? 0.58 : 0.64);
   const solid = preset === 'solid';
@@ -149,9 +134,7 @@ export interface ResolvedTheme {
   preset: ThemePreset;
   mode: ColorMode;
   effects: PresetEffects;
-  /** Every token's color after overrides; a glass header is transparent. */
   colors: Record<ColorToken, string>;
-  /** CSS custom properties, for the frame's root and the loader's shadow host. */
   variables: Record<string, string>;
 }
 
@@ -183,7 +166,6 @@ function readOverrides(value: unknown): ColorOverrides {
   );
 }
 
-/** The overrides of a widget config: known tokens with #rrggbb colors only. */
 export function readThemeColors(value: unknown): ThemeColors {
   const colors = typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
   return { light: readOverrides(colors.light), dark: readOverrides(colors.dark) };
@@ -203,7 +185,6 @@ export function resolveTheme({ preset: presetName, brandColor, mode, overrides =
 
   const panel = pick('panel')!;
   const backdrops = panelBackdrops(panel, mode, effects.glass);
-  // A changed background brings readable text with it, unless that text is changed too.
   const textOn = (token: ColorToken, background: Rgb | null, fallback: Rgb) => own(token) ?? (background ? readableOn(background) : fallback);
   const text = own('text') ?? (own('panel') ? readableOn(panel) : pick('text')!);
   const muted = own('muted') ?? legibleOn(own('text') || own('panel') ? mix(text, panel, 0.35) : pick('muted')!, backdrops, MIN_CONTRAST);
@@ -244,7 +225,6 @@ export function resolveTheme({ preset: presetName, brandColor, mode, overrides =
   const variables: Record<string, string> = {
     '--ka-accent': colors.accent,
     '--ka-on-accent': colors.onAccent,
-    // Accent-colored text and focus rings, on the panel.
     '--ka-accent-text': toHexColor(legibleOn(accent, backdrops, MIN_CONTRAST)),
     '--ka-accent-hover': toHexColor(mix(accent, hoverMix, 0.12)),
     '--ka-accent-soft': rgb(accent, mode === 'light' ? 0.1 : 0.18),
@@ -254,7 +234,6 @@ export function resolveTheme({ preset: presetName, brandColor, mode, overrides =
     '--ka-muted': colors.muted,
     '--ka-border': colors.border,
     '--ka-raised': rgb(text, mode === 'light' ? 0.05 : 0.08),
-    // Input borders: 3:1 against the panel (WCAG 1.4.11).
     '--ka-control': toHexColor(legibleOn(mix(panel, text, 0.45), backdrops, 3)),
     '--ka-danger': toHexColor(legibleOn(NEUTRALS[mode].danger, backdrops, MIN_CONTRAST)),
     '--ka-header': colors.header,
@@ -279,12 +258,9 @@ export function resolveTheme({ preset: presetName, brandColor, mode, overrides =
 export interface ContrastProblem {
   text: ColorToken;
   background: ColorToken;
-  /** The lowest contrast over every background the text can sit on. */
   ratio: number;
 }
 
-// The colors a token's text really sits on: the glass over a black and a white page, a bubble over the glass, and
-// both ends of a gradient.
 function surfacesOf(theme: ResolvedTheme, background: ColorToken): Rgb[] {
   const { colors, variables, mode, effects } = theme;
   const backdrops = panelBackdrops(parseHexColor(colors.panel)!, mode, effects.glass);
@@ -307,7 +283,6 @@ function surfacesOf(theme: ResolvedTheme, background: ColorToken): Rgb[] {
   }
 }
 
-/** Text that falls below WCAG 2.2 AA (4.5:1) on its background. */
 export function contrastProblems(theme: ResolvedTheme): ContrastProblem[] {
   return COLOR_PAIRS.flatMap(({ text, background }) => {
     const color = parseHexColor(theme.colors[text])!;

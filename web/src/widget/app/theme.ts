@@ -1,7 +1,10 @@
-import { resolveTheme, type ColorMode, type ResolvedTheme } from '../shared/theme';
+import { DEFAULT_BRAND_COLOR } from '../shared/color';
+import { DEFAULT_PRESET, resolveTheme, type ColorMode, type ResolvedTheme } from '../shared/theme';
 import type { WidgetConfig } from './types';
 
 export type ThemeSettings = Pick<WidgetConfig, 'brandColor' | 'theme' | 'preset' | 'colors'>;
+
+export const DEFAULT_THEME: ThemeSettings = { brandColor: DEFAULT_BRAND_COLOR, theme: 'auto', preset: DEFAULT_PRESET, colors: { light: {}, dark: {} } };
 
 export function resolveFor(settings: ThemeSettings, mode: ColorMode): ResolvedTheme {
   return resolveTheme({ preset: settings.preset, brandColor: settings.brandColor, mode, overrides: settings.colors[mode] });
@@ -16,7 +19,6 @@ export function paintTheme(theme: ResolvedTheme, root: HTMLElement = document.do
   root.dataset.glass = String(theme.effects.glass);
 }
 
-// "auto" follows the visitor's system, also when it changes.
 export function applyTheme(settings: ThemeSettings, root: HTMLElement = document.documentElement): () => void {
   if (settings.theme !== 'auto') {
     paintTheme(resolveFor(settings, settings.theme), root);

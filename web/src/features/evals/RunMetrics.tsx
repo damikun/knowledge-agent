@@ -95,10 +95,8 @@ function AreaCard({ score, metrics, missed, onShowMissed }: AreaCardProps) {
 
 export interface QualityCardsProps {
   metrics: Record<string, EvalMetricValueDto>;
-  /** The run the change is computed against. */
   previous: EvalRunSummaryDto | null;
   active: boolean;
-  /** Questions below the Good line, per area. */
   missed?: Partial<Record<QualityAreaId, number>>;
   onShowMissed?: (area: QualityAreaId) => void;
 }
@@ -226,7 +224,6 @@ export function GateChecks({ gate }: { gate: EvalGateDto }) {
                     {check.kind ? <Badge>{gateCheckKindLabel(check.kind)}</Badge> : null}
                     {values ? <span className="text-xs text-fg-muted tabular-nums">{values}</span> : null}
                   </div>
-                  {/* The API message uses technical names; only needed when the values can't be shown. */}
                   {!values && check.message ? <p className="mt-0.5 text-small break-words text-fg-secondary">{check.message}</p> : null}
                 </div>
               </li>

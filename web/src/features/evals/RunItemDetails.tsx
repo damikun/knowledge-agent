@@ -37,7 +37,6 @@ function citationTooltip(ref: string, citation: EvalCitationResultDto | undefine
   return `${ref} · ${citation.title || 'Untitled source'} · ${citation.expected ? 'an expected source' : 'not an expected source'}`;
 }
 
-/** No popover: eval sources are not in the library. */
 function AnswerCitation({ citationRef, citation }: { citationRef: string; citation: EvalCitationResultDto | undefined }) {
   const state = citationState(citation);
   return (
@@ -142,7 +141,6 @@ function Muted({ children }: { children: ReactNode }) {
 export function ItemDetails({ item }: { item: EvalItemResultDto }) {
   const missing = new Set(item.missingFacts);
   const expectedSet = new Set(item.expectedFacts);
-  // Missing facts should be a subset of the expected ones, but list any extras too.
   const facts = [...item.expectedFacts, ...item.missingFacts.filter((fact) => !expectedSet.has(fact))];
   const found = facts.filter((fact) => !missing.has(fact)).length;
   const traceUrl = safeExternalUrl(item.langfuseTraceUrl);

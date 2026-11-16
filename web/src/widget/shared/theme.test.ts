@@ -15,7 +15,6 @@ describe('widget themes (WCAG 2.2 AA)', () => {
       const theme = resolveTheme({ preset, brandColor, mode });
       expect(contrastProblems(theme)).toEqual([]);
 
-      // Also over a black or a white page behind the glass.
       const backdrops = panelBackdrops(parseHexColor(theme.colors.panel)!, mode, theme.effects.glass);
       for (const backdrop of backdrops) {
         expect(ratio(theme.variables['--ka-accent-text']!, backdrop)).toBeGreaterThanOrEqual(4.5);

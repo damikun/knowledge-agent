@@ -16,7 +16,6 @@ const GROUPS: ReadonlyArray<{ id: PromptGroupId; label: string }> = [
   { id: 'other', label: 'Other prompts in Langfuse' },
 ];
 
-// Must match PromptNames on the server.
 const KNOWN: Readonly<Record<string, PromptInfo>> = {
   'orchestrator-system': {
     title: 'Answering agent',
@@ -59,7 +58,6 @@ export function promptInfo(name: string): PromptInfo {
   return KNOWN[name] ?? { title: name, description: 'From your Langfuse project. Knowledge Agent does not use it.', group: 'other' };
 }
 
-/** Fixed order; empty groups are left out. */
 export function groupPrompts(prompts: readonly PromptSummaryDto[]): Array<{ id: PromptGroupId; label: string; prompts: PromptSummaryDto[] }> {
   return GROUPS.map((group) => ({ ...group, prompts: prompts.filter((prompt) => promptInfo(prompt.name).group === group.id) })).filter(
     (group) => group.prompts.length > 0,

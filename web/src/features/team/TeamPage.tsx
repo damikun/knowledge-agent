@@ -13,7 +13,6 @@ import { useMe } from '../auth/api';
 import { useTeam } from './api';
 import type { TeamMemberDto } from './types';
 
-/** As the API enforces them. */
 const ROLE_ABILITIES: Array<{ label: string; admin: boolean; support: boolean }> = [
   { label: 'Answer conversations in the Inbox and take over from the agent', admin: true, support: true },
   { label: 'Find and edit contacts, label conversations, read feedback', admin: true, support: true },
@@ -48,7 +47,6 @@ function Allowed({ allowed, role }: { allowed: boolean; role: string }) {
 
 const CONSOLE_HINT = 'You need user admin rights in Keycloak (manage-users) to open it.';
 
-/** Admin here doesn't grant access to Keycloak's console, so the link is only live for its user admins. */
 function ConsoleLink({ url, allowed }: { url: string; allowed: boolean }) {
   const hintId = useId();
   if (allowed) {
@@ -59,7 +57,6 @@ function ConsoleLink({ url, allowed }: { url: string; allowed: boolean }) {
       </a>
     );
   }
-  // Disabled buttons get no pointer events, so the wrapper carries the hover hint; screen readers get aria-describedby.
   return (
     <span title={CONSOLE_HINT} className="inline-flex shrink-0">
       <Button size="sm" disabled aria-describedby={hintId}>

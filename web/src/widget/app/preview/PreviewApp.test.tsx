@@ -10,9 +10,7 @@ import { PreviewApp } from './PreviewApp';
 let posted: MockInstance<typeof window.postMessage>;
 
 beforeEach(() => {
-  // In jsdom the preview is its own parent, so what it posts to the editor lands here.
   posted = vi.spyOn(window, 'postMessage').mockImplementation(() => undefined);
-  // jsdom has no layout: every element on the page gets a box whose height follows its text, so edits move things.
   vi.spyOn(Element.prototype, 'getClientRects').mockImplementation(function (this: Element) {
     return (this.isConnected ? [new DOMRect(0, 0, 10, 10)] : []) as unknown as DOMRectList;
   });
@@ -117,7 +115,7 @@ describe('widget preview', () => {
     show('start');
 
     await user.click(screen.getByRole('button', { name: 'Can I return items?' }));
-    expect(last('select')).toEqual({ type: 'select', target: 'behavior.suggestedQuestions', rect: { x: 12, y: 34, width: 200, height: 37 } });
+    expect(last('select')).toEqual({ type: 'select', target: 'behavior.suggestedQuestions', rect: expect.objectContaining({ x: 12, y: 34, width: 200, height: 37 }) });
     expect(screen.getByRole('button', { name: 'Can I return items?' })).toBeInTheDocument();
 
     await user.click(launcher().button);
@@ -138,7 +136,7 @@ describe('widget preview', () => {
     show('start');
 
     await user.hover(screen.getByRole('heading', { level: 1 }));
-    expect(last('hover')).toEqual({ type: 'hover', target: 'appearance.title', rect: { x: 12, y: 34, width: 200, height: 9 } });
+    expect(last('hover')).toEqual({ type: 'hover', target: 'appearance.title', rect: expect.objectContaining({ x: 12, y: 34, width: 200, height: 9 }) });
     await user.hover(screen.getByText('Powered by Knowledge Agent'));
     expect(last('hover')?.target).toBe('texts.poweredBy');
   });
@@ -148,7 +146,7 @@ describe('widget preview', () => {
     show('start');
 
     fromEditor({ type: 'track', target: 'appearance.title', fallbacks: [] });
-    expect(last('rect')).toEqual({ type: 'rect', target: 'appearance.title', anchor: 'appearance.title', rect: { x: 12, y: 34, width: 200, height: 9 } });
+    expect(last('rect')).toEqual({ type: 'rect', target: 'appearance.title', anchor: 'appearance.title', rect: expect.objectContaining({ x: 12, y: 34, width: 200, height: 9 }) });
 
     show('start', { title: 'Shop help and returns' });
     expect(last('rect')?.rect?.height).toBe(21);

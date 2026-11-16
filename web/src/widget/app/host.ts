@@ -3,26 +3,53 @@ import { isRecord } from './types';
 
 const HOST_SOURCE = 'knowledge-agent';
 
-// busy: an answer is being written, which the loader shows with the glow around the panel.
-export type FrameMessage = { type: 'ready' } | { type: 'close' } | { type: 'unread'; count: number } | { type: 'busy'; busy: boolean };
+export type FrameMessage =
+  | { type: 'ready' }
+  | { type: 'close' }
+  | { type: 'unread'; count: number }
+  | { type: 'busy'; busy: boolean }
+  | { type: 'failed' }
+  | { type: 'unavailable' };
 
-// The frame does not know the host page's origin, hence "*"; these messages never carry anything secret.
 export function postToHost(message: FrameMessage): void {
   try {
     window.parent.postMessage({ source: HOST_SOURCE, ...message }, '*');
-  } catch {
-    // A detached or sandboxed parent: nothing to tell.
-  }
+  } catch {}
 }
 
-export function readHostCommand(event: MessageEvent): 'open' | 'close' | null {
+export type HostCommand = 'open' | 'close';
+
+export interface HostChannel {
+  post(message: FrameMessage): void;
+  listen(listener: (command: HostCommand) => void): () => void;
+}
+
+export const parentHost: HostChannel = {
+  post: postToHost,
+  listen(listener) {
+    const onMessage = (event: MessageEvent) => {
+      const command = readHostCommand(event);
+      if (command) {
+        listener(command);
+      }
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  },
+};
+
+export const silentHost: HostChannel = {
+  post: () => undefined,
+  listen: () => () => undefined,
+};
+
+export function readHostCommand(event: MessageEvent): HostCommand | null {
   if (event.source !== window.parent || !isRecord(event.data) || event.data.source !== HOST_SOURCE) {
     return null;
   }
   return event.data.type === 'open' || event.data.type === 'close' ? event.data.type : null;
 }
 
-// The signed-in user of the host page, as the loader passes it; the API checks the hash.
 export interface HostUser {
   userId: string;
   userHash: string;
@@ -33,18 +60,14 @@ export interface HostUser {
 
 export type HostAttributeValue = string | number | boolean | null;
 
-// Where the visitor is on the host page, as the loader sees it.
 export interface HostPage {
   url: string;
   referrer: string | null;
   language: string | null;
 }
 
-type HostIdentityCommand =
-  | { type: 'identity'; user: HostUser | null }
-  | { type: 'logout' }
-  // update() on the host page: the changed attributes only.
-  | { type: 'attributes'; attributes: Record<string, HostAttributeValue> };
+export type HostIdentityCommand =
+  { type: 'identity'; user: HostUser | null } | { type: 'logout' } | { type: 'attributes'; attributes: Record<string, HostAttributeValue> };
 
 function readAttributes(value: unknown): Record<string, HostAttributeValue> {
   const attributes: Record<string, HostAttributeValue> = {};
@@ -86,7 +109,6 @@ function readHostUser(value: unknown): HostUser | null {
   return user;
 }
 
-// The loader says who is signed in (after "ready" and on every identify()) and when they sign out.
 function readHostIdentity(event: MessageEvent): HostIdentityCommand | null {
   if (event.source !== window.parent || !isRecord(event.data) || event.data.source !== HOST_SOURCE) {
     return null;
@@ -100,12 +122,9 @@ function readHostIdentity(event: MessageEvent): HostIdentityCommand | null {
   return event.data.type === 'identity' ? { type: 'identity', user: readHostUser(event.data.user) } : null;
 }
 
-// The loader's first identity message arrives right after "ready", before the session starts; `ready` also settles
-// after a moment for a loader that never sends one.
 export interface HostIdentity {
   readonly ready: Promise<void>;
   current: () => HostUser | null;
-  // Everything update() said so far, and the page the visitor is on; both go with each new session.
   attributes: () => Record<string, HostAttributeValue>;
   page: () => HostPage | null;
   subscribe: (listener: (command: HostIdentityCommand) => void) => () => void;
@@ -157,7 +176,6 @@ export function listenForHostIdentity(waitMs = 1500): HostIdentity {
   };
 }
 
-// The portal's widget editor embeds the preview from the portal's own origin, so both sides name that origin.
 export function readEditorMessage(event: MessageEvent): EditorMessage | null {
   if (event.origin !== window.location.origin || event.source !== window.parent) {
     return null;
@@ -169,13 +187,11 @@ export function postToEditor(message: PreviewMessage): void {
   window.parent.postMessage(envelope(message), window.location.origin);
 }
 
-/** The language the loader passes from the host page, or English, the language of the frame's default texts. */
 export function readFrameLanguage(location: Pick<Location, 'search'>): string {
   const language = new URLSearchParams(location.search).get('lang')?.trim() ?? '';
   return /^[a-z]{2,3}(-[a-z0-9]{1,8})*$/i.test(language) ? language : 'en';
 }
 
-// /widget/v1/frame/{key} is the chat of one widget; /widget/v1/preview is the editor's preview, which needs no key.
 export function readFrameLocation(location: Pick<Location, 'pathname'>): { widgetKey: string; preview: boolean } {
   if (/\/preview\/?$/.test(location.pathname)) {
     return { widgetKey: '', preview: true };

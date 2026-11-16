@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { statusLine } from './controller';
+import { statusLine } from './chatState';
 
 describe('statusLine', () => {
   it('keeps the last sentence of a note as plain text', () => {

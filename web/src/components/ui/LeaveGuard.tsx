@@ -2,13 +2,11 @@ import { useContext, useEffect, useState } from 'react';
 import { UNSAFE_DataRouterContext, useBlocker, type Location } from 'react-router';
 import { ConfirmDialog } from './Modal';
 
-/** Made once per page by useLeaveGuard; the page calls allowLeave right before a navigation of its own. */
 export interface LeaveGuardHandle {
   allowLeave: () => void;
   isLeaveAllowed: () => boolean;
 }
 
-/** allowLeave has to apply in the same event as the navigation, before React re-renders, so the flag lives outside state. */
 export function useLeaveGuard(): LeaveGuardHandle {
   const [handle] = useState<LeaveGuardHandle>(() => {
     let allowed = false;
@@ -25,7 +23,6 @@ export function useLeaveGuard(): LeaveGuardHandle {
 export interface LeaveGuardProps {
   when: boolean;
   guard: LeaveGuardHandle;
-  /** Navigations that stay on the same form aren't asked about. Default: same path and search. */
   samePlace?: (current: Location, next: Location) => boolean;
   message?: string;
 }
@@ -48,7 +45,6 @@ function Blocker({ when, guard, samePlace = samePathAndSearch, message }: LeaveG
 
 export function LeaveGuard(props: LeaveGuardProps) {
   const { when, guard } = props;
-  // useBlocker needs a data router; the app has one, but tests that mount a page in a MemoryRouter do not.
   const dataRouter = useContext(UNSAFE_DataRouterContext);
 
   useEffect(() => {

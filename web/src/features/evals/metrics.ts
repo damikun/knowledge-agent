@@ -4,12 +4,10 @@ import { EvalMetrics, type EvalGateCheckDto, type EvalMetricValueDto } from './t
 export interface EvalMetricInfo {
   name: string;
   label: string;
-  /** The usual name in evaluation tools. */
   technical: string;
   description: string;
 }
 
-/** In display order, which is the API's order. */
 export const EVAL_METRICS: readonly EvalMetricInfo[] = [
   {
     name: EvalMetrics.RetrievalRecallAt5,
@@ -116,7 +114,6 @@ export function metricInfo(name: string): EvalMetricInfo {
   return METRICS_BY_NAME.get(name) ?? { name, label: name, technical: name, description: '' };
 }
 
-/** Known metrics in display order, then unknown ones alphabetically, without duplicates. */
 export function orderMetrics(names: Iterable<string>): string[] {
   const rank = (name: string) => {
     const index = METRIC_ORDER.indexOf(name);
@@ -138,7 +135,6 @@ export function presentMetrics(maps: Iterable<Readonly<Record<string, unknown>> 
 const percentFormat = new Intl.NumberFormat('en-US', { style: 'percent', maximumFractionDigits: 1 });
 const pointsFormat = new Intl.NumberFormat('en-US', { signDisplay: 'exceptZero', maximumFractionDigits: 1 });
 
-/** 0.8333 → "83.3%"; a missing value → "–". */
 export function formatPercent(value: number | null | undefined): string {
   return value === null || value === undefined || !Number.isFinite(value) ? '–' : percentFormat.format(value);
 }
@@ -148,7 +144,6 @@ function roundPoints(points: number): number {
   return Object.is(rounded, -0) ? 0 : rounded;
 }
 
-/** Percentage points: 3.25 → "+3.3 pp", -1.5 → "-1.5 pp", 0.04 → "±0 pp"; a missing value → "". */
 export function formatDelta(points: number | null | undefined): string {
   if (points === null || points === undefined || !Number.isFinite(points)) {
     return '';
@@ -157,7 +152,6 @@ export function formatDelta(points: number | null | undefined): string {
   return rounded === 0 ? '±0 pp' : `${pointsFormat.format(rounded)} pp`;
 }
 
-/** In percentage points (0.80 → 0.85 is +5); null when either run did not measure the metric. */
 export function metricDelta(
   current: Readonly<Record<string, EvalMetricValueDto>> | null | undefined,
   previous: Readonly<Record<string, EvalMetricValueDto>> | null | undefined,
@@ -192,7 +186,6 @@ export function formatGateValue(metric: string, value: number | null | undefined
   return null;
 }
 
-/** "72% · needs at least 80%"; null when the metric or kind is unknown. */
 export function describeGateCheck(check: Pick<EvalGateCheckDto, 'metric' | 'kind' | 'actual' | 'expected'>): string | null {
   const kind = CHECK_KINDS[check.kind?.toLowerCase()];
   const actual = formatGateValue(check.metric, check.actual);

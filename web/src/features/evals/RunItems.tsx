@@ -44,7 +44,6 @@ export function ItemsTable({ items: allItems, active, filter: controlledFilter, 
   const filter = controlledFilter ?? ownFilter;
   const setFilter = onFilterChange ?? setOwnFilter;
   const idPrefix = useId();
-  // One metric per area, so columns and filters match the score cards.
   const areaMetrics = useMemo(() => itemAreaMetrics(allItems), [allItems]);
   const areaColumns = QUALITY_AREAS.flatMap((area) => (areaMetrics[area.id] ? [{ area, metric: areaMetrics[area.id]! }] : []));
   const items = useMemo(() => filterItems(allItems, filter, areaMetrics), [allItems, filter, areaMetrics]);

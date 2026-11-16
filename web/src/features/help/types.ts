@@ -1,6 +1,5 @@
 import type { CitationDto } from '../chat/types';
 
-/** Computed by the API, so support users get it too. */
 export interface HelpSetupDto {
   chatModel: boolean;
   embeddingModel: boolean;
@@ -9,7 +8,6 @@ export interface HelpSetupDto {
   widget: boolean;
 }
 
-/** Setup is null while help is off; help is disabled while modelReady is false. */
 export interface HelpStatusDto {
   enabled: boolean;
   canManage: boolean;
@@ -29,7 +27,6 @@ export interface HelpChatRequest {
   sessionId?: string;
 }
 
-/** Kept in session storage only. */
 export interface HelpTurn {
   id: string;
   question: string;

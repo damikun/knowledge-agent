@@ -31,6 +31,12 @@ function mockWidget(config: Record<string, unknown> = {}, session: Record<string
     [`GET ${WIDGET_API}/conversations/c1`]: conversation,
     [`GET ${WIDGET_API}/conversations/c1/events`]: (_url: URL, init: RequestInit) => live.respond(init),
     [`POST ${WIDGET_API}/conversations/c1/close`]: () => new Response(null, { status: 204 }),
+    [`GET ${WIDGET_API}/conversations`]: {
+      conversations: [
+        { id: 'c1', status: 'human', updatedAt: '2026-10-31T10:05:00Z', lastMessage: { author: 'staff', authorName: 'Dana', text: 'Anything else?' } },
+        { id: 'c0', status: 'closed', updatedAt: '2026-10-20T09:00:00Z', lastMessage: { author: 'visitor', authorName: null, text: 'Where is my order?' } },
+      ],
+    },
   });
 }
 
@@ -96,14 +102,6 @@ describe('widget frame accessibility (axe-core, WCAG 2.2 AA)', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Can I return items?' })).toBeEnabled());
     await user.type(input, 'Hello{Enter}');
     expect(await screen.findByRole('alert')).toHaveTextContent('You are sending messages too quickly.');
-    expect(await axeViolations()).toEqual([]);
-  });
-
-  it('a widget that could not load', async () => {
-    mockFetch({ [`GET ${WIDGET_API}/config`]: () => problem(500, { title: 'Broken' }) });
-    render(<WidgetApp widgetKey={WIDGET_KEY} retryDelaysMs={[]} />);
-
-    await screen.findByRole('button', { name: 'Try again' });
     expect(await axeViolations()).toEqual([]);
   });
 
@@ -205,6 +203,18 @@ describe('widget frame accessibility (axe-core, WCAG 2.2 AA)', () => {
     await user.click(screen.getByRole('button', { name: 'Not helpful' }));
     await user.click(screen.getByRole('button', { name: 'More options' }));
     await screen.findByRole('menu');
+    expect(await axeViolations()).toEqual([]);
+  });
+
+  it('the list of earlier conversations', async () => {
+    const user = userEvent.setup();
+    mockWidget({}, { conversationId: 'c1' });
+    render(<WidgetApp widgetKey={WIDGET_KEY} />);
+
+    await screen.findByText('Can I return items?', { selector: 'p' });
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Your conversations' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Your conversations' })).toHaveFocus();
     expect(await axeViolations()).toEqual([]);
   });
 

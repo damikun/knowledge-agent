@@ -1,6 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { asArray, asStrings, isRecord, request } from '../../lib/api';
+import { asArray, asStrings, call, isRecord } from '../../lib/api';
+import { pathOf } from '../../lib/endpoint';
+import { endpoints } from '../../lib/endpoints';
 import type { Guid } from '../../lib/types';
 import { agentKeys, agentsApi } from '../agents/api';
 import { integrationKeys, integrationsApi } from '../notifications/api';
@@ -23,7 +25,6 @@ export const widgetKeys = {
 
 export const WEEKDAYS: readonly Weekday[] = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-/** The API's defaults, for settings an older API leaves out. */
 export const FALLBACK_SETTINGS: WidgetSettings = {
   appearance: {
     title: 'Ask us anything',
@@ -195,33 +196,30 @@ function toOptions(value: unknown): WidgetOptionsDto {
   };
 }
 
-const widgetPath = (id: Guid) => `/api/widgets/${encodeURIComponent(id)}`;
-
 export function mediaUrl(assetId: Guid): string {
-  return `/widget/v1/media/${encodeURIComponent(assetId)}`;
+  return pathOf(endpoints.widgets.media, { id: assetId });
 }
 
 export const widgetsApi = {
-  listWidgets: async (signal?: AbortSignal) => asArray<unknown>(await request<unknown>('/api/widgets', { signal })).map(normalizeWidget),
-  getOptions: async (signal?: AbortSignal) => toOptions(await request<unknown>('/api/widgets/options', { signal })),
-  createWidget: async (body: SaveWidgetRequest) => normalizeWidget(await request<unknown>('/api/widgets', { method: 'POST', body })),
-  updateWidget: async (id: Guid, body: SaveWidgetRequest) => normalizeWidget(await request<unknown>(widgetPath(id), { method: 'PUT', body })),
-  deleteWidget: (id: Guid) => request<void>(widgetPath(id), { method: 'DELETE' }),
+  listWidgets: async (signal?: AbortSignal) => asArray<unknown>(await call(endpoints.widgets.list, { signal })).map(normalizeWidget),
+  getOptions: async (signal?: AbortSignal) => toOptions(await call(endpoints.widgets.options, { signal })),
+  createWidget: async (body: SaveWidgetRequest) => normalizeWidget(await call(endpoints.widgets.create, { body })),
+  updateWidget: async (id: Guid, body: SaveWidgetRequest) => normalizeWidget(await call(endpoints.widgets.update, { params: { id }, body })),
+  deleteWidget: (id: Guid): Promise<void> => call(endpoints.widgets.remove, { params: { id } }),
   createIdentitySecret: async (id: Guid): Promise<WidgetIdentitySecretDto> => {
-    const dto = record(await request<unknown>(`${widgetPath(id)}/identity-secret`, { method: 'POST' }));
+    const dto = record(await call(endpoints.widgets.createIdentitySecret, { params: { id } }));
     return { secret: str(dto.secret, ''), createdAt: str(dto.createdAt, '') };
   },
-  removeIdentitySecret: async (id: Guid) => normalizeWidget(await request<unknown>(`${widgetPath(id)}/identity-secret`, { method: 'DELETE' })),
+  removeIdentitySecret: async (id: Guid) => normalizeWidget(await call(endpoints.widgets.removeIdentitySecret, { params: { id } })),
   uploadAsset: async (id: Guid, file: File): Promise<WidgetAssetDto> => {
     const formData = new FormData();
     formData.append('file', file);
-    const dto = record(await request<unknown>(`${widgetPath(id)}/assets`, { method: 'POST', formData }));
+    const dto = record(await call(endpoints.widgets.uploadAsset, { params: { id }, formData }));
     const assetId = str(dto.id, '');
     return { id: assetId, url: str(dto.url, mediaUrl(assetId)), contentType: str(dto.contentType, file.type), size: num(dto.size, file.size) };
   },
 };
 
-/** Support users get 403, so pass `enabled` false for them. */
 export function useWidgets(enabled = true) {
   return useQuery({ queryKey: widgetKeys.list, queryFn: ({ signal }) => widgetsApi.listWidgets(signal), staleTime: 30_000, enabled });
 }
@@ -232,7 +230,6 @@ export function useWidgetOptions() {
   return useQuery(optionsQuery);
 }
 
-/** Prefetches what the editor needs before it can draw. Call it on hover and focus. */
 export function usePrefetchWidgetEditor(): () => void {
   const queryClient = useQueryClient();
   return useCallback(() => {

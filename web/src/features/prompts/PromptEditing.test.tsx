@@ -40,7 +40,6 @@ const versions: PromptVersionsDto = {
   versions: [version(5, 'Write a short title for:\n{{message}}', false, 'Shorter (by Ada)'), version(4, detail.text!, true), version(3, 'Title:\n{{message}}')],
 };
 
-// Echoes the template with {{message}} filled in and reports variables like the API.
 function renderTemplate(_url: URL, init: RequestInit) {
   const body = JSON.parse(String(init.body)) as { template: string; variables: Record<string, unknown> };
   const used = [...body.template.matchAll(/\{\{\s*([a-zA-Z]+)\s*\}\}/g)].map((match) => match[1]!);

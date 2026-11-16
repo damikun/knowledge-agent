@@ -47,7 +47,6 @@ public sealed class ContactAttributeRulesTests
         contact.Attributes["plan"].GetString().ShouldBe("enterprise");
         contact.Attributes["company"].GetString().ShouldBe("Other", "browser may overwrite browser");
 
-        // A more trusted source takes over a value and raises its source; admin and server overwrite each other.
         Merge(contact, registry, AttributeSources.Verified, Now, new { company = "Acme Inc" });
         contact.AttributeSources["company"].Source.ShouldBe(AttributeSources.Verified);
         Merge(contact, registry, AttributeSources.Admin, Now, new { plan = "trial" }).Rejected.ShouldBeEmpty();
@@ -175,11 +174,11 @@ public sealed class ContactAttributeRulesTests
     [Fact]
     public void The_loader_page_is_stored_without_query_or_fragment()
     {
-        var visit = VisitorService.VisitOf(new VisitorPageRequest("https://shop.example.com/cart?token=secret#pay", "https://google.com/search?q=me", "sk-SK"), newSession: true);
+        var visit = VisitorService.VisitOf(new VisitorPageRequest("https://shop.example.com/cart?token=secret#pay", "https://google.com/search?q=me", "sk-SK"), newVisit: true);
         visit.PageUrl.ShouldBe("https://shop.example.com/cart");
         visit.Referrer.ShouldBe("https://google.com/search");
         visit.Language.ShouldBe("sk-SK");
-        VisitorService.VisitOf(new VisitorPageRequest("javascript:alert(1)", "file:///etc/passwd", "<script>"), newSession: false)
+        VisitorService.VisitOf(new VisitorPageRequest("javascript:alert(1)", "file:///etc/passwd", "<script>"), newVisit: false)
             .ShouldBe(new KnowledgeAgent.Features.People.VisitorVisit(false, null, null, null));
     }
 

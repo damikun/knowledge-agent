@@ -16,30 +16,21 @@ interface ChartSeries {
 
 export interface DailyChartProps {
   label: string;
-  /** yyyy-mm-dd, one per column. */
   dates: readonly string[];
-  /**
-   * stacked: the series add up in one column, the first at the bottom. diverging: the first series above the baseline
-   * and the second below it, for good against bad.
-   */
   mode: 'stacked' | 'diverging';
   series: readonly ChartSeries[];
   summary: string;
-  /** Extra lines of a day's tooltip; only for daily columns, since a week sums several days. */
   details?: (index: number) => ReactNode;
   emptyLabel?: string;
 }
 
-// Past this many days, columns become weeks: 90 one-pixel bars read as noise, 13 weekly ones as a trend.
 const WEEKLY_FROM = 45;
 
 interface Bucket {
-  /** The first day, yyyy-mm-dd. */
   start: string;
   days: number;
 }
 
-/** Days, or weeks of up to 7 days ending on the last day, so the newest column is always a full week. */
 function bucketsOf(dates: readonly string[]): Bucket[] {
   if (dates.length < WEEKLY_FROM) {
     return dates.map((start) => ({ start, days: 1 }));
@@ -86,7 +77,6 @@ function Legend({ series }: { series: readonly ChartSeries[] }) {
   );
 }
 
-/** Plain HTML columns, so they size with the card. The same numbers are in a table for screen readers. */
 export function DailyChart({
   label,
   dates: days,
@@ -99,7 +89,6 @@ export function DailyChart({
   const id = useId();
   const [active, setActive] = useState<number | null>(null);
   const [showTable, setShowTable] = useState(false);
-  // Esc hides the hover card without moving the pointer (WCAG 1.4.13).
   useKeydown((event) => event.key === 'Escape' && setActive(null), { enabled: active !== null });
   const diverging = mode === 'diverging';
   const buckets = bucketsOf(days);
@@ -157,7 +146,6 @@ export function DailyChart({
       <figcaption id={`${id}-caption`} className="sr-only">
         {label}. {summary}
       </figcaption>
-      {/* Read top to bottom like the stack: the first series sits at the bottom, so it is listed last. */}
       <Legend series={diverging ? series : [...series].reverse()} />
       {weekly ? <p className="text-xs text-fg-muted">One column per week.</p> : null}
       <div className="relative" onMouseLeave={() => setActive(null)} aria-hidden>
@@ -191,7 +179,6 @@ export function DailyChart({
               ))}
             </div>
             {active !== null ? (
-              // Beside the hovered column, inside the plot: to its right in the left half, to its left in the right half.
               <div
                 className="pointer-events-none absolute top-2 z-10 w-max max-w-64 rounded-lg border border-border bg-raised p-2.5 text-xs shadow-menu"
                 style={

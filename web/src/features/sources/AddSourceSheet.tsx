@@ -19,7 +19,6 @@ import { WebsiteForm } from './WebsiteForm';
 
 export type AddSourceKind = 'url' | 'upload' | 'text';
 
-/** The three ways to add knowledge, for the sheet's choice cards and the empty library. */
 export const SOURCE_KINDS: ReadonlyArray<{ value: AddSourceKind; label: string; description: string; icon: LucideIcon }> = [
   { value: 'url', label: 'Website', description: 'A page or a whole site', icon: Globe },
   { value: 'upload', label: 'Files', description: 'PDF, TXT or Markdown', icon: FileUp },
@@ -309,11 +308,9 @@ function KindChoices({
 
 export interface AddSourceSheetProps {
   open: boolean;
-  /** The choice the sheet opens with. */
   kind: AddSourceKind;
   onKindChange: (kind: AddSourceKind) => void;
   onClose: () => void;
-  // New sources go into this folder; null leaves them unfiled.
   folder?: { id: Guid; label: string } | null;
 }
 

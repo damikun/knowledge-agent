@@ -1,15 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { ApiError, asStrings, buildUrl, isRecord, request } from '../../lib/api';
+import { ApiError, asStrings, call, isRecord, urlOf } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { CurrentUserDto, Role } from './types';
 
 export const authKeys = {
   me: ['auth', 'me'] as const,
 };
 
-/** Set by the API when a sign-in fails or is cancelled at the identity provider. */
 export const AUTH_ERROR_PARAM = 'authError';
 
-// Roles are checked with includes(), so a malformed answer must not take the whole portal down.
 function toCurrentUser(value: unknown): CurrentUserDto {
   const dto = isRecord(value) ? value : {};
   return {
@@ -25,10 +24,8 @@ function toCurrentUser(value: unknown): CurrentUserDto {
 const authApi = {
   me: async (signal?: AbortSignal): Promise<CurrentUserDto | null> => {
     try {
-      return toCurrentUser(await request<unknown>('/api/auth/me', { signal }));
+      return toCurrentUser(await call(endpoints.auth.me, { signal }));
     } catch (error) {
-      // Signed out is an answer, not a failure. As data it survives later checks, which would otherwise reset the query
-      // and flash the loading screen.
       if (error instanceof ApiError && error.status === 401) {
         return null;
       }
@@ -42,8 +39,6 @@ export function useMe() {
     queryKey: authKeys.me,
     queryFn: ({ signal }) => authApi.me(signal),
     staleTime: 60_000,
-    // Before a first answer (API down), a refetch resets the query and would flash the loading screen on every focus;
-    // "Try again" and reconnecting still check again.
     refetchOnWindowFocus: (query) => query.state.data !== undefined,
   });
 }
@@ -56,7 +51,6 @@ export function isAdmin(user: CurrentUserDto | null | undefined): boolean {
   return hasRole(user, 'admin');
 }
 
-/** Neither admin nor support: the API refuses everything but /api/auth/me. */
 export function hasNoRole(user: CurrentUserDto): boolean {
   return !hasRole(user, 'admin') && !hasRole(user, 'support');
 }
@@ -79,24 +73,20 @@ export function returnUrlOf(location: { pathname: string; search: string; hash: 
 }
 
 function signInUrl(returnUrl: string): string {
-  return buildUrl('/api/auth/login', { returnUrl });
+  return urlOf(endpoints.auth.login, { query: { returnUrl } });
 }
 
 function signOutUrl(): string {
-  return buildUrl('/api/auth/logout');
+  return urlOf(endpoints.auth.logout);
 }
 
-/** A full-page navigation: the API signs in and out itself, through redirects to the identity provider. */
 function navigateTo(url: string): void {
   window.location.assign(url);
 }
 
-// Kept per tab in sessionStorage, which survives the round trip through the identity provider. Storage can be
-// unavailable (private windows, blocked site data); sign-in then still works, only without these hints.
 const SIGNED_OUT_KEY = 'ka:signed-out';
 const REDIRECTED_AT_KEY = 'ka:sign-in-redirected-at';
 
-// A sign-in that comes back without a session this soon after the last redirect is failing, not just starting.
 const REDIRECT_LOOP_WINDOW_MS = 30_000;
 
 function readStorage(key: string): string | null {
@@ -115,11 +105,9 @@ function writeStorage(key: string, value: string | null): void {
       window.sessionStorage.setItem(key, value);
     }
   } catch {
-    // Without storage the portal just redirects again next time.
   }
 }
 
-/** Signs out, remembering it so the portal shows the signed-out screen instead of signing straight back in. */
 export function signOut(): void {
   writeStorage(SIGNED_OUT_KEY, '1');
   navigateTo(signOutUrl());
@@ -129,7 +117,6 @@ export function wasSignedOut(): boolean {
   return readStorage(SIGNED_OUT_KEY) === '1';
 }
 
-/** Goes to the identity provider; `automatic` marks redirects nobody clicked, which the loop guard counts. */
 export function signIn(returnUrl: string, automatic = false): void {
   writeStorage(SIGNED_OUT_KEY, null);
   writeStorage(REDIRECTED_AT_KEY, automatic ? String(Date.now()) : null);
@@ -141,7 +128,6 @@ export function redirectedRecently(now = Date.now()): boolean {
   return Number.isFinite(at) && at > 0 && now - at < REDIRECT_LOOP_WINDOW_MS;
 }
 
-/** Called once someone is signed in, so a later expired session redirects again. */
 export function clearSignInMarks(): void {
   writeStorage(SIGNED_OUT_KEY, null);
   writeStorage(REDIRECTED_AT_KEY, null);

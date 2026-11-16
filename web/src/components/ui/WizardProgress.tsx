@@ -7,9 +7,7 @@ interface WizardProgressStep<T extends string> {
 }
 
 export interface WizardProgressProps<T extends string> {
-  /** The numbered steps; a last check after them is not one. */
   steps: readonly WizardProgressStep<T>[];
-  /** The index of the current step; past the last one, the wizard is at its last check. */
   current: number;
   onGo: (step: T) => void;
 }

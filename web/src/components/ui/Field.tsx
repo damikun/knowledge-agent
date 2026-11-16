@@ -1,7 +1,6 @@
 import { clsx } from 'clsx';
 import type { ReactNode } from 'react';
 
-/** For inputs that take codes, keys and addresses: no autofill, capitals or spelling fixes. */
 export const inputProps = { autoComplete: 'off', autoCapitalize: 'off', autoCorrect: 'off', spellCheck: false } as const;
 
 export interface FieldProps {
@@ -15,7 +14,6 @@ export interface FieldProps {
   children: ReactNode;
 }
 
-/** The hint and error ids derive from `htmlFor`; see fieldAria. */
 export function Field({ label, htmlFor, hint, errors, optional, action, className, children }: FieldProps) {
   const labelElement = (
     <label htmlFor={htmlFor} className="flex items-baseline gap-1.5 text-small font-medium text-fg">

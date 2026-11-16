@@ -1,5 +1,6 @@
 import { useQuery, type QueryClient } from '@tanstack/react-query';
-import { asArray, request } from '../../lib/api';
+import { asArray, call } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import { systemInfoQueryKey } from '../../lib/queryKeys';
 import type { ApiKeySource, ModelProfileDto, ProviderDto, ProviderTestResultDto, UpdateModelProfileRequest, UpdateProviderRequest } from './types';
 
@@ -10,7 +11,6 @@ export const modelKeys = {
 
 const API_KEY_SOURCES: readonly string[] = ['none', 'configuration', 'portal'] satisfies ApiKeySource[];
 
-/** Older APIs don't send the provider settings fields. */
 function normalizeProvider(provider: ProviderDto): ProviderDto {
   const source = String(provider.apiKeySource ?? 'none').toLowerCase();
   return {
@@ -37,27 +37,22 @@ function normalizeTestResult(key: string, result: Partial<ProviderTestResultDto>
   };
 }
 
-const providerPath = (key: string) => `/api/models/providers/${encodeURIComponent(key)}`;
-const profilePath = (name: string) => `/api/models/profiles/${encodeURIComponent(name)}`;
-
 export const modelsApi = {
-  listProfiles: async (signal?: AbortSignal) => asArray<ModelProfileDto>(await request<unknown>('/api/models/profiles', { signal })),
+  listProfiles: async (signal?: AbortSignal) => asArray<ModelProfileDto>(await call(endpoints.models.listProfiles, { signal })),
   listProviders: async (signal?: AbortSignal) =>
-    asArray<ProviderDto>(await request<unknown>('/api/models/providers', { signal })).map(normalizeProvider),
-  /** Omit `apiKey` to keep the stored key. */
+    asArray<ProviderDto>(await call(endpoints.models.listProviders, { signal })).map(normalizeProvider),
   updateProvider: async (key: string, body: UpdateProviderRequest) => {
-    const provider = await request<ProviderDto | undefined>(providerPath(key), { method: 'PUT', body });
+    const provider: ProviderDto | undefined = await call(endpoints.models.updateProvider, { params: { key }, body });
     return provider ? normalizeProvider(provider) : undefined;
   },
   resetProvider: async (key: string) => {
-    const provider = await request<ProviderDto | undefined>(`${providerPath(key)}/override`, { method: 'DELETE' });
+    const provider: ProviderDto | undefined = await call(endpoints.models.resetProvider, { params: { key } });
     return provider ? normalizeProvider(provider) : undefined;
   },
-  /** Lists models; generates no tokens. */
-  testProvider: async (key: string) =>
-    normalizeTestResult(key, await request<Partial<ProviderTestResultDto> | undefined>(`${providerPath(key)}/test`, { method: 'POST' })),
-  updateProfile: (name: string, body: UpdateModelProfileRequest) => request<ModelProfileDto | undefined>(profilePath(name), { method: 'PUT', body }),
-  resetProfile: (name: string) => request<ModelProfileDto | undefined>(`${profilePath(name)}/override`, { method: 'DELETE' }),
+  testProvider: async (key: string) => normalizeTestResult(key, await call(endpoints.models.testProvider, { params: { key } })),
+  updateProfile: (name: string, body: UpdateModelProfileRequest): Promise<ModelProfileDto | undefined> =>
+    call(endpoints.models.updateProfile, { params: { name }, body }),
+  resetProfile: (name: string): Promise<ModelProfileDto | undefined> => call(endpoints.models.resetProfile, { params: { name } }),
 };
 
 export function useProfiles() {
@@ -68,7 +63,6 @@ export function useProviders() {
   return useQuery({ queryKey: modelKeys.providers, queryFn: ({ signal }) => modelsApi.listProviders(signal), staleTime: 60_000 });
 }
 
-/** "auto" profiles may resolve to another provider now, and system info lists providers too. */
 export async function invalidateProviderSettings(queryClient: QueryClient): Promise<void> {
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: modelKeys.providers }),

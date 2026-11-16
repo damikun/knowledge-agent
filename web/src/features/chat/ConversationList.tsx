@@ -53,7 +53,6 @@ export function ConversationList({ activeId, basePath, onNewChat, onNavigate, se
   const labels = useLabels();
   const labelList = labels.data?.labels ?? [];
   const labelsAvailable = labels.data?.available ?? false;
-  // The scrolling list, in state so the next page's observer can watch inside it once it mounts.
   const [scroller, setScroller] = useState<HTMLDivElement | null>(null);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -65,7 +64,6 @@ export function ConversationList({ activeId, basePath, onNewChat, onNavigate, se
     [list.data, actions.hidden],
   );
 
-  // The open conversation stays reachable while a search or filter hides it.
   const openItem = filtered && activeId && !actions.hidden.has(activeId) && !items.some((item) => item.id === activeId) ? findListItem(queryClient, activeId) : undefined;
   const groups = useMemo<ConversationGroup[]>(() => {
     const grouped = groupConversations(items);
@@ -166,7 +164,6 @@ export function ConversationList({ activeId, basePath, onNewChat, onNavigate, se
   const endRename = useCallback(
     (id: string) => {
       setEditingId(null);
-      // Back on the row once it shows again, so keyboard users keep their place.
       window.setTimeout(() => focusRow(id), 0);
     },
     [focusRow],
@@ -250,7 +247,6 @@ export function ConversationList({ activeId, basePath, onNewChat, onNavigate, se
   return (
     <div className="flex h-full min-h-0 flex-col bg-canvas">
       <h2 className="sr-only">Conversations</h2>
-      {/* The same 48 px as the chat's top bar, so both share one line. */}
       <div className="flex h-12 shrink-0 items-center gap-1 border-b border-border-subtle pr-2 pl-4">
         <div className="relative min-w-0 flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-fg-muted" aria-hidden />

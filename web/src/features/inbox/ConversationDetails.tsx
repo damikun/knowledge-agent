@@ -107,7 +107,6 @@ export interface ConversationDetailsProps {
   visitorName: string | null;
   agentName: string | undefined;
   widgetNames: ReadonlyMap<string, string> | undefined;
-  /** The latest request for a person; null when nobody asked. */
   handover: HandoverDto | null | undefined;
   handoverError: unknown;
   history: ConversationHistory | undefined;
@@ -131,7 +130,6 @@ export function ConversationDetails({
   const fromWidget = conversation.channel === 'widget';
   const hasLabels = labelsAvailable(useLabels().data);
   const admin = isAdmin(useMe().data);
-  // Only an actionable request gets a panel; finished ones already show as events in the thread.
   const open = handover && (handover.status === 'pending' || handover.status === 'active' || handover.status === 'expired') ? handover : null;
   return (
     <div className={clsx('space-y-5 bg-surface-subtle p-4', className)}>

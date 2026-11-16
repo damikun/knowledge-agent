@@ -7,11 +7,9 @@ export interface BannerProps {
   tone: 'warning' | 'danger';
   icon?: LucideIcon;
   children: ReactNode;
-  /** One link or button; it takes the banner's text color. */
   action?: ReactNode;
 }
 
-/** One blocking problem at the top of the app panel. Show one at a time. */
 export function Banner({ tone, icon, children, action }: BannerProps) {
   const style = TONES[tone];
   const Icon = icon ?? style.Icon;

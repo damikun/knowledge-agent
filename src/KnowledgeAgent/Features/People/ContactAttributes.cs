@@ -19,8 +19,6 @@ public static class AttributeTypes
     public static readonly IReadOnlyList<string> All = [String, Number, Boolean, Date];
 }
 
-// Trust order: browser < verified < server = admin. A less trusted source never overwrites or clears a value.
-// The verified hash signs only the user id, so the visitor can still change those values in their own browser.
 public static class AttributeSources
 {
     public const string Browser = "browser";
@@ -36,7 +34,6 @@ public static class AttributeSources
     };
 }
 
-// Which sources may write a key: any, verified (verified, server and admin) or server (server and admin only).
 public static class AttributeTrust
 {
     public const string Any = "any";
@@ -97,10 +94,8 @@ public static partial class ContactAttributeLimits
     public const int MaxKeysPerContact = 50;
     public const int MaxStringLength = 255;
 
-    // A workspace-wide cap, so a page that sends user ids as keys cannot grow the registry without end.
     public const int MaxRegistryKeys = 200;
 
-    // At most this many keys are looked at per request; the rest are refused.
     public const int MaxKeysPerRequest = 100;
 
     public static readonly IReadOnlySet<string> ReservedKeys = new HashSet<string>(StringComparer.Ordinal)
@@ -124,11 +119,9 @@ public sealed record AttributeChangeResult(IReadOnlyList<string> Applied, IReadO
 
 internal static partial class AttributeValues
 {
-    // 2026-11-05, 2026-11-05T10:00, 2026-11-05T10:00:00Z, 2026-11-05T10:00:00.123+01:00
     [GeneratedRegex(@"^\d{4}-\d{2}-\d{2}([T ]\d{2}:\d{2}(:\d{2}(\.\d{1,7})?)?(Z|[+-]\d{2}:?\d{2})?)?$", RegexOptions.CultureInvariant)]
     private static partial Regex IsoDate();
 
-    // Fixed width in UTC, so stored dates sort as text the same way as in time (the Postgres filters rely on it).
     public static string FormatDate(DateTimeOffset value) => value.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
     public static bool TryParseDate(string? text, out DateTimeOffset value)
@@ -213,8 +206,6 @@ internal static partial class AttributeValues
         }
     }
 
-    // Sent keys overwrite, missing keys keep their value, null clears. New keys go to newDefinitions.
-    // Bad input is reported per key, never thrown.
     public static AttributeChangeResult Merge(
         Contact contact,
         IReadOnlyDictionary<string, JsonElement> incoming,
@@ -319,11 +310,9 @@ internal static partial class AttributeValues
             }
             else if (now - definition.LastSeenAt > TimeSpan.FromHours(1))
             {
-                // Hourly at most, so a busy widget does not write the registry on every session.
                 definition.LastSeenAt = now;
             }
 
-            // The same value again only raises its source; the time says when it last changed.
             var unchanged = values.TryGetValue(key, out var old) && old.GetRawText() == stored.GetRawText();
             if (!unchanged || current is null || AttributeSources.Rank(source) > AttributeSources.Rank(current.Source))
             {
@@ -366,7 +355,6 @@ internal static class ContactJson
         where TDictionary : new() =>
         string.IsNullOrWhiteSpace(json) ? new TDictionary() : JsonSerializer.Deserialize<TDictionary>(json, Options) ?? new TDictionary();
 
-    // Sorted by key, so two dictionaries with the same entries in another order compare equal.
     private static string Text<T>(Dictionary<string, T>? value) =>
         value is null ? string.Empty : JsonSerializer.Serialize(value.OrderBy(entry => entry.Key, StringComparer.Ordinal).ToList(), Options);
 }

@@ -68,7 +68,6 @@ public sealed class WidgetRulesTests
             Hours = [new WidgetOpeningHours(DayOfWeek.Monday, new TimeOnly(9, 0), new TimeOnly(17, 0))],
         };
 
-        // Monday 2026-11-02: 08:30 UTC is 09:30 in Prague (CET, UTC+1).
         WidgetSchedule.IsOpen(hours, new DateTimeOffset(2026, 11, 2, 8, 30, 0, TimeSpan.Zero)).ShouldBeTrue();
         WidgetSchedule.IsOpen(hours, new DateTimeOffset(2026, 11, 2, 7, 30, 0, TimeSpan.Zero)).ShouldBeFalse();
         WidgetSchedule.IsOpen(hours, new DateTimeOffset(2026, 11, 2, 16, 0, 0, TimeSpan.Zero)).ShouldBeFalse("17:00 in Prague is closing time");
@@ -109,18 +108,23 @@ public sealed class WidgetRulesTests
     public void Visitor_tokens_name_one_visitor_of_one_widget_and_cannot_be_forged()
     {
         var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
-        var tokens = new VisitorTokens(new EphemeralDataProtectionProvider(), Options.Create(new WidgetOptions { VisitorTokenLifetimeDays = 30 }), time);
+        var tokens = new VisitorTokens(new EphemeralDataProtectionProvider(), Options.Create(new WidgetOptions()), time);
         var identity = new VisitorIdentity(Guid.NewGuid(), Guid.NewGuid());
 
         var (token, expiresAt) = tokens.Issue(identity);
 
         tokens.Read(token).ShouldBe(identity);
-        expiresAt.ShouldBe(time.GetUtcNow().AddDays(30));
+        expiresAt.ShouldBe(time.GetUtcNow().AddDays(180));
         tokens.Read(token[..^2] + (token[^2] == 'A' ? "B" : "A") + token[^1]).ShouldBeNull();
         tokens.Read("not-a-token").ShouldBeNull();
         tokens.Read(null).ShouldBeNull();
         new VisitorTokens(new EphemeralDataProtectionProvider(), Options.Create(new WidgetOptions()), time).Read(token)
             .ShouldBeNull("another key ring cannot read it");
+
+        time.Advance(TimeSpan.FromDays(179));
+        tokens.Read(token).ShouldBe(identity, "a visitor away for half a year is still the same visitor");
+        time.Advance(TimeSpan.FromDays(2));
+        tokens.Read(token).ShouldBeNull();
     }
 
     [Fact]
@@ -207,7 +211,6 @@ public sealed class WidgetRulesTests
             var time = new FakeTimeProvider(DateTimeOffset.UtcNow);
             var limiter = new WidgetRateLimiter(time);
 
-            // Enough stale windows that every request below cleans up, including the old window of the key it asks for.
             for (var i = 0; i <= 10_000; i++)
             {
                 limiter.TryAcquire($"old:{i}", limit, out _);

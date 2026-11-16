@@ -8,7 +8,6 @@ public sealed class WidgetSettingsTests
     [Fact]
     public void Stored_settings_with_the_former_offer_when_unsure_still_read()
     {
-        // Settings saved with the old offerWhenUnsure flag must still load.
         const string stored = """{"behavior":{"handoverEnabled":true},"handover":{"channel":"slack","offerWhenUnsure":false,"waitMinutes":20}}""";
 
         var settings = (WidgetSettings)JsonColumns.Document<WidgetSettings>().ConvertFromProvider(stored)!;

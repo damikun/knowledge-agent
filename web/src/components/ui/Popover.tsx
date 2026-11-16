@@ -6,7 +6,6 @@ import { transformOriginOf } from './floating';
 export interface PopoverProps {
   open: boolean;
   onClose: () => void;
-  /** Pass `anchor` instead when the opener changes, such as one of several chips. */
   anchorRef?: RefObject<HTMLElement | null>;
   anchor?: HTMLElement | null;
   children: ReactNode;
@@ -20,7 +19,6 @@ export interface PopoverProps {
 const GAP = 6;
 const MARGIN = 8;
 
-/** Non-modal, in a portal so overflow containers never clip it. */
 export function Popover({ open, onClose, anchorRef, anchor, children, label, align = 'start', className, id, initialFocus }: PopoverProps) {
   const { refs, floatingStyles, context, placement } = useFloating({
     open,
@@ -31,7 +29,6 @@ export function Popover({ open, onClose, anchorRef, anchor, children, label, ali
     },
     placement: align === 'end' ? 'bottom-end' : 'bottom-start',
     strategy: 'fixed',
-    // Top and left instead of a transform, so the opening scale centers on the popover rather than the viewport corner.
     transform: false,
     middleware: [offset(GAP), flip({ padding: MARGIN }), shift({ padding: MARGIN })],
     whileElementsMounted: autoUpdate,
@@ -65,7 +62,6 @@ export function Popover({ open, onClose, anchorRef, anchor, children, label, ali
             className,
           )}
           {...getFloatingProps({
-            // React passes events up through portals, so Esc would also reach the editor around the anchor.
             onKeyDown: (event) => {
               if (event.key === 'Escape') {
                 event.stopPropagation();

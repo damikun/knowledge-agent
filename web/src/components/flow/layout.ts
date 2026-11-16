@@ -12,7 +12,6 @@ export interface LayoutOptions {
   width?: (node: GraphNode) => number;
 }
 
-/** Places every node with dagre; edges to unknown nodes are left out instead of growing phantom nodes. */
 export function layoutGraph<N extends GraphNode>(graph: Graph<N>, options: LayoutOptions): PositionedNode<N>[] {
   const g = new dagre.graphlib.Graph();
   g.setGraph({ rankdir: options.direction, nodesep: options.nodeSep ?? 24, ranksep: options.rankSep ?? 72, marginx: 16, marginy: 16 });
@@ -32,4 +31,3 @@ export function layoutGraph<N extends GraphNode>(graph: Graph<N>, options: Layou
     return { node, x: placed.x - placed.width / 2, y: placed.y - placed.height / 2, width: placed.width, height: placed.height };
   });
 }
-

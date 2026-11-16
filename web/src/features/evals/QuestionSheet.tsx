@@ -10,7 +10,6 @@ import type { EvalDatasetItemDto } from './types';
 
 export interface QuestionSheetProps {
   datasetId: string;
-  /** Null to add a new question. */
   item: EvalDatasetItemDto | null;
   onClose: () => void;
   onSaved: (item: EvalDatasetItemDto) => void;
@@ -21,7 +20,6 @@ export function QuestionSheet({ datasetId, item, onClose, onSaved }: QuestionShe
   const formId = `${idPrefix}-form`;
   const [draft, setDraft] = useState<QuestionDraft>(item ? draftOf(item) : EMPTY_QUESTION);
   const save = useMutation({
-    // The API ignores a changed source on update anyway.
     mutationFn: () =>
       item ? evalsApi.updateItem(datasetId, item.id, toRequest(draft)) : evalsApi.addItem(datasetId, toRequest(draft, { source: 'manual' })),
     onSuccess: (saved) => {

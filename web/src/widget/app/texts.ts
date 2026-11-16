@@ -1,4 +1,3 @@
-// Every string the frame shows. A widget's `texts` replace these by key, so admins can translate or reword them.
 export const DEFAULT_TEXTS = {
   launcherLabel: 'Chat with us',
   close: 'Close chat',
@@ -24,7 +23,6 @@ export const DEFAULT_TEXTS = {
   dailyCap: 'This assistant has answered all it can for today. Please come back tomorrow.',
   error: 'Something went wrong. Please try again.',
   poweredBy: 'Powered by Knowledge Agent',
-  // The API has no text keys for these yet, so they show in English unless it gains them.
   message: 'Message',
   messages: 'Messages',
   placeholder: 'Ask a question',
@@ -47,6 +45,9 @@ export const DEFAULT_TEXTS = {
   loading: 'Loading',
   newTab: 'opens in a new tab',
   source: 'Source {count}',
+  conversations: 'Your conversations',
+  backToChat: 'Back to chat',
+  conversationEnded: 'Ended',
   confirmAction: 'Confirm',
   cancelAction: 'Cancel',
 } as const;

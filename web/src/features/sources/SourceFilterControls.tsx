@@ -10,11 +10,9 @@ export interface StatusFiltersProps {
   options: readonly FilterChipOption<StatusFilter>[];
   value: StatusFilter;
   onChange: (value: StatusFilter) => void;
-  /** Offered while any filter or search text is set. */
   onClear?: () => void;
 }
 
-/** The status chips, and Clear while anything filters the list. */
 export function StatusFilters({ options, value, onChange, onClear }: StatusFiltersProps) {
   return (
     <>
@@ -33,11 +31,9 @@ export interface TypeAndSiteFiltersProps {
   onType: (value: TypeFilter) => void;
   site: string;
   onSite: (value: string) => void;
-  /** The sites of the listed sources, with their counts. */
   sites: readonly SourceSiteDto[];
 }
 
-/** The type, and the site once there are web sources; a chosen site stays listed though no source matches it now. */
 export function TypeAndSiteFilters({ type, onType, site, onSite, sites }: TypeAndSiteFiltersProps) {
   const siteOptions = [
     { value: '', label: 'All sites' },

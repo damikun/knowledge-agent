@@ -15,7 +15,6 @@ export type AlertKind =
   | 'thumbs_drop'
   | 'unanswered_spike';
 
-/** `link` is the portal path where it gets fixed. */
 export interface AlertDto {
   key: string;
   kind: AlertKind;
@@ -27,13 +26,11 @@ export interface AlertDto {
   link: string;
 }
 
-/** GET /api/alerts: most severe first; `snoozed` counts the ones an admin hid. */
 export interface AlertListDto {
   alerts: AlertDto[];
   snoozed: number;
 }
 
-/** GET /api/alerts/settings: where new alerts are sent. The ready flags say whether that integration can send at all. */
 export interface AlertSettingsDto {
   slack: boolean;
   email: boolean;

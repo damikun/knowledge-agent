@@ -98,7 +98,6 @@ public interface ISegmentService
     Task<IReadOnlyList<Segment>> AllAsync(CancellationToken cancellationToken = default);
 }
 
-// Cached a minute so the Contacts page does not recount every segment on each visit.
 internal sealed class SegmentCountCache(TimeProvider timeProvider)
 {
     public static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(1);
@@ -248,7 +247,6 @@ internal sealed class SegmentService(
                 segment.Color = request.Color ?? segment.Color;
                 segment.Icon = request.Icon ?? segment.Icon;
 
-                // Only its creator or an admin makes a segment private again.
                 if (request.Shared is { } shared && (viewer.Admin || segment.CreatedById == viewer.Id))
                 {
                     segment.Shared = shared;

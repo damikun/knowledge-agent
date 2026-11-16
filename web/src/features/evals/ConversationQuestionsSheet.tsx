@@ -54,10 +54,8 @@ function searchState(show: Show, labelId: string, period: PeriodFilter, q: strin
   };
 }
 
-/** A person's reply wins over the agent's, since it is what the visitor was told last. */
 export interface ConversationQuestionsSheetProps {
   datasetId: string;
-  /** duplicateKey values of the dataset's questions. */
   existing: ReadonlySet<string>;
   onClose: () => void;
   onAdded: (result: ImportEvalItemsResultDto) => void;

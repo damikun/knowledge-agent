@@ -34,8 +34,6 @@ import {
 } from '../widgetTexts';
 import type { ColorPath, DraftPath, TextPath } from './draft';
 
-// Every setting the editor can change, defined once; the side panel, tabs and search all render these.
-
 type Values = WidgetFormValues;
 type KeysWith<T> = { [K in keyof Values]-?: Values[K] extends T ? K : never }[keyof Values];
 
@@ -52,7 +50,6 @@ interface NoticeContext {
 }
 
 interface Common {
-  /** The draft path the property changes; also its id. */
   id: DraftPath;
   label: string;
   field?: WidgetField;
@@ -91,7 +88,6 @@ export interface TargetDef {
   label: string;
   area: TargetArea;
   scene: PreviewScene;
-  /** Outlined while the element doesn't show, such as for an empty subtitle. */
   parent?: EditTarget;
   properties: readonly DraftPath[];
 }
@@ -112,7 +108,6 @@ export interface Registry {
   sections: readonly PanelSection[];
   target: (id: EditTarget) => TargetDef;
   fallbacks: (id: EditTarget) => EditTarget[];
-  /** The element whose main setting it is, else the first one that shows it, else a panel section. */
   locate: (id: DraftPath) => Location | null;
 }
 
@@ -143,7 +138,6 @@ function colors(...tokens: ColorToken[]): ColorPath[] {
   return tokens.flatMap((token): ColorPath[] => [`colors.light.${token}`, `colors.dark.${token}`]);
 }
 
-// Keyed by every EditTarget, so the compiler checks that each one has a definition.
 const TARGETS: { readonly [T in EditTarget]: Omit<TargetDef, 'id'> } = {
   'appearance.launcher': {
     label: 'Launcher',
@@ -495,7 +489,6 @@ function textProperty(key: string): PropertyDef {
   };
 }
 
-// The API reports all colors of a mode together, so their errors also show in the editor's problem list.
 function colorProperty(mode: ColorMode, token: ColorToken): PropertyDef {
   return { id: `colors.${mode}.${token}`, kind: 'colorToken', label: COLOR_LABELS[token] ?? token, mode, token };
 }
@@ -511,7 +504,6 @@ export function buildRegistry(options: WidgetOptionsDto): Registry {
   for (const property of [...settingProperties(options), ...colorProperties, ...options.textKeys.map(textProperty)]) {
     properties.set(property.id, property);
   }
-  // Leave out texts and colors this API doesn't know; it would reject them.
   const known = (path: DraftPath) => properties.has(path);
   const targets: TargetDef[] = EDIT_TARGETS.map((id) => ({ id, ...TARGETS[id], properties: TARGETS[id].properties.filter(known) }));
   const onCanvas = new Set(targets.flatMap((target) => target.properties));

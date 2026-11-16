@@ -15,7 +15,6 @@ type Payload<K extends ChatEventType> = Omit<ChatEventPayloads[K], 'agent' | 'pa
   parentCallId?: string | null;
 };
 
-/** Builds a typed chat event with orchestrator defaults for `agent` / `parentCallId`. */
 export function ev<K extends ChatEventType>(event: K, data: Payload<K>): ChatEvent {
   return { event, data: { agent: 'orchestrator', parentCallId: null, ...data } } as unknown as ChatEvent;
 }
@@ -56,7 +55,6 @@ export const citationS3: CitationDto = {
   score: 0.71,
 };
 
-/** A complete turn: search, delegated research (nested events), answer with citations, title update. */
 export function fullTurnEvents(): ChatEvent[] {
   return [
     ev('conversation', { conversationId: CONVERSATION_ID, title: 'New conversation', isNew: true }),
@@ -134,7 +132,6 @@ export function turnDto(overrides: Partial<ConversationTurnDto> = {}): Conversat
   };
 }
 
-/** A timeline message; questions are by the user. */
 export function messageDto(overrides: Partial<ConversationMessageDto> & Pick<ConversationMessageDto, 'sequence'>): ConversationMessageDto {
   return {
     id: `message-${overrides.sequence}`,
@@ -148,7 +145,6 @@ export function messageDto(overrides: Partial<ConversationMessageDto> & Pick<Con
   };
 }
 
-/** The question and answer messages of a stored turn. */
 export function turnMessages(turn: ConversationTurnDto, firstSequence: number): ConversationMessageDto[] {
   return [
     messageDto({ sequence: firstSequence, text: turn.userMessage, turnId: turn.id }),
@@ -156,7 +152,6 @@ export function turnMessages(turn: ConversationTurnDto, firstSequence: number): 
   ];
 }
 
-/** "Vacation policy" with one stored turn and its messages. */
 export function conversationDto(overrides: Partial<ConversationDto> = {}): ConversationDto {
   const turns = overrides.turns ?? [turnDto()];
   return {

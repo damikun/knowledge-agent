@@ -32,7 +32,6 @@ export function ProviderCard({ provider }: { provider: ProviderDto }) {
   const [clientErrors, setClientErrors] = useState<ProviderFormErrors>({});
   const [invalidAttempts, setInvalidAttempts] = useState(0);
   const [confirmReset, setConfirmReset] = useState(false);
-  // Resetting removes the focused Reset button, so focus moves to Edit.
   const [focusEditButton, setFocusEditButton] = useState(0);
   const editButtonRef = useRef<HTMLButtonElement>(null);
   const fieldRef = useRef<HTMLInputElement>(null);
@@ -59,7 +58,6 @@ export function ProviderCard({ provider }: { provider: ProviderDto }) {
 
   const save = useMutation({
     mutationFn: (request: UpdateProviderRequest) => modelsApi.updateProvider(provider.key, request),
-    // The request may carry an API key, so don't keep it in the mutation cache.
     gcTime: 0,
     onSuccess: (updated) => {
       showUpdated(updated);
@@ -175,7 +173,6 @@ export function ProviderCard({ provider }: { provider: ProviderDto }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-1.5 rounded-b-2xl border-t border-border-subtle bg-surface-subtle px-4 py-3">
-        {/* Never disabled: focus returns here when the modal panels close. */}
         <Button ref={editButtonRef} size="sm" variant="secondary" icon={needsKey ? KeyRound : Pencil} onClick={() => openForm()}>
           {needsKey ? 'Set API key' : 'Edit'}
         </Button>

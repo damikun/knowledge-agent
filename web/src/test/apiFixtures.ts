@@ -2,7 +2,6 @@ import type { CurrentUserDto } from '../features/auth/types';
 import type { ModelProfileDto, ProviderDto } from '../features/models/types';
 import type { SystemInfoDto } from '../features/system/types';
 
-/** GET /api/auth/me for a signed-in admin, which mockFetch answers unless a test mocks the route itself. */
 export function currentUser(overrides: Partial<CurrentUserDto> = {}): CurrentUserDto {
   return { name: 'Ada Lovelace', email: 'ada@example.com', roles: ['admin', 'support'], mode: 'oidc', canManageUsers: false, ...overrides };
 }
@@ -11,7 +10,6 @@ export const adminUser = currentUser();
 
 export const supportUser = currentUser({ name: 'Sam Rivera', email: 'sam@example.com', roles: ['support'] });
 
-/** A provider without portal settings; `type` defaults to the key. */
 export function providerDto(overrides: Partial<ProviderDto> & Pick<ProviderDto, 'key'>): ProviderDto {
   return {
     type: overrides.key,
@@ -85,7 +83,6 @@ export function systemInfoFixture(overrides: Partial<SystemInfoDto> = {}): Syste
 
 const chatSettings = { provider: 'auto', model: null, temperature: null, maxOutputTokens: 16000, reasoningEffort: 'medium', reasoningOutput: 'summary', dimensions: null };
 
-/** Resolved to the default chat model of `providerType` in `providersFixture`. */
 export function orchestratorProfile(providerType: string, overrides: Partial<ModelProfileDto> = {}): ModelProfileDto {
   return {
     name: 'orchestrator',
@@ -109,7 +106,6 @@ export function orchestratorProfile(providerType: string, overrides: Partial<Mod
   };
 }
 
-/** Resolved to openai, the embedding model of `sourceDto()`. */
 export function embeddingProfile(overrides: Partial<ModelProfileDto> = {}): ModelProfileDto {
   return {
     name: 'embedding',

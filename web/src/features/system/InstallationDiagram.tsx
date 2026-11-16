@@ -50,7 +50,6 @@ export const NODE_ICONS: Record<InstallationNodeId, LucideIcon> = {
   minio: Archive,
 };
 
-/** For the node's accessible name and the list. */
 export function describeNode(node: InstallationNode): string {
   return [node.title, node.status ? STATUS_LABELS[node.status] : null, node.role, node.image].filter(Boolean).join('. ');
 }
@@ -138,7 +137,6 @@ function FrameView({ data }: NodeProps<FrameNode>) {
 
 const NODE_TYPES = { part: PartView, frame: FrameView };
 
-// Refit once React Flow has measured the frame's new size.
 function FitOnResize() {
   const flow = useReactFlow();
   const width = useStore((state) => state.width);
@@ -154,7 +152,6 @@ export interface InstallationDiagramProps {
   installation: Installation;
   selectedId: InstallationNodeId | null;
   onSelect: (node: InstallationNode) => void;
-  /** The frame keeps these proportions, so the picture always fits without scrolling. */
   size: { width: number; height: number };
 }
 
@@ -169,7 +166,6 @@ function Diagram({ installation, selectedId, onSelect, size }: InstallationDiagr
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  // A little padding, but never larger than the picture's own size.
   const height = Math.round(Math.min(size.height * 1.04, (width || size.width) * (size.height / size.width) * 1.04));
 
   const byId = useMemo(() => new Map(installation.nodes.map((node) => [node.id, node])), [installation.nodes]);
@@ -225,7 +221,6 @@ function Diagram({ installation, selectedId, onSelect, size }: InstallationDiagr
     [installation.edges, markerId],
   );
 
-  // React Flow's Enter only selects; open the details like a click does.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
@@ -298,7 +293,6 @@ function Diagram({ installation, selectedId, onSelect, size }: InstallationDiagr
   );
 }
 
-/** Read-only: fit to the frame, no pan or zoom. */
 export function InstallationDiagram(props: InstallationDiagramProps) {
   return (
     <ReactFlowProvider>

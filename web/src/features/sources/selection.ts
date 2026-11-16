@@ -2,9 +2,7 @@ import type { Guid } from '../../lib/types';
 
 export interface Selection {
   ids: ReadonlySet<Guid>;
-  // The row a Shift-click extends from.
   anchor: Guid | null;
-  // Every source the current filters match, on all pages.
   allMatching: boolean;
 }
 
@@ -12,8 +10,6 @@ export const EMPTY_SELECTION: Selection = { ids: new Set(), anchor: null, allMat
 
 export type SelectMode = 'only' | 'toggle' | 'range' | 'add-range';
 
-// The rules of a file manager: a click selects one row, Cmd or Ctrl toggles a row, Shift selects the rows between the
-// last clicked row and this one, and a checkbox works like Cmd with Shift adding a range.
 export function select(selection: Selection, pageIds: readonly Guid[], id: Guid, mode: SelectMode): Selection {
   const current = new Set(selection.allMatching ? pageIds : selection.ids);
   if (mode === 'only') {

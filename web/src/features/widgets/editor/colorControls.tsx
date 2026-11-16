@@ -15,7 +15,6 @@ import { readPath } from './draft';
 export function ColorControl({ property, kit, controlId, errors, action }: ControlProps<'color'>) {
   const color = kit.values.brandColor.trim().toLowerCase();
   const valid = isHexColor(color);
-  // The widget uses white or near-black text on the brand color and shifts the color when neither reaches 4.5:1.
   const text = valid ? readableTextColor(color) : null;
   const contrast = text ? contrastRatio(text, color) : null;
   const low = contrast !== null && contrast < MIN_TEXT_CONTRAST;
@@ -110,7 +109,6 @@ export function PresetControl({ property, kit, controlId, errors, action }: Cont
               />
               <span
                 className={clsx(
-                  // Full height, so the cards line up when one description wraps.
                   'flex w-full flex-col gap-1.5 rounded-2xl border p-1.5 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-focus',
                   current === preset ? 'border-accent ring-1 ring-accent' : 'border-border hover:border-border-hover',
                 )}
@@ -171,7 +169,6 @@ function ColorPicker({ property, kit, anchorRef, open, onClose }: { property: Of
   return (
     <Popover open={open} onClose={onClose} anchorRef={anchorRef} label={`${property.label} color`} align="end" className="w-72 space-y-3 p-3" initialFocus={hexRef}>
       <div className="flex items-center gap-2">
-        {/* Ring on keyboard focus only, so a click leaves none. */}
         <label className="relative size-8 shrink-0 cursor-pointer overflow-hidden rounded-md has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-focus">
           <Swatch color={shown} className="size-full rounded-md" />
           <input

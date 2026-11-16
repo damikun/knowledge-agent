@@ -46,7 +46,6 @@ export interface BuiltInSegment {
   id: string;
   name: string;
   filter: ContactCondition[];
-  /** People who talked to a widget or signed in; the list's default. */
   all?: boolean;
 }
 
@@ -72,12 +71,10 @@ function base64UrlDecode(text: string): string {
   return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
 }
 
-/** base64url JSON of the conditions. */
 export function encodeFilter(conditions: readonly ContactCondition[]): string {
   return base64UrlEncode(JSON.stringify(conditions));
 }
 
-/** Empty when the URL holds no filter this page wrote. */
 export function decodeFilter(text: string | null): ContactCondition[] {
   if (!text) {
     return [];
@@ -92,7 +89,6 @@ export function decodeFilter(text: string | null): ContactCondition[] {
   }
 }
 
-/** e.g. "Plan is pro" or "Seats is between 5 and 10". */
 export function describeCondition(condition: ContactCondition, attribute: FilterAttribute | undefined, widgetName?: (id: string) => string): string {
   const label = attribute?.label ?? condition.attr;
   const op = OP_LABELS[condition.op] ?? condition.op;

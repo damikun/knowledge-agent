@@ -20,7 +20,6 @@ import { isBuiltinDataset, runPath } from './runs';
 import type { EvalDatasetDto, StartEvalRunRequest } from './types';
 import { useReturnState } from '../../lib/returnTo';
 
-/** Fields with a control; errors for the rest are listed together. */
 const FORM_FIELDS = ['judge', 'maxItems', 'tags', 'profile', 'name'] as const;
 const ADVANCED_FIELDS = ['profile', 'name'] as const;
 
@@ -68,7 +67,6 @@ export function StartRunModal({ dataset, judgeAvailable, judgeModel, onClose }: 
     const messages = validation?.errorsFor(field) ?? [];
     return messages.length > 0 ? messages : undefined;
   };
-  // Without tags there's no tag control, so tag errors go to the shared list.
   const shownFields = dataset.tags.length > 0 ? FORM_FIELDS : FORM_FIELDS.filter((field) => field !== 'tags');
   const otherErrors = validation ? validation.errorsExcept(shownFields) : [];
   const maxItemsErrors = maxItemsError ? [maxItemsError] : serverErrors('maxItems');

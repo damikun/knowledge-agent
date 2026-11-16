@@ -1,4 +1,3 @@
-// Its colors run behind the panel, so the glass has something to blur.
 export function SamplePage() {
   return (
     <div aria-hidden="true" className="relative h-full">

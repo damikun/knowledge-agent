@@ -4,7 +4,6 @@ export const EVAL_POLL_INTERVAL_MS = 2000;
 
 const RUN_STATUSES: readonly EvalRunStatus[] = ['queued', 'running', 'completed', 'failed', 'cancelled'];
 
-/** Null for unknown statuses. */
 export function normalizeRunStatus(status: string | null | undefined): EvalRunStatus | null {
   const value = status?.toLowerCase();
   return RUN_STATUSES.find((known) => known === value) ?? null;

@@ -58,7 +58,6 @@ function ToolLinks() {
   );
 }
 
-// Only in development and tests, where no job service runs.
 function InProcessNotice() {
   return (
     <Alert title="Development mode">
@@ -81,7 +80,6 @@ function SchedulesTab() {
   );
 }
 
-/** The tab is in ?tab=. */
 export function SystemPage() {
   const [search, setSearch] = useSearchParams();
   const tab = parseTab(search.get('tab'));

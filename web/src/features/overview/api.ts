@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { asArray, isRecord, request } from '../../lib/api';
+import { asArray, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { OverviewDto, WidgetActivityDto } from './types';
 
 export const OVERVIEW_DAYS = 7;
 
-// Under the chat's ['conversations'] key, so new conversations refresh the numbers too.
 const overviewKey = ['conversations', 'overview', OVERVIEW_DAYS] as const;
 
 function count(value: unknown): number {
@@ -38,10 +38,9 @@ function toOverview(value: unknown): OverviewDto {
 }
 
 const overviewApi = {
-  getOverview: async (signal?: AbortSignal) => toOverview(await request<unknown>('/api/overview', { query: { days: OVERVIEW_DAYS }, signal })),
+  getOverview: async (signal?: AbortSignal) => toOverview(await call(endpoints.overview.get, { query: { days: OVERVIEW_DAYS }, signal })),
 };
 
-/** Admin only. */
 export function useOverview() {
   return useQuery({ queryKey: overviewKey, queryFn: ({ signal }) => overviewApi.getOverview(signal), staleTime: 30_000, refetchInterval: 60_000 });
 }

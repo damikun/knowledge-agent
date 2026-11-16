@@ -1,3 +1,4 @@
+import { pathOf, queryString, type Endpoint, type ParamNames, type ParamsOf, type PathParams, type Query } from './endpoint';
 import { checkSession, REQUEST_HEADERS } from './session';
 import { isAbortError } from './sse';
 import type { ProblemDetails } from './types';
@@ -14,7 +15,6 @@ export interface ApiErrorInit {
   cause?: unknown;
 }
 
-/** An HTTP or network failure. `status` is 0 when the API could not be reached at all. */
 export class ApiError extends Error {
   readonly status: number;
   readonly title: string | null;
@@ -40,7 +40,6 @@ export class ApiError extends Error {
     return this.status === 0;
   }
 
-  /** Matches the field case-insensitively, ignoring a `$.` or `request.` prefix. */
   errorsFor(field: string): string[] {
     const wanted = normalizeFieldName(field);
     return Object.entries(this.fieldErrors)
@@ -48,7 +47,6 @@ export class ApiError extends Error {
       .flatMap(([, messages]) => messages);
   }
 
-  /** Messages for all other fields, e.g. the ones a form has no input for. */
   errorsExcept(fields: readonly string[]): string[] {
     const known = new Set(fields.map(normalizeFieldName));
     return Object.entries(this.fieldErrors)
@@ -83,7 +81,6 @@ function readFieldErrors(value: unknown): Record<string, string[]> {
   return result;
 }
 
-/** "SourceIds[0]" → "Source ids [0]", "$.url" → "Url". */
 function humanizeField(field: string): string {
   const name = field.replace(/^\$\.?/, '').replace(/^request\./i, '');
   if (!name) {
@@ -104,7 +101,6 @@ function flattenFieldErrors(fieldErrors: Record<string, string[]>): string {
     .join(' ');
 }
 
-// The API's generic titles ("Unauthorized", "Forbidden") don't say what to do.
 const ACCESS_MESSAGES: Readonly<Record<number, string>> = {
   401: 'Your session has ended. Sign in again.',
   403: 'You need the admin role to do this.',
@@ -122,7 +118,6 @@ export async function toApiError(response: Response): Promise<ApiError> {
   try {
     text = await response.text();
   } catch {
-    // Unreadable body: fall back to the status line.
   }
 
   let problem: ProblemDetails | null = null;
@@ -133,7 +128,6 @@ export async function toApiError(response: Response): Promise<ApiError> {
         problem = parsed as ProblemDetails;
       }
     } catch {
-      // Not JSON, e.g. an HTML error page from a proxy.
     }
   }
 
@@ -174,33 +168,29 @@ export function networkError(cause: unknown): ApiError {
   return new ApiError({ status: 0, message: 'Cannot reach the API. Check that the backend is running.', cause });
 }
 
-export type QueryValue = string | number | boolean | null | undefined;
+export type { QueryValue } from './endpoint';
 
 interface RequestOptions {
   method?: string;
   body?: unknown;
-  /** Sent as multipart instead of `body`. */
   formData?: FormData;
-  query?: Record<string, QueryValue>;
+  query?: Query;
   signal?: AbortSignal;
 }
 
-export function buildUrl(path: string, query?: Record<string, QueryValue>): string {
-  let url = `${API_BASE}${path}`;
-  if (query) {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(query)) {
-      if (value !== undefined && value !== null && value !== '') {
-        params.set(key, String(value));
-      }
-    }
-    // Commas need no escaping in a query string; keeping them makes lists (status, ids) readable.
-    const qs = params.toString().replace(/%2C/gi, ',');
-    if (qs) {
-      url += `?${qs}`;
-    }
-  }
-  return url;
+export type CallOptions<P extends string> = Omit<RequestOptions, 'method'> & ParamsOf<P>;
+
+export function buildUrl(path: string, query?: Query): string {
+  return `${API_BASE}${path}${queryString(query)}`;
+}
+
+export function urlOf<P extends string>(target: Endpoint<P>, ...[options]: [ParamNames<P>] extends [never] ? [{ query?: Query }?] : [{ params: PathParams<P>; query?: Query }]): string {
+  return `${API_BASE}${pathOf(target, options && 'params' in options ? options.params : undefined, options?.query)}`;
+}
+
+export function call<T, P extends string>(target: Endpoint<P>, ...[options]: [ParamNames<P>] extends [never] ? [CallOptions<P>?] : [CallOptions<P>]): Promise<T> {
+  const { params, ...rest } = (options ?? {}) as CallOptions<P> & { params?: PathParams<P> };
+  return request<T>(pathOf(target, params), { ...rest, method: target.method });
 }
 
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -246,12 +236,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   }
 }
 
-/** Keeps only the strings of a JSON array; anything else gives []. */
 export function asStrings(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 }
 
-/** Accepts a bare JSON array or a wrapper such as `{ items: [] }`. */
 export function asArray<T>(value: unknown): T[] {
   if (Array.isArray(value)) {
     return value as T[];

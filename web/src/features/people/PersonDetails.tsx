@@ -26,7 +26,6 @@ const NOTES_DELAY_MS = 800;
 
 const IDENTIFIED_WARNING = 'Your website sends this for signed-in users, so their next sign-in may replace your edit.';
 
-// Autosaves when typing pauses and on blur.
 function NotesField({ person }: { person: Person }) {
   const id = useId();
   const update = useUpdatePerson(person.id);
@@ -36,7 +35,6 @@ function NotesField({ person }: { person: Person }) {
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   const timer = useRef<number | null>(null);
 
-  // Follow outside changes while there are no local edits; after our own save, take the server-trimmed text.
   if (stored !== seen) {
     setSeen(stored);
     if (notes.trim() === seen.trim() || notes.trim() === stored.trim()) {
@@ -97,7 +95,6 @@ function NotesField({ person }: { person: Person }) {
 
 export function DetailsCard({ person, admin }: { person: Person; admin: boolean }) {
   const update = useUpdatePerson(person.id);
-  // The website owns name and email of signed-in users; only admins can correct them.
   const canEdit = !person.identified || admin;
   const saveField = (field: 'name' | 'email') => (value: string) => update.mutateAsync({ [field]: value });
   return (
@@ -156,7 +153,6 @@ function typedValue(type: string, text: string): AttributeValue | null {
 
 export function AboutCard({ person, admin }: { person: Person; admin: boolean }) {
   const setAttributes = useSetPersonAttributes(person.id);
-  // Hidden attributes stay stored and filterable; admins still see them.
   const attributes = person.attributes.filter((attribute) => attribute.visible || admin);
   const row = (label: string, value: ReactNode) => <EditableRow label={label} value="" display={value} />;
   return (
@@ -169,7 +165,7 @@ export function AboutCard({ person, admin }: { person: Person; admin: boolean })
           {person.externalId ? row('User id', <span className="font-mono text-xs" title={person.externalId}>{person.externalId}</span>) : null}
           {row('First seen', formatDateTime(person.firstSeenAt))}
           {row('Last seen', formatDateTime(person.lastSeenAt))}
-          {row('Sessions', `${formatNumber(person.sessionCount)}${person.returning ? ', returning' : ''}`)}
+          {row('Visits', `${formatNumber(person.visitCount)}${person.returning ? ', returning' : ''}`)}
           {person.lastPageUrl ? row('Last page', <span className="break-all">{person.lastPageUrl}</span>) : null}
           {person.lastReferrer ? row('Referrer', <span className="break-all">{person.lastReferrer}</span>) : null}
           {person.language ? row('Language', person.language) : null}

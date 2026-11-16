@@ -37,19 +37,16 @@ export function formatDateTime(value: string | number | Date | null | undefined)
   return date ? dateTimeFormat.format(date) : '–';
 }
 
-/** "Oct 1, 2026". */
 export function formatDate(value: string | number | Date | null | undefined): string {
   const date = toDate(value);
   return date ? dateFormat.format(date) : '–';
 }
 
-/** "just now", "5 minutes ago", "yesterday", or a date for anything older than a week. */
 export function formatRelativeTime(value: string | number | Date | null | undefined, now: number = Date.now()): string {
   const date = toDate(value);
   if (!date) {
     return '–';
   }
-  // Server timestamps are never in the future; a positive difference is clock skew.
   const seconds = Math.min(0, Math.round((date.getTime() - now) / 1000));
   const abs = Math.abs(seconds);
   if (abs < 45) {
@@ -67,7 +64,6 @@ export function formatRelativeTime(value: string | number | Date | null | undefi
   return dateFormat.format(date);
 }
 
-/** 850 → "850 ms", 4200 → "4.2 s", 65000 → "1 min 5 s". */
 export function formatDuration(ms: number | null | undefined): string {
   if (ms === null || ms === undefined || Number.isNaN(ms)) {
     return '–';
@@ -107,7 +103,6 @@ export function hostname(url: string | null | undefined): string | null {
   }
 }
 
-/** Only http(s) URLs are rendered as links. */
 export function safeExternalUrl(url: string | null | undefined): string | null {
   if (!url) {
     return null;

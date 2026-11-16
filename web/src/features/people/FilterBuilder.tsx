@@ -8,7 +8,6 @@ import { describeCondition, OP_LABELS, TYPE_LABELS, VALUELESS_OPS } from './filt
 import type { ContactCondition, FilterAttribute } from './types';
 
 export interface FilterBuilderProps {
-  /** Index of the condition, conditions.length for a new one, or null while closed. */
   editing: number | null;
   onEditingChange: (editing: number | null) => void;
   conditions: readonly ContactCondition[];
@@ -191,7 +190,6 @@ function ConditionEditor({
 }
 
 export function FilterBuilder({ editing, onEditingChange: setEditing, conditions, onChange, attributes, widgets }: FilterBuilderProps) {
-  // Anchored to the clicked chip, or to Filter for a new condition.
   const [addButton, setAddButton] = useState<HTMLButtonElement | null>(null);
   const [chip, setChip] = useState<HTMLElement | null>(null);
   const byKey = useMemo(() => new Map(attributes.map((item) => [item.key, item])), [attributes]);

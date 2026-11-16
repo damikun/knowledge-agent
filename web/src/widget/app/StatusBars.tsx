@@ -1,7 +1,7 @@
 import { Headset, LoaderCircle, X } from 'lucide-react';
 import { useState } from 'react';
-import { useWidget } from './context';
-import type { ChatSession, ChatState, Notice } from './controller';
+import { useChat, useChatState, useWidget } from './context';
+import type { Notice } from './errors';
 import type { VisitorMessage } from './types';
 
 function lastStaffName(messages: readonly VisitorMessage[]): string | null {
@@ -34,8 +34,10 @@ function NoticeBar({ notice, onDismiss }: { notice: Notice; onDismiss: () => voi
   );
 }
 
-function WaitingForPerson({ state, session, onLeft }: { state: ChatState; session: ChatSession; onLeft: () => void }) {
+function WaitingForPerson({ onLeft }: { onLeft: () => void }) {
   const { t, mark } = useWidget();
+  const session = useChat();
+  const phase = useChatState((state) => state.phase);
   const [leaving, setLeaving] = useState(false);
 
   const keepChatting = async () => {
@@ -58,7 +60,7 @@ function WaitingForPerson({ state, session, onLeft }: { state: ChatState; sessio
         <LoaderCircle className="size-3.5 shrink-0 text-accent-text motion-safe:animate-spin" aria-hidden="true" />
         {t('waitingForPerson')}
       </p>
-      {state.phase === 'ready' ? (
+      {phase === 'ready' ? (
         <button
           type="button"
           disabled={leaving}
@@ -92,16 +94,15 @@ function HandoverOffer({ onAsk }: { onAsk: () => void }) {
 }
 
 export interface StatusBarsProps {
-  state: ChatState;
-  session: ChatSession;
   answering: boolean;
   onLeftQueue: () => void;
-  // Shown when the agent offered a person and the widget allows one.
   onAskForPerson?: () => void;
 }
 
-export function StatusBars({ state, session, answering, onLeftQueue, onAskForPerson }: StatusBarsProps) {
+export function StatusBars({ answering, onLeftQueue, onAskForPerson }: StatusBarsProps) {
   const { t, mark } = useWidget();
+  const session = useChat();
+  const state = useChatState();
   const { status } = state;
   return (
     <>
@@ -145,7 +146,7 @@ export function StatusBars({ state, session, answering, onLeftQueue, onAskForPer
             </div>
           ))
         : null}
-      {status === 'handover_pending' ? <WaitingForPerson state={state} session={session} onLeft={onLeftQueue} /> : null}
+      {status === 'handover_pending' ? <WaitingForPerson onLeft={onLeftQueue} /> : null}
       {status === 'human' ? (
         <p
           {...mark('status.joined')}

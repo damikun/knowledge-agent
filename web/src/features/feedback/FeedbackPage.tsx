@@ -74,7 +74,6 @@ export function FeedbackPage() {
   const filters = readFilters(params);
   const kept = useKeptReturnState();
   const admin = isAdmin(useMe().data);
-  // Support users can't read widgets (403), so they see widget ids.
   const widgets = useWidgets(admin);
   const agents = useAgents();
   const summary = useFeedbackSummary(filters.days);
@@ -86,7 +85,7 @@ export function FeedbackPage() {
     const agentNames = new Map((agents.data ?? []).map((agent) => [agent.id.toLowerCase(), agent.name] as const));
     return {
       widget: (id) => (id ? (widgetNames.get(id.toLowerCase()) ?? `Widget ${shortId(id)}`) : 'Portal chat'),
-      agent: (id) => (id ? (agentNames.get(id.toLowerCase()) ?? null) : (agents.data?.find((agent) => agent.isBuiltIn)?.name ?? null)),
+      agent: (id) => (id ? (agentNames.get(id.toLowerCase()) ?? null) : null),
     };
   }, [widgets.data, agents.data]);
 
@@ -105,7 +104,6 @@ export function FeedbackPage() {
     ...(filters.agentId && !agents.data?.some((agent) => agent.id.toLowerCase() === filters.agentId) ? [[filters.agentId, 'Unknown agent'] as const] : []),
   ];
   const filtered = Boolean(filters.widgetId || filters.agentId || filters.kind || filters.positive);
-  // The API stores the built-in agent's feedback without an agent, so match the agent id exactly.
   const summaryRows = (summary.data ?? []).filter(
     (row) =>
       (!filters.widgetId || row.widgetId?.toLowerCase() === filters.widgetId) && (!filters.agentId || row.agentId?.toLowerCase() === filters.agentId),

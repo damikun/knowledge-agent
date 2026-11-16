@@ -75,7 +75,6 @@ function PageRow({ page }: { page: SourceDto }) {
   );
 }
 
-/** The pages a website's crawl found, with their status, kept current while it crawls. */
 export function WebsitePages({ website }: { website: SourceDto }) {
   const [offset, setOffset] = useState(0);
   const crawling = isCrawling(website);

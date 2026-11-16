@@ -16,9 +16,7 @@ const CHUNK_PAGE_SIZE = 20;
 
 export interface SourceDetailsSheetProps {
   source: SourceDto | null;
-  /** The folder path, when the source is in one. */
   folder: string | null;
-  /** Its vectors come from another model than the current embedding model. */
   stale: boolean;
   onClose: () => void;
 }
@@ -133,7 +131,6 @@ function CrawlDetails({ source }: { source: SourceDto }) {
   );
 }
 
-/** Everything about one source that the list leaves out, such as its size and embedding model, and its stored chunks or pages. */
 export function SourceDetailsSheet({ source, folder, stale, onClose }: SourceDetailsSheetProps) {
   const url = safeExternalUrl(source?.url);
   const runUrl = safeExternalUrl(source?.jobRunUrl);
@@ -220,7 +217,6 @@ export function SourceDetailsSheet({ source, folder, stale, onClose }: SourceDet
               </Detail>
             ) : null}
           </dl>
-          {/* Keyed by source, so another source starts at its first page. */}
           {website ? <WebsitePages key={source.id} website={source} /> : <Chunks key={source.id} source={source} />}
         </div>
       ) : null}

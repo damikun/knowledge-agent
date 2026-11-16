@@ -7,16 +7,13 @@ import type { FolderNode } from './folders';
 export interface FolderPickerProps {
   legend: string;
   nodes: readonly FolderNode[];
-  // Null picks the root option, undefined picks nothing yet.
   value: Guid | null | undefined;
   onChange: (folderId: Guid | null) => void;
   rootLabel: string;
   rootKind?: 'top-level' | 'unfiled';
-  // A returned reason disables the option and is shown next to it.
   blocker?: (node: FolderNode | null) => string | null;
 }
 
-// Radio buttons, so the browser provides arrow-key navigation and screen readers announce the group.
 export function FolderPicker({ legend, nodes, value, onChange, rootLabel, rootKind = 'top-level', blocker }: FolderPickerProps) {
   const name = useId();
   const options: Array<{ id: Guid | null; label: string; depth: number; icon: LucideIcon; reason: string | null }> = [

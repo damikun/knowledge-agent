@@ -13,7 +13,6 @@ import { SOURCE_TYPES } from './sourceTypes';
 import type { SourceDto } from './types';
 import { scrollBehavior } from '../../lib/motion';
 
-// The chunk count gives way first when the list is narrow; size, pages, tokens and the model are in the details.
 const CHUNKS_COLUMN = 'hidden @min-[36rem]:table-cell';
 
 function SourceTypeIcon({ type }: { type: string }) {
@@ -90,7 +89,6 @@ function SelectPage({ sources, selectedIds, onSelectPage }: Pick<SourcesTablePro
   const some = selected > 0 && !all;
   return (
     <input
-      // Mixed has no attribute; the DOM property is set on every render that changes it.
       ref={(input) => {
         if (input) {
           input.indeterminate = some;
@@ -135,7 +133,6 @@ export function SourcesTable({
     <div
       ref={tableRef}
       tabIndex={-1}
-      // Fills the space it is given and scrolls inside it, so the header row stays in view over a long page.
       className="@container flex min-h-0 flex-1 flex-col"
       onKeyDown={(event) => {
         if (event.key === 'Escape' && selectedIds.size > 0) {
@@ -170,7 +167,6 @@ export function SourcesTable({
               <TableRow
                 key={source.id}
                 ref={highlighted ? highlightRef : undefined}
-                // A source linked from a citation gets the selected look without joining the selection.
                 selected={selected || highlighted}
                 data-selected={selected || undefined}
                 data-highlighted={highlighted || undefined}
@@ -180,13 +176,11 @@ export function SourcesTable({
                   startDrag(event, payload, label);
                 }}
                 onDragEnd={endDrag}
-                // Shift-click selects rows, not text.
                 onMouseDown={(event) => event.shiftKey && event.preventDefault()}
                 onClick={(event) => {
                   if ((event.target as HTMLElement).closest('a, button, input, select, textarea, label')) {
                     return;
                   }
-                  // Focus follows the click as in a file manager, so Escape also clears a selection made with the mouse.
                   tableRef.current?.focus({ preventScroll: true });
                   onSelect(source, event.shiftKey ? 'range' : event.metaKey || event.ctrlKey ? 'toggle' : 'only');
                 }}
@@ -202,7 +196,6 @@ export function SourcesTable({
                     className="block size-4"
                   />
                 </TableCell>
-                {/* Full width with max-width 0 makes the title take the space left over and truncate instead of widening the table. */}
                 <TableRowHeader className="w-full max-w-0">
                   <div className="flex min-w-0 items-center gap-3">
                     <SourceTypeIcon type={source.type} />
@@ -263,7 +256,6 @@ export function SourcesTable({
                   {formatRelativeTime(source.createdAt)}
                 </TableCell>
                 <TableCell className="py-1">
-                  {/* Shown on hover or focus, while its menu is open, and always where nothing can hover. */}
                   <div
                     className={clsx(
                       'flex justify-end gap-0.5',

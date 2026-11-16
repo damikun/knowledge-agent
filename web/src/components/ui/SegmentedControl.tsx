@@ -14,12 +14,10 @@ export interface SegmentedControlProps<T extends string> {
   value: T;
   onChange: (value: T) => void;
   disabled?: boolean;
-  /** Shows only the icons, with the labels for screen readers and as tooltips. */
   iconOnly?: boolean;
   className?: string;
 }
 
-/** Native radios, so arrow keys work. Use Tabs when each option shows its own panel. */
 export function SegmentedControl<T extends string>({
   label,
   options,

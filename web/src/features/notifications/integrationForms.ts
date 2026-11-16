@@ -48,7 +48,6 @@ export interface EmailFormValues {
   processedFolder: string;
   staffAddresses: string;
   staffDomains: string;
-  /** Not editable; sent back unchanged so an existing value stays as the fallback. */
   portalUrl: string;
 }
 
@@ -110,7 +109,6 @@ export function toEmailRequest(values: EmailFormValues): { request: SaveEmailSet
   if (imapPort === null) {
     errors.imapPort = 'Enter a port from 1 to 65535.';
   }
-  // The API needs both to send email; checked here so the message sits next to the empty field.
   if (values.enabled && !values.smtpHost.trim()) {
     errors.smtpHost = 'Enter the SMTP server to send email.';
   }

@@ -1,8 +1,9 @@
+import { createStore } from 'zustand/vanilla';
 import type { PreviewScene } from '../../shared/preview';
-import { initialChatState, type ChatSession, type ChatState, type FormResult, type SendResult } from '../controller';
+import { INITIAL_CHAT, type Chat, type ChatActions, type ChatState, type ChatStore } from '../chatState';
+import type { ReadonlyStore } from '../store';
 import type { VisitorMessage, WidgetConfig } from '../types';
-
-// Sample conversations for the editor preview. Every text the widget shows still comes from the edited config.
+import { STARTING, type VisitorState } from '../visitor';
 
 export type ChatScene = Exclude<PreviewScene, 'launcher'>;
 
@@ -39,7 +40,7 @@ const JOINED = message(3, 'system', `${STAFF_NAME} joined the conversation.`);
 const STAFF_REPLY = message(4, 'staff', 'Hi, I am Dana from the team. I can help with your return.', { authorName: STAFF_NAME });
 
 export function sceneState(scene: ChatScene): ChatState {
-  const base: ChatState = { ...initialChatState(), phase: 'ready', visitor: SAMPLE_VISITOR };
+  const base: ChatState = { ...INITIAL_CHAT, phase: 'ready' };
   const conversation = { conversationId: 'sample', messages: [QUESTION, ANSWER] };
   switch (scene) {
     case 'start':
@@ -56,7 +57,6 @@ export function sceneState(scene: ChatScene): ChatState {
           answer: {
             text: 'Yes. Unused items can go back within 30 days [S1]. Start the return from your',
             status: null,
-            step: null,
             citations: ANSWER.citations,
             activity: null,
             error: null,
@@ -65,7 +65,7 @@ export function sceneState(scene: ChatScene): ChatState {
         },
       };
     case 'contact':
-      return { ...base, visitor: { name: null, email: null } };
+      return base;
     case 'conversation':
       return { ...base, ...conversation };
     case 'waiting':
@@ -77,68 +77,32 @@ export function sceneState(scene: ChatScene): ChatState {
   }
 }
 
-// The contact form scene shows the form whatever the widget's setting, so its texts can be edited.
+export function sceneVisitor(scene: ChatScene): ReadonlyStore<VisitorState> {
+  const contact = scene === 'contact' ? { name: null, email: null } : SAMPLE_VISITOR;
+  const state: VisitorState = { ...STARTING, phase: 'ready', visitorId: 'sample', ...contact };
+  return createStore<VisitorState>()(() => state);
+}
+
 export function sceneConfig(config: WidgetConfig, scene: ChatScene): WidgetConfig {
   return scene === 'contact' ? { ...config, contactCapture: 'before_chat' } : config;
 }
 
-const FAILED: FormResult = { ok: false, errors: {} };
-const NOT_SENT: SendResult = { status: 'failed' };
+const IDLE: ChatActions = {
+  retry: async () => undefined,
+  reconnect: () => undefined,
+  send: async () => ({ status: 'failed' }),
+  newChat: async () => undefined,
+  loadConversations: () => undefined,
+  showConversation: async () => undefined,
+  endChat: async () => false,
+  saveContact: async () => ({ ok: false, errors: {} }),
+  requestHandover: async () => ({ ok: false, errors: {} }),
+  cancelHandover: async () => false,
+  rateAnswer: async () => false,
+  rateConversation: async () => false,
+  dismissNotice: () => undefined,
+};
 
-// A chat that stays in one scene: what the visitor would do is not sent anywhere.
-export class SceneSession implements ChatSession {
-  constructor(private readonly state: ChatState) {}
-
-  get isAnswering(): boolean {
-    const { pending } = this.state;
-    return pending !== null && !pending.answer?.done;
-  }
-
-  readonly getState = (): ChatState => this.state;
-
-  readonly subscribe = (): (() => void) => () => undefined;
-
-  onActivity(): () => void {
-    return () => undefined;
-  }
-
-  start(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  reconnect(): void {}
-
-  send(): Promise<SendResult> {
-    return Promise.resolve(NOT_SENT);
-  }
-
-  newChat(): Promise<void> {
-    return Promise.resolve();
-  }
-
-  endChat(): Promise<boolean> {
-    return Promise.resolve(false);
-  }
-
-  saveContact(): Promise<FormResult> {
-    return Promise.resolve(FAILED);
-  }
-
-  requestHandover(): Promise<FormResult> {
-    return Promise.resolve(FAILED);
-  }
-
-  cancelHandover(): Promise<boolean> {
-    return Promise.resolve(false);
-  }
-
-  rateAnswer(): Promise<boolean> {
-    return Promise.resolve(false);
-  }
-
-  rateConversation(): Promise<boolean> {
-    return Promise.resolve(false);
-  }
-
-  dismissNotice(): void {}
+export function sceneChat(state: ChatState): ChatStore {
+  return createStore<Chat>()(() => ({ ...state, ...IDLE }));
 }

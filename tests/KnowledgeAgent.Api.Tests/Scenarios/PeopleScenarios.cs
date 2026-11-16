@@ -68,7 +68,6 @@ public abstract class PeopleScenarios(AppFixture fixture)
         other.ConversationId.ShouldBeNull();
         (await GetAsVisitorAsync(app, $"/api/public/widgets/{widget.PublicKey}/conversations/{chat}", other.Token)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
 
-        // A page without the user on a widget that verifies users is a signed-out page: a new anonymous visitor.
         var signedOut = await StartSessionAsync(app, widget.PublicKey, signedIn.Token);
         signedOut.Identified.ShouldBeFalse();
         signedOut.VisitorId.ShouldNotBe(signedIn.VisitorId);
@@ -82,7 +81,6 @@ public abstract class PeopleScenarios(AppFixture fixture)
         var widget = await CreateWidgetAsync(app);
         var userId = ApiClient.UniqueWord("user-");
 
-        // No secret yet: identify is ignored, whatever the hash.
         var withoutSecret = await StartSessionAsync(app, widget.PublicKey, user: new VisitorUserRequest(userId, Hash("guess", userId)));
         withoutSecret.Identified.ShouldBeFalse();
 

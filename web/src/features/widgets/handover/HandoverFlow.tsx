@@ -4,7 +4,6 @@ import type { HandoverFlowProps } from './HandoverFlowView';
 
 export type { HandoverFlowProps } from './HandoverFlowView';
 
-// Lazy, so React Flow gets a chunk of its own.
 const HandoverFlowView = lazy(() => import('./HandoverFlowView'));
 
 export function HandoverFlow(props: HandoverFlowProps) {

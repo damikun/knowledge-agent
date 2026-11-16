@@ -45,9 +45,7 @@ describe('ReturnLink', () => {
   });
 
   it('steps back through the history to the origin, so the history does not grow', async () => {
-    // React Router keeps the entry's index in history.state.idx; here the third entry is open.
     window.history.replaceState({ idx: 2 }, '');
-    // The link's address differs from the entry only so the test can tell a step back from a new entry.
     renderAt(['/contacts/1', '/inbox?c=1', '/inbox?c=2'], <ReturnLink returnTo={{ label: 'Ada Lovelace', to: '/contacts/1?new-entry', idx: 0 }} />);
     await userEvent.click(screen.getByRole('link', { name: 'Back to Ada Lovelace' }));
     expect(screen.getByTestId('address')).toHaveTextContent(/^\/contacts\/1$/);

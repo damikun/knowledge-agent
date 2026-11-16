@@ -1,6 +1,5 @@
 import { useEffect, useEffectEvent } from 'react';
 
-// Listens to the frame's window while mounted; the listener always sees the latest props and state.
 export function useWindowEvent<K extends keyof WindowEventMap>(type: K, listener: (event: WindowEventMap[K]) => void): void {
   const onEvent = useEffectEvent(listener);
   useEffect(() => {

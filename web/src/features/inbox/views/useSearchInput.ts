@@ -1,7 +1,6 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { useDebouncedValue } from '../../../lib/hooks/useDebouncedValue';
 
-/** Applies typed words once typing pauses, and follows the applied query when it changes from outside (cleared filters, back navigation). */
 export function useSearchInput(applied: string, onApply: (query: string) => void, delayMs = 300) {
   const [input, setInput] = useState(applied);
   const [seen, setSeen] = useState(applied);

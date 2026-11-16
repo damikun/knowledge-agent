@@ -46,7 +46,6 @@ describe('SseParser', () => {
 
   it('produces identical events however the stream is split into chunks', () => {
     const expected = parseAll([STREAM]);
-    // One character at a time (splits inside field names, values and line breaks).
     expect(parseAll(STREAM.split(''))).toEqual(expected);
     for (let i = 1; i < STREAM.length; i++) {
       expect(parseAll([STREAM.slice(0, i), STREAM.slice(i)])).toEqual(expected);
@@ -103,7 +102,6 @@ describe('readSseStream', () => {
     const body = new ReadableStream<Uint8Array>({
       start(stream) {
         stream.enqueue(encoder.encode('event: text-delta\ndata: {"text":"a"}\n\n'));
-        // Never closes: only the abort can end it.
       },
     });
     const received: SseMessage[] = [];

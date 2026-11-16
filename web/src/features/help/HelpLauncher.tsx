@@ -8,7 +8,6 @@ import { isAdmin, useMe } from '../auth/api';
 import { useHelpStatus } from './api';
 import { HelpPanel } from './HelpPanel';
 
-/** Typing "?" in a field is text, not the shortcut. */
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -28,7 +27,6 @@ export function HelpLauncher() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const enabled = status.data?.enabled === true;
 
-  // Refetch on open; setup may have changed since the last look.
   const show = () => {
     if (!open) {
       setOpen(true);
@@ -50,7 +48,6 @@ export function HelpLauncher() {
     return null;
   }
 
-  // On phones the sheet covers the page, so following a link closes it.
   const onNavigate = () => {
     if (typeof window.matchMedia === 'function' && !window.matchMedia('(min-width: 640px)').matches) {
       setOpen(false);

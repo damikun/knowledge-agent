@@ -25,11 +25,9 @@ export function ChoiceCardGroup({ label, errorId, children }: ChoiceCardGroupPro
 export interface ChoiceCardProps {
   name: string;
   checked: boolean;
-  /** Without it the card is the only, fixed choice. */
   onChoose?: () => void;
   icon: LucideIcon;
   title: ReactNode;
-  /** Names the radio by the title, for cards whose description would otherwise read as the name. */
   titleId?: string;
   description?: ReactNode;
   descriptionId: string;

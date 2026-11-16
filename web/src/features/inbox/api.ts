@@ -1,5 +1,6 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient, type InfiniteData } from '@tanstack/react-query';
-import { ApiError, asArray, isRecord, request } from '../../lib/api';
+import { ApiError, asArray, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { Guid } from '../../lib/types';
 import { conversationKeys } from '../chat/api';
 import { mergeMessages } from '../chat/timeline';
@@ -26,12 +27,10 @@ import type {
   StaffMember,
 } from './types';
 
-// Under the chat's ['conversations'] key, so the live conversation view refreshes these too.
 export const inboxKeys = {
   all: ['conversations', 'inbox'] as const,
   list: (filters: InboxFilters) => ['conversations', 'inbox', 'list', filters] as const,
   waiting: ['conversations', 'inbox', 'waiting'] as const,
-  /** Every page of every search, for patching rows in all of them. */
   searches: ['conversations', 'inbox', 'search'] as const,
   search: (state: InboxState) => ['conversations', 'inbox', 'search', listKey(state)] as const,
   allCounts: ['conversations', 'inbox', 'counts'] as const,
@@ -43,7 +42,6 @@ export const inboxKeys = {
 };
 
 const INBOX_PAGE_SIZE = 100;
-/** The next page loads on scroll. */
 const VIEW_PAGE_SIZE = 50;
 const INBOX_REFRESH_MS = 10_000;
 const WAITING_REFRESH_MS = 30_000;
@@ -52,11 +50,9 @@ const STATUSES: readonly ConversationStatus[] = ['ai', 'handover_pending', 'huma
 const HANDOVER_STATUSES: readonly HandoverStatus[] = ['pending', 'active', 'resolved', 'cancelled', 'expired'];
 const HANDOVER_SOURCES: readonly HandoverSource[] = ['agent', 'visitor', 'staff'];
 
-/** Counts follow the channel and widget filters so they match the lists. */
 export interface CountFilters {
   channel: InboxState['channel'];
   widgetId: string;
-  /** Empty for anyone. */
   contactId?: string;
 }
 
@@ -95,7 +91,6 @@ function toInboxConversation(value: unknown): InboxConversationDto {
   };
 }
 
-/** Accepts both the paged response and the older plain array. */
 export function conversationItems(value: unknown): unknown[] {
   return Array.isArray(value) ? value : isRecord(value) ? asArray<unknown>(value.items) : [];
 }
@@ -206,42 +201,35 @@ function toCounts(value: unknown): InboxCounts {
   };
 }
 
-const conversationPath = (id: Guid) => `/api/conversations/${encodeURIComponent(id)}`;
-
 export const inboxApi = {
   listConversations: async (filters: InboxFilters, signal?: AbortSignal) =>
     conversationItems(
-      await request<unknown>('/api/conversations', {
+      await call(endpoints.conversations.list, {
         query: { channel: 'widget', status: filters.status, widgetId: filters.widgetId, limit: INBOX_PAGE_SIZE },
         signal,
       }),
     ).map(toInboxConversation),
-  /** Null on 204, when nobody asked for a person yet. */
-  getHandover: async (id: Guid, signal?: AbortSignal) => toHandover(await request<unknown>(`${conversationPath(id)}/handover`, { signal })),
-  join: async (id: Guid) => toHandover(await request<unknown>(`${conversationPath(id)}/join`, { method: 'POST' })),
-  /** Joins the conversation first when nobody has. */
-  reply: (id: Guid, message: string) => request<ConversationMessageDto>(`${conversationPath(id)}/messages`, { method: 'POST', body: { text: message } }),
-  returnToAgent: (id: Guid) => request<void>(`${conversationPath(id)}/return`, { method: 'POST' }),
-  close: (id: Guid) => request<void>(`${conversationPath(id)}/close`, { method: 'POST' }),
-  /** userId null unassigns. */
+  getHandover: async (id: Guid, signal?: AbortSignal) => toHandover(await call(endpoints.conversations.handover, { params: { id }, signal })),
+  join: async (id: Guid) => toHandover(await call(endpoints.conversations.join, { params: { id } })),
+  reply: (id: Guid, message: string): Promise<ConversationMessageDto> => call(endpoints.conversations.reply, { params: { id }, body: { text: message } }),
+  returnToAgent: (id: Guid): Promise<void> => call(endpoints.conversations.returnToAgent, { params: { id } }),
+  close: (id: Guid): Promise<void> => call(endpoints.conversations.close, { params: { id } }),
   assign: async (id: Guid, userId: string | null) => {
-    const dto = await request<unknown>(`${conversationPath(id)}/assign`, { method: 'POST', body: { userId } });
+    const dto = await call(endpoints.conversations.assign, { params: { id }, body: { userId } });
     return toAssignee(isRecord(dto) ? dto.assignee : null);
   },
-  /** Marks everything read without a sequence; the read position only moves forward. */
   markRead: (id: Guid, sequence?: number) =>
-    request<unknown>(`${conversationPath(id)}/read`, { method: 'POST', body: sequence === undefined ? {} : { sequence } }),
-  markUnread: (id: Guid) => request<unknown>(`${conversationPath(id)}/read`, { method: 'DELETE' }),
+    call(endpoints.conversations.markRead, { params: { id }, body: sequence === undefined ? {} : { sequence } }),
+  markUnread: (id: Guid) => call(endpoints.conversations.markUnread, { params: { id } }),
   staff: async (signal?: AbortSignal): Promise<StaffMember[]> =>
-    asArray<unknown>(await request<unknown>('/api/staff', { signal })).flatMap((item) =>
+    asArray<unknown>(await call(endpoints.team.staff, { signal })).flatMap((item) =>
       isRecord(item) && typeof item.id === 'string' && typeof item.name === 'string'
         ? [{ id: item.id, name: item.name, email: text(item.email), role: typeof item.role === 'string' ? item.role : 'support' }]
         : [],
     ),
-  /** Empty when the API has no segments endpoint (404). */
   segments: async (signal?: AbortSignal): Promise<Segment[]> => {
     try {
-      const dto = await request<unknown>('/api/segments', { signal });
+      const dto = await call(endpoints.segments.list, { signal });
       return (Array.isArray(dto) ? dto : isRecord(dto) ? asArray<unknown>(dto.items) : []).flatMap((item) =>
         isRecord(item) && typeof item.id === 'string' && typeof item.name === 'string' && item.name ? [{ id: item.id.toLowerCase(), name: item.name }] : [],
       );
@@ -252,22 +240,21 @@ export const inboxApi = {
       throw error;
     }
   },
-  /** Pins are shared by everyone. */
-  setPinned: (id: Guid, pinned: boolean) => request<unknown>(conversationPath(id), { method: 'PATCH', body: { pinned } }),
+  setPinned: (id: Guid, pinned: boolean) => call(endpoints.conversations.update, { params: { id }, body: { pinned } }),
   search: async (state: InboxState, cursor: string | null, signal?: AbortSignal): Promise<ConversationSearchPage> => {
-    const dto = await request<unknown>('/api/conversations/search', { query: toSearchQuery(state, cursor, VIEW_PAGE_SIZE), signal });
+    const dto = await call(endpoints.conversations.search, { query: toSearchQuery(state, cursor, VIEW_PAGE_SIZE), signal });
     const page = isRecord(dto) ? dto : {};
     return { items: asArray<unknown>(page.items).map(toSearchItem), nextCursor: text(page.nextCursor) };
   },
   counts: async (filters: CountFilters, signal?: AbortSignal) =>
     toCounts(
-      await request<unknown>('/api/conversations/counts', {
+      await call(endpoints.conversations.counts, {
         query: { channel: filters.channel || undefined, widgetId: filters.widgetId || undefined, contactId: filters.contactId || undefined },
         signal,
       }),
     ),
   history: async (id: Guid, signal?: AbortSignal): Promise<ConversationHistory> => {
-    const dto = await request<unknown>(`${conversationPath(id)}/history`, { signal });
+    const dto = await call(endpoints.conversations.history, { params: { id }, signal });
     const history = isRecord(dto) ? dto : {};
     return {
       feedback: asArray<unknown>(history.feedback).map(toFeedback),
@@ -277,21 +264,18 @@ export const inboxApi = {
   },
 };
 
-/** Keyset-paged. */
 export function useInboxSearch(state: InboxState) {
   return useInfiniteQuery({
     queryKey: inboxKeys.search(state),
     queryFn: ({ signal, pageParam }) => inboxApi.search(state, pageParam, signal),
     initialPageParam: null as string | null,
     getNextPageParam: (last) => last.nextCursor,
-    // Keep old rows while a new search loads, so the list doesn't flash empty on each keystroke.
     placeholderData: keepPreviousData,
     refetchInterval: INBOX_REFRESH_MS,
     refetchOnWindowFocus: true,
   });
 }
 
-/** Undefined while loading or when the API has no counts. */
 export function useInboxCounts(filters: CountFilters) {
   return useQuery({
     queryKey: inboxKeys.counts(filters),
@@ -336,7 +320,6 @@ export function useHandover(id: Guid) {
   return useQuery({ queryKey: inboxKeys.handover(id), queryFn: ({ signal }) => inboxApi.getHandover(id, signal) });
 }
 
-/** Optimistic in every list and the open conversation; rolled back if the server refuses. */
 export function usePinConversation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -371,7 +354,6 @@ export function usePinConversation() {
   });
 }
 
-/** Empty, which hides the filter, while the API has no segments. */
 export function useSegments() {
   return useQuery({ queryKey: inboxKeys.segments, queryFn: ({ signal }) => inboxApi.segments(signal), staleTime: 60_000, retry: false });
 }
@@ -386,7 +368,6 @@ function patchRows(queryClient: ReturnType<typeof useQueryClient>, id: Guid, pat
   );
 }
 
-// Patch rows and the open conversation at once; the server response then refreshes counts and lists.
 function patchConversation(
   queryClient: ReturnType<typeof useQueryClient>,
   id: Guid,
@@ -429,7 +410,6 @@ export function useReadState() {
   });
 }
 
-/** The row loses its bold at once; counts follow from the server. */
 export function useMarkReadUpTo(id: Guid) {
   const queryClient = useQueryClient();
   return useMutation({
@@ -439,7 +419,6 @@ export function useMarkReadUpTo(id: Guid) {
   });
 }
 
-// The detail key prefixes the handover and history keys, so those refresh with it.
 function useRefreshConversation(id: Guid) {
   const queryClient = useQueryClient();
   return () => {

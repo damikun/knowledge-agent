@@ -30,7 +30,6 @@ export function NotFoundPage() {
   );
 }
 
-/** When a page's chunk fails to load (after a deploy or a dev server restart), reload once the server answers. */
 export function RouteErrorPage() {
   const error = useRouteError();
   const moduleError = isModuleLoadError(error);

@@ -13,11 +13,9 @@ export interface WidgetCardProps {
   status: ReactNode;
   actions?: ReactNode;
   meta: readonly EntityMeta[];
-  /** Fires on pointer or focus, before the card is opened; used for prefetching. */
   onIntent?: () => void;
 }
 
-/** Like EntityCard: a stretched title link with the actions raised above it, so no button sits inside a link. */
 export function WidgetCard({ widget, to, description, warning, status, actions, meta, onIntent }: WidgetCardProps) {
   const titleId = useId();
   return (

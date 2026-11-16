@@ -91,7 +91,6 @@ internal sealed partial class CloseIdleConversationsJob(
     public const string Kind = "conversations.close-idle";
     public const int BatchSize = 100;
 
-    // A visitor who wrote last is waiting for the team, so only staff replies and notices let it close.
     private static readonly MessageAuthor[] VisitorNotWaiting = [MessageAuthor.Staff, MessageAuthor.System];
 
     public async Task HandleAsync(JobContext context, CancellationToken cancellationToken)
@@ -128,7 +127,6 @@ internal sealed partial class CloseIdleConversationsJob(
             var closedInBatch = 0;
             foreach (var conversationId in batch)
             {
-                // An answer being written on this instance is activity that is not stored yet.
                 if (!turns.IsActive(conversationId) && await handover.CloseIdleAsync(conversationId, status, idleSince, cancellationToken))
                 {
                     closedInBatch++;
@@ -137,7 +135,6 @@ internal sealed partial class CloseIdleConversationsJob(
 
             closed += closedInBatch;
 
-            // A batch that closed nothing would come back the same.
             if (batch.Count < BatchSize || closedInBatch == 0)
             {
                 return closed;

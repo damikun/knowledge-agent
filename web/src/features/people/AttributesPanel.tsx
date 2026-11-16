@@ -20,7 +20,6 @@ const TRUST_OPTIONS: readonly { value: AttributeTrust; label: string }[] = [
   { value: 'server', label: 'Server only' },
 ];
 
-// Saves on blur or Enter; Escape restores the saved value.
 function LabelInput({ attribute, disabled }: { attribute: ContactAttribute; disabled: boolean }) {
   const update = useUpdateAttribute();
   const [label, setLabel] = useState(attribute.label);

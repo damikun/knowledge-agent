@@ -8,7 +8,6 @@ export interface ConfirmationBarProps {
   disabled?: boolean;
 }
 
-/** They run only after Confirm, exactly as asked; sending a message instead drops them. */
 export function ConfirmationBar({ calls, onAnswer, disabled = false }: ConfirmationBarProps) {
   if (calls.length === 0) {
     return null;

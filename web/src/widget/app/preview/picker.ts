@@ -1,4 +1,4 @@
-import { EDIT_ATTRIBUTE, isEditTarget, type EditTarget, type PreviewMessage, type PreviewRect, type PreviewScene } from '../../shared/preview';
+import { EDIT_ATTRIBUTE, isEditTarget, type CornerRadii, type EditTarget, type PreviewBox, type PreviewMessage, type PreviewRect, type PreviewScene } from '../../shared/preview';
 
 type Root = Document | ShadowRoot;
 
@@ -7,13 +7,54 @@ interface Found {
   element: Element;
 }
 
+const CORNER_TOLERANCE = 1.5;
+
+function boxOf(element: Element): PreviewBox {
+  const { x, y, width, height } = element.getBoundingClientRect();
+  return { x, y, width, height };
+}
+
+function radiiOf(element: Element, box: PreviewBox): CornerRadii {
+  const style = getComputedStyle(element);
+  const most = Math.min(box.width, box.height) / 2;
+  const read = (value: string) => Math.min(Number.parseFloat(value) || 0, most);
+  return [read(style.borderTopLeftRadius), read(style.borderTopRightRadius), read(style.borderBottomRightRadius), read(style.borderBottomLeftRadius)];
+}
+
+function near(a: number, b: number): boolean {
+  return Math.abs(a - b) <= CORNER_TOLERANCE;
+}
+
+function panelOf(element: Element): Element | null {
+  const root = element.getRootNode();
+  const host = root instanceof ShadowRoot ? root.host : element.closest('knowledge-agent-widget');
+  const surface = (host?.shadowRoot ?? null)?.querySelector('.ka-surface') ?? null;
+  return surface && surface !== element && (surface.contains(element) || host?.contains(element)) ? surface : null;
+}
+
 function rectOf(element: Element): PreviewRect | null {
-  // Nothing to point at with display: none, such as the launcher behind the open panel on a phone.
   if (element.getClientRects().length === 0) {
     return null;
   }
-  const { x, y, width, height } = element.getBoundingClientRect();
-  return { x, y, width, height };
+  const box = boxOf(element);
+  const own = radiiOf(element, box);
+  const surface = panelOf(element);
+  if (!surface) {
+    return { ...box, radii: own };
+  }
+  const panel = boxOf(surface);
+  const panelRadii = radiiOf(surface, panel);
+  const left = near(box.x, panel.x);
+  const right = near(box.x + box.width, panel.x + panel.width);
+  const top = near(box.y, panel.y);
+  const bottom = near(box.y + box.height, panel.y + panel.height);
+  const radii: CornerRadii = [
+    top && left ? Math.max(own[0], panelRadii[0]) : own[0],
+    top && right ? Math.max(own[1], panelRadii[1]) : own[1],
+    bottom && right ? Math.max(own[2], panelRadii[2]) : own[2],
+    bottom && left ? Math.max(own[3], panelRadii[3]) : own[3],
+  ];
+  return { ...box, radii, panel };
 }
 
 function sameRect(a: PreviewRect | null, b: PreviewRect | null): boolean {
@@ -35,11 +76,8 @@ function targetIn(event: Event): Found | null {
   return null;
 }
 
-// Reports the editable element under the pointer and the clicked one, and keeps tracking the selected element.
-// The roots are the page and the launcher's shadow root, which queries on the page don't reach.
 export class PreviewPicker {
   private scene: PreviewScene | null = null;
-  // What the editor wants measured: the target, else the first of its fallbacks that shows.
   private tracked: { target: EditTarget; fallbacks: readonly EditTarget[] } | null = null;
   private anchor: Found | null = null;
   private anchorRect: PreviewRect | null = null;
@@ -58,7 +96,6 @@ export class PreviewPicker {
     this.mutations = typeof MutationObserver === 'function' ? new MutationObserver(refresh) : null;
     for (const root of roots) {
       this.mutations?.observe(root, { subtree: true, childList: true, characterData: true, attributes: true });
-      // The launcher's panel moves what is inside it while it opens; its transitions do not leave the shadow root.
       this.listen(root, 'transitionend', refresh);
     }
     const page = roots[0];
@@ -70,7 +107,6 @@ export class PreviewPicker {
       this.listen(page, 'keydown', this.onKeyDown, true);
       this.listen(page, 'scroll', refresh, true);
     }
-    // A phone-sized preview hides the launcher behind the open panel, for one.
     this.listen(window, 'resize', () => {
       if (this.scene) {
         this.rendered(this.scene);
@@ -86,7 +122,6 @@ export class PreviewPicker {
     }
   }
 
-  // After a render the editor asked for: which marked elements show, and where the tracked and hovered ones are now.
   rendered(scene: PreviewScene): void {
     this.scene = scene;
     this.post({ type: 'rendered', scene, targets: this.visibleTargets() });
@@ -135,7 +170,6 @@ export class PreviewPicker {
     }
   }
 
-  // The target before its fallbacks, as soon as it shows again, and the same element while it shows.
   private locate(): Found | null {
     if (!this.tracked) {
       return null;
@@ -149,7 +183,6 @@ export class PreviewPicker {
     return null;
   }
 
-  // The same element while it shows, else the first one that shows with the same mark: React may have replaced it.
   private resolve(target: EditTarget, element: Element | null): Element | null {
     if (element?.isConnected && element.getAttribute(EDIT_ATTRIBUTE) === target && rectOf(element)) {
       return element;
@@ -214,13 +247,11 @@ export class PreviewPicker {
   };
 
   private readonly onPointerOut = (event: PointerEvent) => {
-    // Without a related target the pointer left the preview.
     if (event.relatedTarget === null) {
       this.setHovered(null);
     }
   };
 
-  // Clicking an editable element selects it; it must not also focus a field or start a text selection.
   private readonly onMouseDown = (event: MouseEvent) => {
     if (targetIn(event)) {
       event.preventDefault();
@@ -230,11 +261,9 @@ export class PreviewPicker {
   private readonly onClick = (event: MouseEvent) => {
     const found = targetIn(event);
     if (found) {
-      // The widget's own behavior, such as sending a suggested question, does not run in the editor.
       event.preventDefault();
       event.stopPropagation();
     }
-    // Tracked from now on; the editor sends the fallbacks with its next track.
     this.tracked = found ? { target: found.target, fallbacks: [] } : null;
     this.anchor = found;
     this.anchorRect = found ? rectOf(found.element) : null;

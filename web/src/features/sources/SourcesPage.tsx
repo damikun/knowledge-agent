@@ -65,9 +65,7 @@ export function SourcesPage() {
   const queryClient = useQueryClient();
   const profiles = useProfiles();
   const [searchParams, setSearchParams] = useSearchParams();
-  // Linked from a citation ("Show in Sources"): the library shows just that source.
   const linkedId = searchParams.get('source')?.trim() || null;
-  // Opened from a citation, the way back to the answer survives "Show all".
   const kept = useKeptReturnState();
   const view = parseFolderView(searchParams.get('folder'));
 
@@ -85,8 +83,6 @@ export function SourcesPage() {
   const filters = { query: search.query, type, status, site };
   const filtered = hasActiveFilters(filters);
 
-  // An offset belongs to the filters it was chosen for, so changing any filter starts at the first page, also when the
-  // filters return to earlier values. The stored offset is reset during render.
   const filtersKey = JSON.stringify([search.query, type, status, site, linkedId, view, pageSize]);
   const [paging, setPaging] = useState({ filtersKey, offset: 0 });
   if (paging.filtersKey !== filtersKey) {
@@ -100,15 +96,12 @@ export function SourcesPage() {
   const params: SourceListParams = linkedId
     ? { ids: [linkedId], limit: pageSize }
     : { ...toListParams(filters, offset, pageSize), folder: view === 'all' ? null : view };
-  // The page also polls while one of its own sources is ingesting: the stats may already be idle when the page was read
-  // just before ingestion finished.
   const page = useSourcesPage(params, { refetchInterval: (data) => (polling || anyIngesting(data?.items) ? SOURCE_POLL_INTERVAL_MS : false) });
   const sites = useSourceSites(params, !linkedId);
   const pageData = page.data;
   const items = useMemo(() => pageData?.items ?? [], [pageData]);
   const total = pageData?.total ?? 0;
 
-  // A selection belongs to the page it was made on, like the offset belongs to its filters.
   const pageKey = `${filtersKey}:${offset}`;
   const [selectionState, setSelectionState] = useState<{ pageKey: string; selection: Selection }>({ pageKey, selection: EMPTY_SELECTION });
   const selection = selectionState.pageKey === pageKey ? selectionState.selection : EMPTY_SELECTION;
@@ -140,8 +133,6 @@ export function SourcesPage() {
   const stale = staleEmbeddings(stats.data?.readyByEmbeddingModel, embeddingProfile);
   const staleIds = useMemo(() => new Set(staleEmbeddingSources(items, embeddingProfile).map((s) => s.id)), [items, embeddingProfile]);
 
-  // A page past the end (its last items were deleted or finished elsewhere) moves to the last page, during render like
-  // the reset of the offset above.
   const settledPage = page.isPlaceholderData ? undefined : pageData;
   if (settledPage && settledPage.items.length === 0 && settledPage.total > 0 && offset > 0) {
     const last = lastPageOffset(settledPage.total, pageSize);
@@ -150,7 +141,6 @@ export function SourcesPage() {
     }
   }
 
-  // When ingestion finishes, refresh the page once more: its last poll may predate the final status.
   useOnChange(polling, (now) => {
     if (!now) {
       void queryClient.invalidateQueries({ queryKey: sourceKeys.pages });
@@ -216,7 +206,6 @@ export function SourcesPage() {
       if (source.id === linkedId) {
         showAll();
       } else if (offset > 0 && items.length === 1 && items[0]?.id === source.id) {
-        // Deleting the last item of a page shows the previous page instead of an empty one.
         goTo(offset - pageSize);
       } else {
         queryClient.setQueryData<SourcePageDto>(sourceKeys.page(params), (old) =>
@@ -250,7 +239,6 @@ export function SourcesPage() {
     onError: (error) => toast({ title: 'Could not move', description: errorMessage(error), tone: 'danger' }),
   });
 
-  // Drops that would change nothing, or nest a folder into itself or too deep, are refused while dragging.
   const folderDrop: FolderDrop = {
     canDrop: (payload, folderId) => {
       if (payload.kind === 'folder') {
@@ -268,7 +256,6 @@ export function SourcesPage() {
 
   const dragRows = (source: SourceDto): { payload: DragPayload; label: string } => {
     if (!visibleSelection.has(source.id)) {
-      // Like a file manager, dragging an unselected row selects it and drags only that row.
       setSelection(select(selection, pageIds, source.id, 'only'));
       return { payload: { kind: 'sources', ids: [source.id] }, label: source.title };
     }
@@ -342,7 +329,6 @@ export function SourcesPage() {
           onClearSelection={clearSelection}
           onDragRows={dragRows}
           onSite={setSite}
-          // Only the All sources view mixes sources from different folders.
           folderLabel={(source) => (view === 'all' && source.folderId ? folderLabel(source.folderId) || null : null)}
           onOpen={setDetails}
           onMove={(source) => setFolderDialog({ kind: 'move-sources', sources: { kind: 'sources', sources: [source] } })}
@@ -356,7 +342,6 @@ export function SourcesPage() {
     );
   }
 
-  // An empty library has nothing to filter, unless filters emptied it.
   const showFilters = !libraryEmpty || filtered;
   const statusOptions = statusFilterOptions(stats.data, view === 'all' && !search.query && type === 'all' && !site);
   const selectionText = selection.allMatching ? `All ${pluralize(total, 'source')} selected` : `${pluralize(selectedCount, 'source')} selected`;
@@ -376,12 +361,10 @@ export function SourcesPage() {
     <StatusFilters options={statusOptions} value={status} onChange={setStatus} onClear={filtered || search.input.trim() ? clearFilters : undefined} />
   );
   const filterSelects = <TypeAndSiteFilters type={type} onType={setType} site={site} onSite={setSite} sites={sites.data ?? []} />;
-  // The open source follows the polled page, so its status and counts stay current.
   const detailsSource = details ? (items.find((source) => source.id === details.id) ?? details) : null;
 
   return (
     <div className="relative h-full overflow-y-auto">
-      {/* Like <Page>: one scrolling column with the shared gutter; the table card is as tall as its rows. */}
       <div className="flex flex-col gap-5 px-4 py-6 lg:px-6">
         <PageHeader
           title="Sources"
@@ -397,7 +380,6 @@ export function SourcesPage() {
             </>
           }
         />
-        {/* For screen readers only, so it takes no row (and no gap) in the layout. */}
         {stats.data && stats.data.total > 0 ? (
           <div aria-live="polite" className="sr-only">
             <LibrarySummary stats={stats.data} />
@@ -409,14 +391,11 @@ export function SourcesPage() {
         ) : null}
 
         <div className="flex items-start gap-4">
-          {/* Beside the list, so sources can be dragged onto any folder; it hides to give the list the room. */}
-          {/* Not an aside: the tree is a "Folders" navigation landmark of its own. */}
           <div id="source-folders" className={clsx('sticky top-0 w-48 shrink-0', foldersHidden ? 'hidden' : 'hidden lg:block')}>
             <FolderTree {...treeProps} />
           </div>
 
           <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-card">
-            {/* A compact notice in the table instead of a page banner: what waits, and where to fix it. */}
             {stats.data && stats.data.waiting > 0 ? (
               <div
                 role="status"
@@ -448,7 +427,6 @@ export function SourcesPage() {
                     onShowFolders={() => setFoldersOpen(true)}
                     foldersHidden={foldersHidden}
                     onToggleFolders={toggleFolders}
-                    // The search shares the folder's row, so the chips, type and site fit one row beside the folders.
                     end={
                       showFilters ? (
                         <>
@@ -469,7 +447,6 @@ export function SourcesPage() {
                               value={search.input}
                               onChange={(event) => search.setInput(event.target.value)}
                               placeholder="Search title, URL or file"
-                              // 28 px like the folder buttons in this row.
                               className="field h-7 py-0 pl-8 text-small"
                             />
                           </form>

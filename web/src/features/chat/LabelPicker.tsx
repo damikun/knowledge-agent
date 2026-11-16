@@ -38,12 +38,10 @@ export interface LabelPickerProps {
   onChange: (labels: LabelDto[]) => void;
 }
 
-/** Each tick saves at once. */
 export function LabelPicker({ open, onClose, anchorRef, anchor, labels, value, onChange }: LabelPickerProps) {
   const [query, setQuery] = useState('');
   const searchRef = useRef<HTMLInputElement>(null);
   const searchId = useId();
-  // After the menu that opened the picker has handed focus back to its button.
   useEffect(() => {
     if (!open) {
       return undefined;

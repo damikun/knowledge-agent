@@ -10,16 +10,12 @@ import { sourcesPageLink } from '../chat/CitationChip';
 import { citedSources, isModelNotConfigured, useSuggestReply } from './suggestReplyApi';
 
 export interface SuggestReplyProps {
-  /** Defaults to the inbox route's conversation. */
   conversationId?: Guid;
-  /** Lets a replacing draft be undone. */
   currentText: string;
-  /** Never sends; only fills the reply box. */
   onDraft: (text: string) => void;
   disabled?: boolean;
 }
 
-/** Callers key this by conversation, since a draft belongs to one. */
 export function SuggestReply({ conversationId, currentText, onDraft, disabled = false }: SuggestReplyProps) {
   const { conversationId: routeId } = useParams();
   const id = conversationId ?? routeId ?? null;
@@ -29,7 +25,6 @@ export function SuggestReply({ conversationId, currentText, onDraft, disabled = 
   const [replaced, setReplaced] = useState<string | null>(null);
 
   const draft = suggest.data;
-  // Once the draft is sent or cleared, its sources no longer apply.
   const showSources = draft !== undefined && currentText.trim().length > 0;
   const sources = draft ? citedSources(draft.citations) : [];
 

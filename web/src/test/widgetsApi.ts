@@ -10,12 +10,10 @@ export const WIDGET_TEXT_KEYS = [
   'contactSubmit', 'sources', 'offline', 'rateLimited', 'dailyCap', 'error', 'poweredBy',
 ];
 
-/** A GUID-shaped widget id (`n` = 1 → "0199c1e2-0000-7000-8000-0000000b0001"). */
 export function widgetGuid(n: number): string {
   return `0199c1e2-0000-7000-8000-0000000b${String(n).padStart(4, '0')}`;
 }
 
-/** The defaults of a new widget, as GET /api/widgets/options sends them. */
 export function widgetSettings(overrides: { [K in keyof WidgetSettings]?: Partial<WidgetSettings[K]> } = {}): WidgetSettings {
   const base = structuredClone(FALLBACK_SETTINGS);
   return {
@@ -43,7 +41,6 @@ export function widgetOptions(overrides: Partial<WidgetOptionsDto> = {}): Widget
   };
 }
 
-/** "Shop help" for the website helper agent of agentsApi. */
 export function widgetDto(overrides: Partial<WidgetDto> = {}): WidgetDto {
   return {
     id: widgetGuid(1),
@@ -60,7 +57,6 @@ export function widgetDto(overrides: Partial<WidgetDto> = {}): WidgetDto {
   };
 }
 
-/** mockFetch routes for GET /api/widgets and /options; the getter is read per request. */
 export function widgetsRoutes(getWidgets: () => readonly WidgetDto[], options: WidgetOptionsDto = widgetOptions()): Record<string, FetchHandler> {
   return {
     'GET /api/widgets': () => jsonResponse(getWidgets()),

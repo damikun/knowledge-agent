@@ -13,7 +13,6 @@ export function refreshSchedule(overrides: Partial<JobScheduleDto> = {}): JobSch
   };
 }
 
-/** GET /api/jobs/overview with the in-process engine, as in in-memory mode and the tests. */
 export function jobsOverview(overrides: Partial<JobsOverviewDto> = {}): JobsOverviewDto {
   return { engine: 'inprocess', dashboardUrl: null, schedules: [refreshSchedule()], ...overrides };
 }
@@ -28,7 +27,6 @@ export function healthComponent(key: string, status: SystemComponentHealthDto['s
   return { key, status, detail, checkedAt: CHECKED, variant };
 }
 
-/** What the API reports for the Docker Compose setup with everything working. */
 export function healthyInstallation(overrides: SystemComponentHealthDto[] = []): SystemHealthDto {
   const components = [
     healthComponent('api', 'healthy'),

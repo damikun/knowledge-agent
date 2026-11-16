@@ -2,7 +2,6 @@ import type { Tone } from '../../components/ui/tone';
 import { metricDelta } from './metrics';
 import { EvalMetrics, type EvalItemResultDto, type EvalMetricValueDto } from './types';
 
-/** A UI grouping of the metrics; the API metric keys don't change. */
 export type QualityAreaId = 'finds' | 'answers' | 'cites' | 'declines';
 
 export type Verdict = 'good' | 'needs-work' | 'poor';
@@ -10,20 +9,15 @@ export type Verdict = 'good' | 'needs-work' | 'poor';
 export interface QualityArea {
   id: QualityAreaId;
   title: string;
-  /** For table columns and filters. */
   short: string;
   meaning: string;
   improve: string;
   missedLabel: string;
-  /** Best first; the first one the run measured is the headline. */
   headline: readonly string[];
   supporting: readonly string[];
-  /** At or above `good` is Good, at or above `fair` is Needs work, below is Poor. */
   thresholds: { good: number; fair: number };
 }
 
-// Search misses cascade into wrong answers, so finds is a bit stricter than answers and cites.
-// An invented answer costs the most trust, so declines is strictest.
 export const QUALITY_AREAS: readonly QualityArea[] = [
   {
     id: 'finds',
@@ -43,7 +37,6 @@ export const QUALITY_AREAS: readonly QualityArea[] = [
     meaning: 'How much of what a good answer must say the agent actually said.',
     improve: 'If it is low, fill gaps in the sources, sharpen the prompt, or try a stronger answering model.',
     missedLabel: 'Incomplete answer',
-    // Facts first: every run measures them, with or without the judge.
     headline: [EvalMetrics.AnswerFactRecall, EvalMetrics.JudgeCorrectness],
     supporting: [EvalMetrics.JudgeCorrectness, EvalMetrics.JudgeFaithfulness],
     thresholds: { good: 0.8, fair: 0.6 },
@@ -92,12 +85,10 @@ export function headlineMetric(area: QualityArea, metrics: Readonly<Record<strin
   return area.headline.find((name) => metrics?.[name] !== undefined && metrics?.[name] !== null) ?? null;
 }
 
-/** In pp; smaller changes are one rounding step of noise. */
 const MEANINGFUL_CHANGE_PP = 1;
 
 export type Change = { kind: 'better' | 'worse'; points: number } | { kind: 'same' };
 
-/** Null when there's nothing to compare with. Every metric is higher-is-better. */
 export function changeOf(points: number | null): Change | null {
   if (points === null || !Number.isFinite(points)) {
     return null;
@@ -117,7 +108,6 @@ export interface AreaScore {
   supporting: string[];
 }
 
-/** In order; areas the run has no metric for are left out. */
 export function scoreAreas(
   metrics: Readonly<Record<string, EvalMetricValueDto>> | null | undefined,
   previous?: Readonly<Record<string, EvalMetricValueDto>> | null,
@@ -152,7 +142,6 @@ export function itemAreaMetrics(items: readonly EvalItemResultDto[]): Partial<Re
   return result;
 }
 
-/** Below the Good line; questions the metric doesn't apply to never miss. */
 export function missedArea(item: EvalItemResultDto, area: QualityArea, metric: string): boolean {
   const value = item.metrics?.[metric];
   return value !== undefined && value !== null && value < area.thresholds.good;
@@ -175,7 +164,6 @@ export function filterItems(items: readonly EvalItemResultDto[], filter: ItemFil
   return metric ? items.filter((item) => missedArea(item, qualityArea(filter), metric)) : [];
 }
 
-// Correctness first; the others stand in when a run didn't measure it.
 const HEADLINE_ORDER: readonly QualityAreaId[] = ['answers', 'finds', 'cites', 'declines'];
 
 export function headlineScore(metrics: Readonly<Record<string, EvalMetricValueDto>> | null | undefined): AreaScore | null {

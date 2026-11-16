@@ -21,13 +21,11 @@ export interface FocusTrapOptions {
   onEscape?: () => void;
   initialFocus?: RefObject<HTMLElement | null>;
   restoreFocus?: boolean;
-  /** Keeps Tab inside the container, as modal dialogs do; a non-modal panel lets focus move on to the page. */
   contain?: boolean;
 }
 
 export function useFocusTrap(container: RefObject<HTMLElement | null>, options: FocusTrapOptions): void {
   const { active, initialFocus, restoreFocus = true, contain = true, onEscape } = options;
-  // Whether Esc was handled here, read when the key is pressed, so a new onEscape never moves the focus again.
   const escape = useEffectEvent((): boolean => {
     onEscape?.();
     return onEscape !== undefined;

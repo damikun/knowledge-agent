@@ -1,7 +1,7 @@
 import { useId, useState, type ComponentProps, type FormEvent } from 'react';
 import { AccentButton } from './AccentButton';
 import { useWidget } from './context';
-import type { FieldErrors, FormResult } from './controller';
+import type { FieldErrors, FormResult } from './errors';
 
 export interface ContactFormProps {
   initialName: string | null;
@@ -9,7 +9,6 @@ export interface ContactFormProps {
   initialErrors?: FieldErrors;
   onSubmit: (contact: { name: string; email: string }) => Promise<FormResult>;
   onCancel?: () => void;
-  // On touch devices, focus would open the keyboard unasked.
   autoFocus?: boolean;
 }
 
@@ -46,7 +45,6 @@ function ContactField({ label, value, onChange, error, ...input }: ContactFieldP
   );
 }
 
-// Also runs when autoFocus turns on after mount.
 function focusField(input: HTMLInputElement | null): void {
   input?.focus({ preventScroll: true });
 }
@@ -67,7 +65,6 @@ export function ContactForm({ initialName, initialEmail, initialErrors, onSubmit
     setBusy(false);
     if (!result.ok) {
       setErrors(result.errors);
-      // Focus the first field to fix, which reads its error with it (WCAG 3.3.1).
       const invalid = result.errors.name ? 'name' : result.errors.email ? 'email' : null;
       const field = invalid ? form.elements.namedItem(invalid) : null;
       if (field instanceof HTMLInputElement) {

@@ -31,7 +31,6 @@ const anthropicSaved = providerDto({
 
 type Routes = Record<string, unknown>;
 
-/** `routes` receives `save`, which stores a provider. Profiles and system info are cached, not observed, so their invalidation can be asserted. */
 function setup(initial: ProviderDto[], routes: (save: (provider: ProviderDto) => Response) => Routes = () => ({})) {
   let providers = [...initial];
   const save = (next: ProviderDto) => {

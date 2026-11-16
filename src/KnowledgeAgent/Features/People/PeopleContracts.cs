@@ -33,7 +33,7 @@ public sealed record PersonSummaryDto(
     int ConversationCount,
     IReadOnlyList<PersonWidgetDto> Widgets)
 {
-    public int SessionCount { get; init; }
+    public int VisitCount { get; init; }
     public bool Returning { get; init; }
     public string? Language { get; init; }
     public string? LastPageUrl { get; init; }
@@ -90,7 +90,7 @@ public sealed record PersonDto(
     IReadOnlyList<PersonWidgetUsageDto> Widgets,
     PersonStatsDto Stats)
 {
-    public int SessionCount { get; init; }
+    public int VisitCount { get; init; }
     public bool Returning { get; init; }
     public string? LastPageUrl { get; init; }
     public string? LastReferrer { get; init; }
@@ -133,12 +133,12 @@ public sealed record ServerContactResult(Guid ContactId, bool Created, Attribute
 
 public sealed record IdentifiedContact(Contact Contact, AttributeChangeResult Attributes);
 
-public static class VisitorSessions
+public static class Visits
 {
     public static readonly TimeSpan IdleTime = TimeSpan.FromMinutes(30);
 }
 
-public sealed record VisitorVisit(bool NewSession, string? PageUrl, string? Referrer, string? Language);
+public sealed record VisitorVisit(bool NewVisit, string? PageUrl, string? Referrer, string? Language);
 
 public sealed record ConversationContactDto(Guid Id, string Name, string? Email, bool Identified);
 

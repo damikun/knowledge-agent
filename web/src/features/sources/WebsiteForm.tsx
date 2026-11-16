@@ -29,7 +29,6 @@ function fieldErrors(error: unknown, field: string): string[] | undefined {
   return error instanceof ApiError ? error.errorsFor(field) : undefined;
 }
 
-/** One pattern per line, trimmed, without blanks or repeats. */
 export function parseExcludePatterns(text: string): string[] {
   return [
     ...new Set(
@@ -86,7 +85,6 @@ function Added({ source, fallback, onDismiss }: { source: SourceDto | undefined;
   );
 }
 
-/** Adds one page, or a website whose pages are crawled. */
 export function WebsiteForm({ folderId }: { folderId: Guid | null }) {
   const queryClient = useQueryClient();
   const [url, setUrl] = useState('');

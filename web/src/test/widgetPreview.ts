@@ -25,7 +25,6 @@ const PANEL: readonly EditTarget[] = [
 
 const ANSWERED: readonly EditTarget[] = [...PANEL, 'header.menu', 'messages.visitor', 'messages.assistant', 'behavior.citations', 'behavior.feedback'];
 
-// What the real preview shows in each scene, on a desktop; widget/app/preview checks the real one.
 function shownIn(scene: PreviewScene, config: Record<string, unknown>): EditTarget[] {
   const scenes: Record<PreviewScene, readonly EditTarget[]> = {
     launcher: ['appearance.launcher'],
@@ -66,10 +65,6 @@ export interface FakePreview {
   click: (target: EditTarget | null) => void;
 }
 
-/**
- * Stands in for /widget/v1/preview, which jsdom does not load: it answers the editor as the real preview does, each
- * answer in a task of its own.
- */
 export async function fakePreview(): Promise<FakePreview> {
   const frame = await screen.findByTitle<HTMLIFrameElement>('Widget preview');
   const preview = frame.contentWindow!;
@@ -81,7 +76,6 @@ export async function fakePreview(): Promise<FakePreview> {
     act(() => {
       window.dispatchEvent(new MessageEvent('message', { data: envelope(message), origin: window.location.origin, source: preview }));
     });
-  // As the real preview does after each render and track: the target, else the first fallback that shows.
   const place = (always: boolean) => {
     if (!tracked?.target) {
       return;

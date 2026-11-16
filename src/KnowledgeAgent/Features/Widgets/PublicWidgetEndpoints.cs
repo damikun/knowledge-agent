@@ -6,7 +6,6 @@ using KnowledgeAgent.Features.Chat.Live;
 using KnowledgeAgent.Features.Feedback;
 using KnowledgeAgent.Features.Handover;
 using KnowledgeAgent.Features.People;
-using KnowledgeAgent.Infrastructure.Security;
 using KnowledgeAgent.Infrastructure.Web;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +17,6 @@ using Microsoft.Net.Http.Headers;
 
 namespace KnowledgeAgent.Features.Widgets;
 
-// Anonymous: visitors authenticate with the bearer token from POST /sessions.
 internal static class PublicWidgetEndpoints
 {
     public const string RateLimitedCode = "rate_limited";
@@ -33,90 +31,38 @@ internal static class PublicWidgetEndpoints
 
     private static readonly JsonSerializerOptions ServerJson = new(JsonSerializerDefaults.Web);
 
-    public static RouteGroupBuilder MapPublicWidgetEndpoints(this IEndpointRouteBuilder routes)
+    public static void MapPublicWidgetEndpoints(this IEndpointRouteBuilder routes)
     {
-        // Visitor requests carry a message of a few thousand characters at most; a larger body is refused before it is read.
-        var group = routes.MapGroup("/api/public/widgets/{key}")
-            .WithTags("Widget (public)")
+        var widget = routes.MapGroup("/api/public/widgets/{key}")
             .AllowAnonymous()
+            .ExcludeFromDescription()
             .WithMetadata(new RequestBodySizeLimit(MaxRequestBytes));
 
-        // The loader reads the launcher's look from the host page, so any site may read this.
-        group.MapGet("/config", ConfigAsync)
-            .WithName("GetWidgetConfig")
-            .WithSummary("What the widget shows before anyone talks to it.")
-            .RequireCors(policy => policy.AllowAnyOrigin().WithMethods(HttpMethods.Get))
-            .ProducesProblem(StatusCodes.Status404NotFound);
-        group.MapPost("/sessions", StartSessionAsync)
-            .WithName("StartVisitorSession")
-            .WithSummary("Starts or resumes a visitor session and returns the visitor token. user identifies a signed-in user of the website (identity verification).")
-            .ProducesProblem(StatusCodes.Status403Forbidden)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status429TooManyRequests);
-        group.MapPost("/messages", SendAsync)
-            .WithName("SendVisitorMessage")
-            .WithSummary("Sends a visitor message and streams the answer as text/event-stream. No conversation id starts a conversation.")
-            .Produces<ChatStreamEvent>(StatusCodes.Status200OK, ChatEventStreamResult.ContentType)
-            .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status429TooManyRequests);
-        group.MapGet("/conversations/{id:guid}", GetConversationAsync)
-            .WithName("GetVisitorConversation")
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status404NotFound);
-        group.MapPost("/contact", UpdateContactAsync)
-            .WithName("UpdateVisitorContact")
-            .WithSummary("Saves the visitor's name and email, so the team can reply by email.")
-            .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status401Unauthorized);
-        group.MapPost("/attributes", UpdateAttributesAsync)
-            .WithName("UpdateVisitorAttributes")
-            .WithSummary("KnowledgeAgent.update(): sets attributes of the visitor (browser source, or verified for a signed-in user); null clears one.")
-            .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status429TooManyRequests);
-        group.MapPut("/contacts/{userId}", UpsertContactAsync)
+        widget.MapGet("/config", ConfigAsync).RequireCors(policy => policy.AllowAnyOrigin().WithMethods(HttpMethods.Get));
+        widget.MapPost("/sessions", StartSessionAsync);
+        widget.MapPost("/messages", SendAsync);
+        widget.MapPost("/contact", UpdateContactAsync);
+        widget.MapPost("/attributes", UpdateAttributesAsync);
+        widget.MapGet("/conversations", ListConversationsAsync);
+        widget.MapGet("/conversations/{id:guid}", GetConversationAsync);
+        widget.MapGet("/conversations/{id:guid}/events", FollowConversationAsync);
+        widget.MapPost("/conversations/{id:guid}/handover", RequestHandoverAsync);
+        widget.MapPost("/conversations/{id:guid}/handover/cancel", CancelHandoverAsync);
+        widget.MapPost("/conversations/{id:guid}/close", CloseAsync);
+        widget.MapPost("/conversations/{id:guid}/feedback", SubmitFeedbackAsync);
+
+        routes.MapPut("/api/public/widgets/{key}/contacts/{userId}", UpsertContactAsync)
+            .AllowAnonymous()
+            .WithMetadata(new RequestBodySizeLimit(MaxRequestBytes))
+            .WithTags("Widget contacts")
             .WithName("UpsertContactFromServer")
-            .WithSummary("For the website's backend: creates or updates the contact with this user id (source server). "
+            .WithSummary("For the website's backend: creates or updates the contact with this user id. "
                 + "Signed with the identity secret: X-KA-Timestamp (Unix seconds) and X-KA-Signature = hex(HMAC-SHA256(secret, \"{timestamp}.{userId}.{body}\")).")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status429TooManyRequests);
-        group.MapPost("/conversations/{id:guid}/handover", RequestHandoverAsync)
-            .WithName("RequestPerson")
-            .WithSummary("Asks for a person (the widget's \"Talk to a person\"). The team's answers arrive as staff messages.")
-            .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
-        group.MapPost("/conversations/{id:guid}/handover/cancel", CancelHandoverAsync)
-            .WithName("CancelPersonRequest")
-            .WithSummary("Stops waiting for a person (the widget's \"Keep chatting with the assistant\"); 409 with code person_joined once someone joined.")
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .ProducesProblem(StatusCodes.Status409Conflict);
-        group.MapPost("/conversations/{id:guid}/close", CloseAsync)
-            .WithName("EndVisitorConversation")
-            .WithSummary("Ends the conversation; the next message starts a new one.")
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status404NotFound);
-        group.MapPost("/conversations/{id:guid}/feedback", SubmitFeedbackAsync)
-            .WithName("SubmitVisitorFeedback")
-            .WithSummary("Rates an answer (1 or -1, with messageId) or the whole conversation (1 to 5), with an optional comment.")
-            .ProducesValidationProblem()
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status404NotFound);
-        group.MapGet("/conversations/{id:guid}/events", FollowConversationAsync)
-            .WithName("FollowVisitorConversation")
-            .WithSummary("Server-sent events of the visitor's conversation, resumable with Last-Event-ID.")
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .ProducesProblem(StatusCodes.Status404NotFound);
-
-        return group;
     }
 
     private static async Task<Results<Ok<WidgetPublicConfigDto>, ProblemHttpResult>> ConfigAsync(
@@ -169,7 +115,7 @@ internal static class PublicWidgetEndpoints
     }
 
     private static async Task<IResult> SendAsync(
-        string key,
+        VisitorContext visitor,
         VisitorMessageRequest request,
         HttpContext http,
         VisitorService visitors,
@@ -183,16 +129,7 @@ internal static class PublicWidgetEndpoints
         ILoggerFactory loggerFactory,
         CancellationToken cancellationToken)
     {
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { } widget)
-        {
-            return WidgetNotFound();
-        }
-
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
-        }
-
+        var widget = visitor.Widget;
         var security = widget.Settings.Security;
         var message = request.Message?.Trim() ?? string.Empty;
         if (message.Length == 0 && request.Confirmation is { Approved: var approved })
@@ -216,12 +153,10 @@ internal static class PublicWidgetEndpoints
             return TooManyRequests(http, retryAfter, RateLimitedCode, "You are sending messages too quickly. Wait a moment and try again.");
         }
 
-        Conversation? conversation = null;
-        if (request.ConversationId is { } conversationId
-            && (conversation = await visitors.FindOwnConversationAsync(visitor, conversationId, includeTurns: false, cancellationToken)) is null)
-        {
-            return ConversationNotFound(conversationId);
-        }
+        var conversation = request.ConversationId is { } conversationId
+            ? await visitors.FindOwnConversationAsync(visitor, conversationId, includeTurns: false, cancellationToken)
+                ?? throw new ConversationNotFoundException(conversationId)
+            : null;
 
         if (conversation is { Status: ConversationStatus.HandoverPending or ConversationStatus.Human })
         {
@@ -254,7 +189,6 @@ internal static class PublicWidgetEndpoints
                 detail: VisitorErrorTexts.Unavailable);
         }
 
-        // The turn keeps running if the visitor closes the page.
         var caller = visitor.Preview
             ? WidgetChatCaller.ForPreview(widget, visitor.Visitor)
             : WidgetChatCaller.ForVisitor(widget, visitor.Visitor) with
@@ -278,66 +212,26 @@ internal static class PublicWidgetEndpoints
         return new ChatEventStreamResult(events, hasFirst, loggerFactory.CreateLogger(typeof(ChatEventStreamResult).FullName!));
     }
 
-    private static async Task<IResult> GetConversationAsync(
-        string key,
-        Guid id,
-        HttpContext http,
-        VisitorService visitors,
-        CancellationToken cancellationToken)
+    private static async Task<IResult> ListConversationsAsync(VisitorContext visitor, VisitorService visitors, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await visitors.ListConversationsAsync(visitor, cancellationToken));
+
+    private static async Task<IResult> GetConversationAsync(VisitorConversation conversation, VisitorService visitors, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await visitors.GetHistoryAsync(conversation.Visitor, conversation.Id, cancellationToken));
+
+    private static async Task<IResult> UpdateContactAsync(VisitorContext visitor, VisitorContactRequest request, VisitorService visitors, CancellationToken cancellationToken)
     {
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { } widget)
-        {
-            return WidgetNotFound();
-        }
-
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
-        }
-
-        var history = await visitors.GetHistoryAsync(visitor, id, cancellationToken);
-        return history is null ? ConversationNotFound(id) : TypedResults.Ok(history);
-    }
-
-    private static async Task<IResult> UpdateContactAsync(
-        string key,
-        VisitorContactRequest request,
-        HttpContext http,
-        VisitorService visitors,
-        CancellationToken cancellationToken)
-    {
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { } widget)
-        {
-            return WidgetNotFound();
-        }
-
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
-        }
-
         var updated = await visitors.UpdateContactAsync(visitor, request.Name, request.Email, cancellationToken);
         return TypedResults.Ok(new VisitorContactDto(updated.Name, updated.Email));
     }
 
     private static async Task<IResult> UpdateAttributesAsync(
-        string key,
+        VisitorContext visitor,
         VisitorAttributesRequest request,
         HttpContext http,
         VisitorService visitors,
         WidgetRateLimiter limiter,
         CancellationToken cancellationToken)
     {
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { } widget)
-        {
-            return WidgetNotFound();
-        }
-
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
-        }
-
         if (!limiter.TryAcquire($"attributes:{visitor.Visitor.Id}", AttributeUpdatesPerMinute, out var retryAfter))
         {
             return TooManyRequests(http, retryAfter, RateLimitedCode, "Too many updates at once. Try again in a minute.");
@@ -443,8 +337,7 @@ internal static class PublicWidgetEndpoints
     }
 
     private static async Task<IResult> RequestHandoverAsync(
-        string key,
-        Guid id,
+        VisitorConversation conversation,
         VisitorHandoverRequest request,
         HttpContext http,
         VisitorService visitors,
@@ -452,14 +345,10 @@ internal static class PublicWidgetEndpoints
         WidgetRateLimiter limiter,
         CancellationToken cancellationToken)
     {
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { Settings.Behavior.HandoverEnabled: true } widget)
+        var (visitor, behavior) = (conversation.Visitor, conversation.Visitor.Widget.Settings.Behavior);
+        if (!behavior.HandoverEnabled)
         {
             return WidgetNotFound();
-        }
-
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
         }
 
         if (!limiter.TryAcquire($"handover:{visitor.Visitor.Id}", FeedbackPerMinute, out var retryAfter))
@@ -467,113 +356,60 @@ internal static class PublicWidgetEndpoints
             return TooManyRequests(http, retryAfter, RateLimitedCode, "Too many requests. Try again in a minute.");
         }
 
-        if (await visitors.FindOwnConversationAsync(visitor, id, includeTurns: false, cancellationToken) is null)
-        {
-            return ConversationNotFound(id);
-        }
-
         var contact = await visitors.UpdateContactAsync(visitor, request.Name, request.Email, cancellationToken);
-        // The widget asks first; this holds for any client, whichever channel the team is reached on.
-        if (contact.Email is null && widget.Settings.Behavior.ContactCapture != WidgetChoices.ContactNever)
+        if (contact.Email is null && behavior.ContactCapture != WidgetChoices.ContactNever)
         {
             return ApiResults.Validation("email", "Leave your email address so the team can reply.");
         }
 
         var reason = string.IsNullOrWhiteSpace(request.Reason) ? "Asked for a person" : request.Reason.Trim();
-        var (outcome, _) = await handover.RequestAsync(id, HandoverSource.Visitor, reason, summary: null, cancellationToken);
+        var (outcome, _) = await handover.RequestAsync(conversation.Id, HandoverSource.Visitor, reason, summary: null, cancellationToken);
         return TypedResults.Ok(new VisitorHandoverDto(outcome.Started ? "handover_pending" : "ai", outcome.Started));
     }
 
     private static async Task<IResult> CancelHandoverAsync(
-        string key,
-        Guid id,
+        VisitorConversation conversation,
         HttpContext http,
-        VisitorService visitors,
         IHandoverService handover,
         WidgetRateLimiter limiter,
         CancellationToken cancellationToken)
     {
-        // Also when handover was turned off meanwhile, so nobody is left waiting.
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { } widget)
-        {
-            return WidgetNotFound();
-        }
-
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
-        }
-
-        // The same budget as asking, so asking and cancelling in a loop cannot flood the team.
-        if (!limiter.TryAcquire($"handover:{visitor.Visitor.Id}", FeedbackPerMinute, out var retryAfter))
+        if (!limiter.TryAcquire($"handover:{conversation.Visitor.Visitor.Id}", FeedbackPerMinute, out var retryAfter))
         {
             return TooManyRequests(http, retryAfter, RateLimitedCode, "Too many requests. Try again in a minute.");
         }
 
-        if (await visitors.FindOwnConversationAsync(visitor, id, includeTurns: false, cancellationToken) is null)
-        {
-            return ConversationNotFound(id);
-        }
-
-        await handover.CancelAsync(id, cancellationToken);
+        await handover.CancelAsync(conversation.Id, cancellationToken);
         return TypedResults.NoContent();
     }
 
-    private static async Task<IResult> CloseAsync(
-        string key,
-        Guid id,
-        HttpContext http,
-        VisitorService visitors,
-        IHandoverService handover,
-        CancellationToken cancellationToken)
+    private static async Task<IResult> CloseAsync(VisitorConversation conversation, IHandoverService handover, CancellationToken cancellationToken)
     {
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { } widget)
+        if (conversation.Conversation.Status != ConversationStatus.Closed)
         {
-            return WidgetNotFound();
+            await handover.CloseAsync(conversation.Id, conversation.Visitor.Visitor.Name ?? "The visitor", cancellationToken);
         }
 
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
-        }
-
-        if (await visitors.FindOwnConversationAsync(visitor, id, includeTurns: false, cancellationToken) is not { Status: not ConversationStatus.Closed })
-        {
-            return TypedResults.NoContent();
-        }
-
-        await handover.CloseAsync(id, visitor.Visitor.Name ?? "The visitor", cancellationToken);
         return TypedResults.NoContent();
     }
 
     private static async Task<IResult> SubmitFeedbackAsync(
-        string key,
-        Guid id,
+        VisitorConversation conversation,
         SubmitFeedbackRequest request,
         HttpContext http,
-        VisitorService visitors,
         IFeedbackService feedback,
         WidgetRateLimiter limiter,
         CancellationToken cancellationToken)
     {
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { Settings.Behavior.FeedbackEnabled: true } widget)
+        var visitor = conversation.Visitor;
+        if (!visitor.Widget.Settings.Behavior.FeedbackEnabled)
         {
             return WidgetNotFound();
-        }
-
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
         }
 
         if (!limiter.TryAcquire($"feedback:{visitor.Visitor.Id}", FeedbackPerMinute, out var retryAfter))
         {
             return TooManyRequests(http, retryAfter, RateLimitedCode, "Too much feedback at once. Try again in a minute.");
-        }
-
-        if (await visitors.FindOwnConversationAsync(visitor, id, includeTurns: false, cancellationToken) is not { } conversation)
-        {
-            return ConversationNotFound(id);
         }
 
         if (visitor.Preview)
@@ -582,41 +418,23 @@ internal static class PublicWidgetEndpoints
         }
 
         var author = new FeedbackAuthorRef(FeedbackAuthor.Visitor, VisitorService.AuthorKey(visitor));
-        var saved = await feedback.SubmitAsync(conversation, request, author, cancellationToken);
+        var saved = await feedback.SubmitAsync(conversation.Conversation, request, author, cancellationToken);
         return TypedResults.Ok(new { saved.Id, saved.MessageId, saved.Rating });
     }
 
-    private static async Task<IResult> FollowConversationAsync(
-        string key,
-        Guid id,
+    private static IResult FollowConversationAsync(
+        VisitorConversation conversation,
         int? after,
         HttpContext http,
-        VisitorService visitors,
         VisitorPresence presence,
-        ILoggerFactory loggerFactory,
-        CancellationToken cancellationToken)
+        ILoggerFactory loggerFactory)
     {
-        if (await visitors.FindWidgetAsync(key, BearerToken(http.Request), cancellationToken) is not { } widget)
-        {
-            return WidgetNotFound();
-        }
-
-        if (await visitors.AuthenticateAsync(widget, BearerToken(http.Request), cancellationToken, IsAdmin(http)) is not { } visitor)
-        {
-            return Unauthorized();
-        }
-
-        if (await visitors.FindOwnConversationAsync(visitor, id, includeTurns: false, cancellationToken) is null)
-        {
-            return ConversationNotFound(id);
-        }
-
         var stream = new ConversationEventStreamResult(
-            id,
+            conversation.Id,
             ConversationEventStreamResult.AfterSequence(http.Request, after),
             loggerFactory.CreateLogger(typeof(ConversationEventStreamResult).FullName!),
-            VisitorService.ViewFor(widget));
-        return new PresenceResult(stream, presence, id);
+            VisitorService.ViewFor(conversation.Visitor.Widget));
+        return new PresenceResult(stream, presence, conversation.Id);
     }
 
     private static async IAsyncEnumerable<ChatStreamEvent> ForVisitor(
@@ -633,16 +451,12 @@ internal static class PublicWidgetEndpoints
         }
     }
 
-    // A preview token works only together with an admin's portal session, which the portal's frame sends along.
-    private static bool IsAdmin(HttpContext http) => http.User.IsInRole(AuthRoles.Admin);
-
     internal static string? BearerToken(HttpRequest request)
     {
         var header = request.Headers.Authorization.ToString();
         return header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? header["Bearer ".Length..].Trim() : null;
     }
 
-    // Behind the portal's proxy this is the visitor's address once forwarded headers are enabled.
     private static string ClientIp(HttpContext http) => http.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
     private static ProblemHttpResult TooManyRequests(HttpContext http, TimeSpan retryAfter, string code, string detail)
@@ -655,12 +469,5 @@ internal static class PublicWidgetEndpoints
             extensions: new Dictionary<string, object?> { ["code"] = code });
     }
 
-    private static ProblemHttpResult Unauthorized() => TypedResults.Problem(
-        statusCode: StatusCodes.Status401Unauthorized,
-        title: "Session expired",
-        detail: "Start a new visitor session.");
-
     private static ProblemHttpResult WidgetNotFound() => ApiResults.NotFound("This chat is not available.");
-
-    private static ProblemHttpResult ConversationNotFound(Guid id) => ApiResults.NotFound($"Conversation '{id}' was not found.");
 }

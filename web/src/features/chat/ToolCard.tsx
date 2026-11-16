@@ -34,7 +34,6 @@ function times(phrase: string, count: number): string {
   return count === 1 ? phrase : `${phrase} ${count} times`;
 }
 
-/** "Searched the knowledge base 2 times, read a source" for finished steps. */
 function describeActivity(tools: readonly ToolCallView[]): string {
   const counts = new Map<string, number>();
   for (const tool of tools) {
@@ -232,13 +231,11 @@ export function ToolStep({ tool }: { tool: ToolCallView }) {
 }
 
 function runningStep(tools: readonly ToolCallView[]): ToolCallView | undefined {
-  // The innermost running step says best what is happening now, such as the researcher's search.
   return flatten(tools)
     .filter((tool) => tool.status === 'running')
     .pop();
 }
 
-/** While tools run, the agent's latest note before them says best what it is doing. */
 function runningNote(tools: readonly ToolCallView[]): string | null {
   const index = tools.findLastIndex((tool) => tool.preamble);
   return index >= 0 && tools.slice(index).some((tool) => tool.status === 'running') ? (tools[index]?.preamble ?? null) : null;

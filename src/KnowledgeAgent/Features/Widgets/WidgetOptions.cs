@@ -6,7 +6,7 @@ public sealed class WidgetOptions
 
     public string AssetsPath { get; set; } = "wwwroot/widget";
 
-    public int VisitorTokenLifetimeDays { get; set; } = 30;
+    public int VisitorTokenLifetimeDays { get; set; } = 180;
 
     public int PreviewTokenLifetimeMinutes { get; set; } = 60;
 

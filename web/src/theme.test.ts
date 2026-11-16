@@ -3,12 +3,10 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// Read from disk: with css: false (vite.config.ts) Vitest stubs CSS imports, ?raw included. Tests run from web/.
 const read = (path: string) => readFileSync(resolve(process.cwd(), path), 'utf8');
 const tokensCss = read('src/styles/tokens.css');
 const indexCss = read('src/index.css');
 
-/** The custom properties declared in each block, keyed by the block's selector or at-rule ("@theme", ":root", ".dark"). */
 function declarations(css: string): Map<string, Record<string, string>> {
   const blocks = new Map<string, Record<string, string>>();
   const stack: string[] = [];
@@ -43,7 +41,6 @@ const darkBlock = blocks.get('.dark') ?? {};
 
 type Theme = 'light' | 'dark';
 
-/** A token's color as #rrggbb or #rrggbbaa, following var() references within the theme. */
 function color(theme: Theme, name: string): string {
   const source = theme === 'light' ? lightBlock : { ...lightBlock, ...darkBlock };
   let value = source[`--ka-${name}`];
@@ -61,7 +58,6 @@ function channels(hex: string): [number, number, number, number] {
   return [byte(1), byte(3), byte(5), hex.length === 9 ? byte(7) / 255 : 1];
 }
 
-/** An alpha color composited onto an opaque one, as the browser paints a fill over a surface. */
 function over(fill: string, surface: string): string {
   const [r, g, b, a] = channels(fill);
   const [sr, sg, sb] = channels(surface);
@@ -83,7 +79,6 @@ function contrast(a: string, b: string): number {
   return (light + 0.05) / (dark + 0.05);
 }
 
-/** "fill-active/sidebar" is the alpha fill painted over the sidebar. */
 function background(theme: Theme, name: string): string {
   const [fill, surface] = name.split('/') as [string, string?];
   return surface ? over(color(theme, fill), color(theme, surface)) : color(theme, fill);
@@ -91,10 +86,8 @@ function background(theme: Theme, name: string): string {
 
 type Pair = [foreground: string, background: string, minimum: number];
 
-// The label colors the API accepts (features/labels/types.ts), each a muted category tone.
 const TAGS = ['gray', 'blue', 'green', 'amber', 'red', 'purple', 'teal', 'pink'];
 
-// The semantic color table; info reuses the accent.
 const SPEC_TOKENS = [
   ...['canvas', 'sidebar', 'surface', 'surface-subtle', 'raised', 'overlay', 'fill-hover', 'fill-active', 'fill-muted'],
   ...['border-subtle', 'border', 'border-strong', 'fg', 'fg-secondary', 'fg-muted', 'fg-disabled', 'fg-on-accent'],
@@ -104,8 +97,6 @@ const SPEC_TOKENS = [
   ...TAGS.flatMap((tag) => [`tag-${tag}`, `tag-${tag}-subtle`, `tag-${tag}-text`]),
 ];
 
-// Text needs 4.5:1 (WCAG 1.4.3); input edges, the focus ring, checked controls, status dots and icons need 3:1 (1.4.11,
-// 2.4.13). Disabled text is exempt.
 const SURFACES = ['canvas', 'sidebar', 'surface', 'surface-subtle', 'raised', 'fill-muted', 'accent-subtle'];
 const FILLS = ['fill-hover/canvas', 'fill-hover/sidebar', 'fill-hover/raised', 'fill-active/canvas', 'fill-active/sidebar', 'fill-active/raised'];
 
@@ -128,7 +119,6 @@ const tokenPairs: Pair[] = [
     [`${tone}-text`, `${tone}-subtle`, 4.5],
     [`${tone}-text`, 'canvas', 4.5],
     [`${tone}-text`, 'surface', 4.5],
-    // Menus put danger text on the raised surface.
     [`${tone}-text`, 'raised', 4.5],
     ['fg', `${tone}-subtle`, 4.5],
     ['fg-secondary', `${tone}-subtle`, 4.5],
@@ -136,7 +126,6 @@ const tokenPairs: Pair[] = [
     ...['canvas', 'surface', 'sidebar'].map((surface): Pair => [tone, surface, 3]),
   ]),
   ['accent', 'accent-subtle', 3],
-  // Fields also sit on muted fills, such as a toolbar or a disabled row.
   ...['canvas', 'surface', 'raised', 'surface-subtle', 'fill-muted'].flatMap((surface): Pair[] => [
     ['border-strong', surface, 3],
     ['accent', surface, 3],
@@ -147,7 +136,6 @@ const tokenPairs: Pair[] = [
 
 const proseText = ['body', 'headings', 'lead', 'links', 'bold', 'counters', 'captions', 'quotes', 'code', 'kbd'];
 
-/** The tokens the Markdown answers use, from `.prose-zinc` in index.css. */
 function proseTokens(): Record<string, string> {
   return Object.fromEntries(
     Object.entries(declarations(indexCss).get('.prose-zinc') ?? {}).map(([name, value]) => [
@@ -202,7 +190,6 @@ describe('theme contrast (WCAG 2.2 AA)', () => {
     });
   }
 
-  // The lowest body-text ratios the spec reports, so a token change that lowers them fails here first.
   it.each([
     { theme: 'light' as const, pair: ['fg-muted', 'fill-active/sidebar', 4.5] as Pair, spec: 4.89 },
     { theme: 'dark' as const, pair: ['fg-muted', 'fill-active/raised', 4.5] as Pair, spec: 5.22 },

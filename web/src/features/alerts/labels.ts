@@ -29,7 +29,6 @@ export const SEVERITY_LABELS: Readonly<Record<AlertSeverity, string>> = {
   info: 'For your information',
 };
 
-/** Hours, or null to hide it until it changes. */
 export const SNOOZE_CHOICES: ReadonlyArray<{ hours: number | null; label: string; done: string }> = [
   { hours: 1, label: 'For 1 hour', done: 'Snoozed for 1 hour' },
   { hours: 24, label: 'For 1 day', done: 'Snoozed for 1 day' },

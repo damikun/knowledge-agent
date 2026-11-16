@@ -27,7 +27,6 @@ export function policyLabel(policy: McpToolPolicy): string {
   return POLICY_CHOICES.find((choice) => choice.value === policy)?.label ?? policy;
 }
 
-/** The server's own claim, shown as such. */
 export function toolEffect(tool: Pick<McpToolDto, 'readOnly' | 'destructive'>): { label: string; tone: BadgeTone } {
   if (tool.readOnly) {
     return { label: 'Only reads', tone: 'success' };
@@ -42,7 +41,6 @@ export function toolLabel(tool: Pick<McpToolDto, 'title' | 'name'>): string {
   return tool.title ?? tool.name;
 }
 
-/** e.g. "12 tools: 9 look things up, 3 make changes". */
 export function toolsSummary(tools: readonly Pick<McpToolDto, 'readOnly'>[]): string {
   if (tools.length === 0) {
     return 'No tools listed yet';

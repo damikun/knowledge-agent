@@ -2,22 +2,16 @@ import { clsx } from 'clsx';
 import type { ComponentProps } from 'react';
 import { useScrollFocus } from '../../lib/hooks/useScrollFocus';
 
-/* Name each table with aria-label or a caption. */
-
 export interface TableProps extends ComponentProps<'table'> {
-  /** Give it a height to keep the header row in view. */
   containerClassName?: string;
-  /** False for a table only screen readers get, which must not become an invisible scroll box. */
   scroll?: boolean;
 }
 
-// Separate borders, because collapsed ones scroll away from a sticky header row.
 export function Table({ containerClassName, scroll: scrolls = true, className, ...props }: TableProps) {
   const scroll = useScrollFocus<HTMLDivElement>();
   return (
     <div
       {...scroll}
-      // A table wider than its box scrolls; named like the table, so the focused box says what it holds.
       role={scroll.tabIndex === 0 ? 'region' : undefined}
       aria-label={scroll.tabIndex === 0 ? props['aria-label'] : undefined}
       className={clsx('relative w-full', scrolls && 'overflow-x-auto', containerClassName)}
@@ -91,7 +85,6 @@ export function TableCell({ numeric = false, mono = false, className, ...props }
   );
 }
 
-/** Screen readers announce this cell with each cell of the row. */
 export function TableRowHeader({ className, ...props }: ComponentProps<'th'>) {
   return <BodyCell as="th" scope="row" className={clsx('text-left font-medium text-fg', className)} {...props} />;
 }

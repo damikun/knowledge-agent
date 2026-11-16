@@ -15,7 +15,6 @@ public sealed class Contact
 
     public Guid Id { get; set; } = Guid.CreateVersion7();
 
-    // The user id of the host website, set only through verified identity, so it can be trusted.
     public string? ExternalId { get; set; }
     public string? Name { get; set; }
     public string? Email { get; set; }
@@ -24,7 +23,7 @@ public sealed class Contact
     public Dictionary<string, JsonElement> Attributes { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, AttributeStamp> AttributeSources { get; set; } = new(StringComparer.Ordinal);
 
-    public int SessionCount { get; set; }
+    public int VisitCount { get; set; }
     public string? LastPageUrl { get; set; }
     public string? LastReferrer { get; set; }
     public string? Language { get; set; }
@@ -32,12 +31,11 @@ public sealed class Contact
     public DateTimeOffset FirstSeenAt { get; set; }
     public DateTimeOffset LastSeenAt { get; set; }
 
-    // Kept up to date on insert and delete and recounted by the retention job, so lists need no count per row.
     public int ConversationCount { get; set; }
 
     public bool Identified => ExternalId is not null;
 
-    public bool Returning => SessionCount > 1 || ConversationCount > 1;
+    public bool Returning => VisitCount > 1 || ConversationCount > 1;
 
     public string DisplayName => DisplayNameOf(Id, Name);
 
@@ -78,11 +76,9 @@ internal sealed class ContactConfiguration(bool isNpgsql) : IEntityTypeConfigura
         builder.HasIndex(contact => new { contact.LastSeenAt, contact.Id });
         if (isNpgsql)
         {
-            // Backs the case-insensitive substring search of the People page (ILIKE '%term%'), and email lookups.
             builder.HasIndex(contact => contact.Name).HasMethod("gin").HasOperators("gin_trgm_ops");
             builder.HasIndex(contact => contact.Email).HasMethod("gin").HasOperators("gin_trgm_ops");
 
-            // Backs attribute filters: containment (@>), existence and equality in JSON paths (@?, @@).
             builder.HasIndex(contact => contact.Attributes).HasMethod("gin").HasOperators("jsonb_path_ops");
         }
     }

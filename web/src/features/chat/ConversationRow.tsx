@@ -59,7 +59,6 @@ export interface ConversationRowProps {
   item: ConversationListItem;
   basePath: string;
   active: boolean;
-  /** The row Tab lands on; the others are reached with the arrow keys. */
   tabbable: boolean;
   query: string;
   editing: boolean;
@@ -119,7 +118,6 @@ export const ConversationRow = memo(function ConversationRow({
   ];
 
   return (
-    // content-visibility skips layout for rows far off screen, so thousands of rows stay cheap without virtualizing.
     <li className="group/row relative [contain-intrinsic-size:auto_2rem] [content-visibility:auto]">
       <Link
         to={`${basePath}/${item.id}`}

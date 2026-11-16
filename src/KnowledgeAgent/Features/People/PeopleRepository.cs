@@ -61,7 +61,6 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
 {
     private const int IdentifyAttempts = 3;
 
-    // An empty anonymous contact this old is a page open nothing came of; younger ones may be about to get a conversation.
     private static readonly TimeSpan EmptyContactGrace = TimeSpan.FromDays(1);
 
     public async Task<PeoplePageDto> ListAsync(PeopleQuery query, CancellationToken cancellationToken = default)
@@ -95,7 +94,7 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
                     contact.ConversationCount,
                     widgets.TryGetValue(contact.Id, out var used) ? used.Select(widget => new PersonWidgetDto(widget.Id, widget.Name)).ToList() : [])
                 {
-                    SessionCount = contact.SessionCount,
+                    VisitCount = contact.VisitCount,
                     Returning = contact.Returning,
                     Language = contact.Language,
                     LastPageUrl = contact.LastPageUrl,
@@ -115,7 +114,6 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
             : (await MatchInMemoryAsync(await contacts.ToListAsync(cancellationToken), query.Conditions, query.Now, int.MaxValue, cancellationToken)).Count;
     }
 
-    // Everything but the attribute conditions on the in-memory store, which are checked over the loaded rows.
     private IQueryable<Contact> Filtered(PeopleQuery query)
     {
         var contacts = query.Conditions.Count > 0 && db.Database.IsNpgsql()
@@ -201,7 +199,6 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
 
             if (db.Database.IsRelational())
             {
-                // One transaction, retried as a whole, so a failure never leaves half a person behind.
                 await db.Database.CreateExecutionStrategy().ExecuteAsync(async () =>
                 {
                     await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -212,7 +209,6 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
             }
             else
             {
-                // The in-memory provider does not cascade, so every dependent goes explicitly.
                 db.ConversationLabels.RemoveRange(await db.ConversationLabels.Where(item => conversationIds.Contains(item.ConversationId)).ToListAsync(cancellationToken));
                 db.Feedback.RemoveRange(await db.Feedback.Where(item => conversationIds.Contains(item.ConversationId)).ToListAsync(cancellationToken));
                 db.Handovers.RemoveRange(await db.Handovers.Where(item => conversationIds.Contains(item.ConversationId)).ToListAsync(cancellationToken));
@@ -330,7 +326,6 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
             }
             catch (DbUpdateException) when (attempt < IdentifyAttempts)
             {
-                // Another session created the contact with this user id (or a new attribute key) at the same time; the next attempt finds it.
             }
             finally
             {
@@ -425,20 +420,19 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
                 ExternalId = user.UserId,
                 FirstSeenAt = now,
                 LastSeenAt = now,
-                SessionCount = visitor.ContactId is null ? Math.Max(visitor.SessionCount, 1) : 0,
+                VisitCount = visitor.ContactId is null ? Math.Max(visitor.VisitCount, 1) : 0,
             };
             db.Contacts.Add(contact);
         }
-        else if (now - contact.LastSeenAt >= VisitorSessions.IdleTime)
+        else if (now - contact.LastSeenAt >= Visits.IdleTime)
         {
-            contact.SessionCount++;
+            contact.VisitCount++;
         }
 
         contact.LastPageUrl = visitor.LastPageUrl ?? contact.LastPageUrl;
         contact.LastReferrer = visitor.LastReferrer ?? contact.LastReferrer;
         contact.Language = visitor.Language ?? contact.Language;
 
-        // Linked before the old contact may go, so deleting it never takes this browser with it.
         var previousId = visitor.ContactId;
         visitor.ContactId = contact.Id;
         if (previousId is { } oldId && oldId != contact.Id
@@ -452,7 +446,7 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
             contact.FirstSeenAt = anonymous.FirstSeenAt < contact.FirstSeenAt ? anonymous.FirstSeenAt : contact.FirstSeenAt;
             contact.Name ??= anonymous.Name;
             contact.Email ??= anonymous.Email;
-            contact.SessionCount += anonymous.SessionCount;
+            contact.VisitCount += anonymous.VisitCount;
 
             var values = new Dictionary<string, JsonElement>(contact.Attributes, StringComparer.Ordinal);
             var stamps = new Dictionary<string, AttributeStamp>(contact.AttributeSources, StringComparer.Ordinal);
@@ -516,7 +510,7 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
             FirstSeenAt = visitor.CreatedAt == default ? now : visitor.CreatedAt,
             LastSeenAt = now,
 
-            SessionCount = Math.Max(visitor.SessionCount, 1),
+            VisitCount = Math.Max(visitor.VisitCount, 1),
             LastPageUrl = visitor.LastPageUrl,
             LastReferrer = visitor.LastReferrer,
             Language = visitor.Language,
@@ -593,7 +587,7 @@ internal sealed partial class PeopleRepository(KnowledgeDbContext db, DbContextG
             widgets,
             new PersonStatsDto(conversationCount, handovers, ratings.Count == 0 ? null : Math.Round(ratings.Average(), 2), ratings.Count, contact.LastSeenAt))
         {
-            SessionCount = contact.SessionCount,
+            VisitCount = contact.VisitCount,
             Returning = contact.Returning,
             LastPageUrl = contact.LastPageUrl,
             LastReferrer = contact.LastReferrer,

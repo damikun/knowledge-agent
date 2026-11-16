@@ -22,12 +22,10 @@ const TOOL_META: Record<string, ToolMeta> = {
   [ToolNames.TransferBack]: { label: 'Handed back', activeLabel: 'Handing back', icon: Undo2 },
 };
 
-/** transfer_to_agent and transfer_back: the conversation moves between the front agent and a specialist. */
 export function isTransferTool(toolName: string): boolean {
   return toolName === ToolNames.TransferToAgent || toolName === ToolNames.TransferBack;
 }
 
-/** "fetch_url" → "Fetch url". */
 function humanizeToolName(name: string): string {
   const spaced = name.replace(/[_-]+/g, ' ').replace(/([a-z0-9])([A-Z])/g, '$1 $2').trim();
   return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1).toLowerCase() : 'Tool';
@@ -61,12 +59,10 @@ function asText(value: JsonValue | undefined): string | null {
 }
 
 export interface ToolArgumentSummary {
-  /** The argument that best describes the call: query, task or source. */
   primary: string | null;
   details: string[];
 }
 
-/** `sourceTitle` resolves source ids to titles; unknown ids are shown as they are. */
 export function summarizeToolArguments(
   toolName: string,
   rawArgs: JsonValue | null | undefined,
@@ -147,7 +143,6 @@ export function summarizeToolArguments(
   }
 }
 
-/** The source ids a tool card shows by title: read_source's id, or a single scoped source. */
 export function toolSourceIds(toolName: string, rawArgs: JsonValue | null | undefined): string[] {
   const ids: string[] = [];
   summarizeToolArguments(toolName, rawArgs, (id) => {

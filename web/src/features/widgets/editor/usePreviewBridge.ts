@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
+import { pathOf } from '../../../lib/endpoint';
+import { endpoints } from '../../../lib/endpoints';
 import {
   envelope,
   parsePreviewMessage,
@@ -10,7 +12,7 @@ import {
 } from '../../../widget/shared/preview';
 import type { WidgetPreviewConfig } from '../types';
 
-export const PREVIEW_URL = '/widget/v1/preview';
+export const PREVIEW_URL = pathOf(endpoints.widgets.preview);
 
 interface Pointed {
   target: EditTarget;
@@ -38,14 +40,11 @@ export interface PreviewBridge {
   painted: boolean;
 }
 
-// The editor's side of widget/shared/preview.ts. Messages go only to, and count only from, the preview's window.
 export function usePreviewBridge({ frame, config, scene, colorScheme, tracking, onPick }: PreviewBridgeOptions): PreviewBridge {
-  // Bumped on every frame load; each new page starts empty and needs everything again.
   const [connection, setConnection] = useState(0);
   const [rendered, setRendered] = useState<{ scene: PreviewScene; targets: ReadonlySet<EditTarget> } | null>(null);
   const [hovered, setHovered] = useState<Pointed | null>(null);
   const [placed, setPlaced] = useState<{ target: EditTarget; anchor: Pointed } | null>(null);
-  // The latest track request; answers to earlier ones may still arrive and are dropped. A ref, since it never renders.
   const requested = useRef<EditTarget | null>(null);
   const pick = useEffectEvent(onPick);
 
@@ -94,7 +93,6 @@ export function usePreviewBridge({ frame, config, scene, colorScheme, tracking, 
 
   const post = useCallback((message: EditorMessage) => frame?.contentWindow?.postMessage(envelope(message), window.location.origin), [frame]);
 
-  // The frame renders each message before reading the next, so a track sent after a render finds the new scene.
   useEffect(() => {
     if (connection > 0) {
       post({ type: 'render', config, scene, colorScheme });

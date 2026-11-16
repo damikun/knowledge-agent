@@ -1,5 +1,3 @@
-// For syntax highlighting only; the API does the rendering.
-
 export type TemplateTokenType = 'text' | 'variable' | 'block-open' | 'block-close' | 'else' | 'comment' | 'partial';
 
 export interface TemplateToken {

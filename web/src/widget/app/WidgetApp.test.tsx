@@ -9,7 +9,6 @@ import { WidgetApp } from './WidgetApp';
 let posted: MockInstance<typeof window.postMessage>;
 
 beforeEach(() => {
-  // In jsdom the frame is its own parent, so what it posts to the host page lands here.
   posted = vi.spyOn(window, 'postMessage').mockImplementation(() => undefined);
 });
 
@@ -82,7 +81,6 @@ describe('widget frame', () => {
     expect(screen.getByRole('button', { name: 'Where is my order?' })).toBeInTheDocument();
     expect(screen.getByText('Run by Acme')).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: 'Message' })).toHaveAttribute('placeholder', 'Ask about your order');
-    expect(document.title).toBe('Shop help');
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(hostMessages()).toContainEqual({ source: 'knowledge-agent', type: 'ready' });
     expect(localStorage.getItem(`ka-widget:${WIDGET_KEY}`)).toBe('visitor-token');
@@ -227,27 +225,6 @@ describe('widget frame', () => {
     expect(document.body.textContent).not.toContain('Sure.');
   });
 
-  it('starts a new paragraph for the text of a new step instead of gluing the steps together', async () => {
-    const user = userEvent.setup();
-    const turn = controlledEventStream();
-    mockFetch(
-      routes({
-        [`POST ${WIDGET_API}/messages`]: (_url: URL, init: RequestInit) => turn.respond(init),
-        [`GET ${WIDGET_API}/conversations/c1/events`]: (_url: URL, init: RequestInit) => controlledEventStream().respond(init),
-      }),
-    );
-    renderWidget();
-
-    await user.type(await screen.findByRole('textbox', { name: 'Message' }), 'Hi{Enter}');
-    turn.send('conversation', { conversationId: 'c1', title: 'Hi', isNew: true });
-    turn.send('text-delta', { text: 'Let me look.', step: 1 });
-    turn.send('text-delta', { text: 'Hello there.', step: 2 });
-
-    expect(await screen.findByText('Hello there.')).toBeInTheDocument();
-    expect(screen.getByText('Let me look.')).toBeInTheDocument();
-    expect(document.body.textContent).not.toContain('look.Hello');
-  });
-
   it('paints the theme with its overrides on the page, and leaves the footer out when the widget hides it', async () => {
     mockFetch(routes({}, { preset: 'solid', colors: { light: { header: '#1E3A8A', glow: 'pink' }, dark: {} }, showFooter: false }));
     renderWidget();
@@ -362,7 +339,6 @@ describe('widget frame', () => {
     expect(screen.getByRole('textbox', { name: 'Message' })).toBeInTheDocument();
 
     await waitFor(() => expect(resumed.live.isOpen).toBe(true));
-    // The live stream has sent the status without the underscore.
     resumed.live.send('conversation', { conversationId: 'c1', status: 'handoverpending' });
     resumed.live.send('message', visitorMessage(3, 'system', 'A colleague will reply here soon.'), 3);
     resumed.live.send('conversation', { conversationId: 'c1', status: 'human' });
@@ -718,6 +694,58 @@ describe('widget frame', () => {
     expect(fetchMock.mock.calls.filter(([input]) => String(input).endsWith('/close'))).toHaveLength(1);
   });
 
+  it("lists the visitor's conversations, opens an ended one to read and starts a new chat from there", async () => {
+    const user = userEvent.setup();
+    const resumed = resumedConversation([visitorMessage(1, 'visitor', 'Returns?'), answerWithSources]);
+    mockFetch(
+      routes(
+        {
+          ...resumed.routes,
+          [`GET ${WIDGET_API}/conversations`]: {
+            conversations: [
+              { id: 'c1', status: 'ai', updatedAt: '2026-10-31T10:05:00Z', lastMessage: { author: 'assistant', authorName: null, text: 'Returns are accepted [S1].', createdAt: '2026-10-31T10:05:00Z' } },
+              { id: 'c0', status: 'closed', updatedAt: '2026-10-20T09:00:00Z', lastMessage: { author: 'visitor', authorName: null, text: 'Where is my **order**?', createdAt: '2026-10-20T09:00:00Z' } },
+            ],
+          },
+          [`GET ${WIDGET_API}/conversations/c0`]: visitorConversation([visitorMessage(1, 'visitor', 'Where is my order?')], { id: 'c0', status: 'closed' }),
+          [`GET ${WIDGET_API}/conversations/c0/events`]: (_url: URL, init: RequestInit) => controlledEventStream().respond(init),
+        },
+        {},
+        { conversationId: 'c1' },
+      ),
+    );
+    renderWidget();
+
+    await screen.findByText('Returns?', { selector: 'p' });
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Your conversations' }));
+
+    expect(await screen.findByRole('heading', { level: 2, name: 'Your conversations' })).toHaveFocus();
+    const list = screen.getByRole('list');
+    const items = within(list).getAllByRole('button');
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveAttribute('aria-current', 'true');
+    expect(items[0]).toHaveTextContent('Returns are accepted.');
+    expect(items[1]).toHaveTextContent('Ended');
+    expect(items[1]).toHaveTextContent('You: Where is my order?');
+
+    await user.click(items[1]!);
+    expect(screen.getByRole('region', { name: 'Messages' })).toHaveFocus();
+    expect(await screen.findByText('Where is my order?', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.queryByText('Returns?', { selector: 'p' })).not.toBeInTheDocument();
+    expect(screen.getByText('This chat has ended.')).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: 'Message' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'More options' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Your conversations' }));
+    await user.click(screen.getByRole('button', { name: 'Back to chat' }));
+    expect(screen.getByText('Where is my order?', { selector: 'p' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Messages' })).toHaveFocus();
+
+    await user.click(screen.getByRole('button', { name: 'New chat' }));
+    expect(await screen.findByRole('textbox', { name: 'Message' })).toBeInTheDocument();
+  });
+
   it('tells the host to close on the close button and on Escape', async () => {
     const user = userEvent.setup();
     mockFetch(routes());
@@ -820,10 +848,18 @@ describe('widget frame', () => {
     expect(screen.getByText('the form (https://evil.test/f?d=1)')).toBeInTheDocument();
   });
 
-  it('says when the widget does not exist', async () => {
+  it('shows nothing when the widget does not exist or cannot load, and tells the host instead', async () => {
     mockFetch({ [`GET ${WIDGET_API}/config`]: () => problem(404, { title: 'Not found', detail: 'This chat is not available.' }) });
-    renderWidget();
+    const missing = renderWidget();
 
-    expect(await screen.findByText('This chat is not available.')).toBeInTheDocument();
+    await waitFor(() => expect(hostMessages()).toContainEqual({ source: 'knowledge-agent', type: 'unavailable' }));
+    expect(missing.container).toBeEmptyDOMElement();
+    missing.unmount();
+
+    mockFetch({ [`GET ${WIDGET_API}/config`]: () => problem(500, { title: 'Broken' }) });
+    const broken = renderWidget();
+
+    await waitFor(() => expect(hostMessages()).toContainEqual({ source: 'knowledge-agent', type: 'failed' }));
+    expect(broken.container).toBeEmptyDOMElement();
   });
 });

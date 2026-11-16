@@ -10,7 +10,6 @@ import { AlertRow } from './AlertRow';
 
 export interface NeedsAttentionProps {
   action?: ReactNode;
-  /** While present, the "All good" line stays hidden even without alerts. */
   children?: ReactNode;
 }
 

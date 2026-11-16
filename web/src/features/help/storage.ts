@@ -1,6 +1,5 @@
 import type { HelpTurn } from './types';
 
-// Session storage: the thread ends with the tab and is never stored server-side.
 const KEY = 'ka-help-thread';
 const MAX_TURNS = 30;
 
@@ -39,7 +38,6 @@ export function saveThread(thread: HelpThread): void {
   try {
     window.sessionStorage.setItem(KEY, JSON.stringify({ ...thread, turns: thread.turns.slice(-MAX_TURNS) }));
   } catch {
-    // Storage may be full or blocked; the chat still works for this page view.
   }
 }
 
@@ -49,7 +47,6 @@ export function clearThread(): void {
   } catch {}
 }
 
-/** Groups the traces of one help conversation; null where randomUUID is unavailable. */
 export function newSessionId(): string | null {
   return typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : null;
 }

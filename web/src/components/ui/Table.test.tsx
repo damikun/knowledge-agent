@@ -69,7 +69,6 @@ describe('Table', () => {
         disconnect() {}
       },
     );
-    // jsdom loads no CSS, so the box gets the overflow-x of its class here.
     const computed = window.getComputedStyle.bind(window);
     vi.spyOn(window, 'getComputedStyle').mockImplementation((element) => {
       const style = computed(element);

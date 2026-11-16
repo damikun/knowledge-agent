@@ -46,7 +46,6 @@ describe('SideSheet', () => {
     expect(sheet).toContainElement(document.activeElement as HTMLElement);
     expect(await axeViolations()).toEqual([]);
 
-    // Close, Title, Cancel, Save, and around again.
     await user.tab();
     await user.tab();
     await user.tab();

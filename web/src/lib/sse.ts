@@ -1,17 +1,11 @@
-// EventSource only does GET, and POST /api/chat streams text/event-stream, so the stream is parsed here (WHATWG rules,
-// plus a final event without a trailing blank line).
-
 import { checkSession, REQUEST_HEADERS } from './session';
 
 export interface SseMessage {
-  /** The `event:` field; "message" when absent. */
   event: string;
-  /** All `data:` lines of the event joined with "\n". */
   data: string;
   id?: string;
 }
 
-/** Feed decoded text with push() and call flush() when the stream ends. */
 export class SseParser {
   private buffer = '';
   private eventName = '';
@@ -29,7 +23,6 @@ export class SseParser {
       }
     }
     if (this.skipLeadingLineFeed && text.length > 0) {
-      // The previous chunk ended with "\r"; a "\n" here belongs to the same CRLF line break.
       if (text.startsWith('\n')) {
         text = text.slice(1);
       }
@@ -61,7 +54,6 @@ export class SseParser {
     return events;
   }
 
-  /** Processes an unterminated last line and dispatches a pending event. */
   flush(): SseMessage[] {
     const events: SseMessage[] = [];
     if (this.buffer.length > 0) {
@@ -80,7 +72,7 @@ export class SseParser {
       return;
     }
     if (line.startsWith(':')) {
-      return; // comment / keep-alive
+      return;
     }
     const colon = line.indexOf(':');
     const field = colon === -1 ? line : line.slice(0, colon);
@@ -101,7 +93,6 @@ export class SseParser {
         }
         break;
       default:
-        // `retry` and unknown fields are irrelevant for a single fetch-based stream.
         break;
     }
   }
@@ -125,12 +116,10 @@ function abortReason(signal: AbortSignal): unknown {
   return signal.reason ?? new DOMException('The operation was aborted.', 'AbortError');
 }
 
-/** Checks the name rather than instanceof, so aborts from another realm match too. */
 export function isAbortError(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'name' in error && (error as { name: unknown }).name === 'AbortError';
 }
 
-/** Aborting `signal` cancels the reader and makes the generator throw the abort reason. */
 export async function* readSseStream(
   body: ReadableStream<Uint8Array>,
   signal?: AbortSignal,
@@ -163,19 +152,16 @@ export async function* readSseStream(
     try {
       reader.releaseLock();
     } catch {
-      // Already released or a read is still pending after cancellation.
     }
   }
 }
 
 export interface SseRequestInit {
-  /** Defaults to POST when a body is given, GET otherwise. */
   method?: string;
   headers?: Record<string, string>;
   body?: BodyInit | null;
   signal?: AbortSignal;
   onErrorResponse?: (response: Response) => Promise<Error> | Error;
-  /** Called once the stream is open, before its first event; a stream may stay quiet for a while. */
   onOpen?: (response: Response) => void;
 }
 

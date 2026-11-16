@@ -4,9 +4,7 @@ import { policyLabel, toolEffect, toolLabel } from './words';
 
 export interface McpToolListProps {
   tools: readonly McpToolDto[];
-  /** Names the list for screen readers. */
   label: string;
-  /** Shows the default policy for each tool. */
   showDefaults?: boolean;
 }
 

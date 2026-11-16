@@ -1,6 +1,5 @@
 import { formatBytes } from '../../lib/format';
 
-/** Mirrors Ingestion:MaxUploadBytes on the API. */
 export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
 
 const ACCEPTED_EXTENSIONS = ['.pdf', '.txt', '.md', '.markdown'] as const;

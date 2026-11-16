@@ -10,9 +10,7 @@ import { PREVIEW_URL } from './usePreviewBridge';
 
 export type Device = 'desktop' | 'phone';
 
-// Room for the 400 px panel beside the page, above the loader's 640 px breakpoint.
 const MIN_DESKTOP_WIDTH = 720;
-// The open panel is about 600 px tall; a shorter viewport scales the preview down instead of squeezing it.
 const MIN_DESKTOP_HEIGHT = 760;
 const PHONE = { width: 390, height: 780 };
 
@@ -22,7 +20,6 @@ interface Viewport {
   scale: number;
 }
 
-// The room is 0 before layout and while hidden; 1 px keeps the scale above zero.
 export function fit(device: Device, space: { width: number; height: number }): Viewport {
   const width = Math.max(space.width, 1);
   const height = Math.max(space.height, 1);
@@ -47,21 +44,27 @@ const DEVICES: readonly SegmentedOption<Device>[] = [
   { value: 'phone', label: choiceLabel('Phone'), icon: Smartphone },
 ];
 
-// Line and label stay readable when the frame is scaled down.
+const LABEL_GAP = 8;
+const LABEL_ROOM = 120;
+const MIN_RADIUS = 6;
+
 function Outline({ rect, scale, label, selected }: { rect: PreviewRect; scale: number; label?: string | undefined; selected: boolean }) {
   const top = rect.y * scale;
+  const radii = rect.radii?.map((radius) => `${Math.max(radius * scale, MIN_RADIUS)}px`).join(' ');
+  const besidePanel = rect.panel && rect.panel.x * scale >= LABEL_ROOM ? (rect.panel.x - rect.x) * scale - LABEL_GAP : null;
   return (
     <div
       aria-hidden
-      className={clsx('pointer-events-none absolute rounded-md outline-2 outline-offset-2', selected ? 'outline-focus' : 'outline-focus/70 outline-dashed')}
-      style={{ left: rect.x * scale, top, width: rect.width * scale, height: rect.height * scale }}
+      className={clsx('pointer-events-none absolute outline-2', rect.panel ? '-outline-offset-2' : 'outline-offset-2', !radii && 'rounded-md', selected ? 'outline-focus' : 'outline-focus/70 outline-dashed')}
+      style={{ left: rect.x * scale, top, width: rect.width * scale, height: rect.height * scale, ...(radii ? { borderRadius: radii } : {}) }}
     >
       {label ? (
         <span
           className={clsx(
-            'absolute left-0 rounded-md border border-border bg-raised px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-fg shadow-menu',
-            top >= 28 ? '-top-7' : '-bottom-7',
+            'absolute rounded-md border border-border bg-raised px-1.5 py-0.5 text-xs font-medium whitespace-nowrap text-fg shadow-menu',
+            besidePanel !== null ? 'top-0 -translate-x-full' : ['left-0', top >= 28 ? '-top-7' : '-bottom-7'],
           )}
+          style={besidePanel !== null ? { left: besidePanel } : undefined}
         >
           {label}
         </span>
@@ -83,7 +86,6 @@ export interface PreviewCanvasProps {
   painted: boolean;
 }
 
-// Show the page anyway if the preview never reports a paint, e.g. a stale cached build.
 const PAINT_TIMEOUT_MS = 2500;
 
 export function PreviewCanvas({
@@ -103,7 +105,6 @@ export function PreviewCanvas({
   const room = useElementSize(roomElement);
   const [loadedPage, setLoadedPage] = useState(false);
   const [timedOut, setTimedOut] = useState(false);
-  // The frame paints a light page before the widget arrives; fade it in once painted to avoid a flash in dark mode.
   const visible = painted || timedOut;
 
   useEffect(() => {
@@ -123,7 +124,6 @@ export function PreviewCanvas({
           <label htmlFor={sceneId} className="text-small font-medium text-fg-secondary">
             Scene
           </label>
-          {/* Fits the longest scene, "Waiting for a person". */}
           <Select
             id={sceneId}
             value={scene}

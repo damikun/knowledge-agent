@@ -4,6 +4,7 @@ import { axeViolations } from '../../test/a11y';
 import { mockFetch } from '../../test/utils';
 import { problem, WIDGET_API, WIDGET_KEY, widgetConfig } from '../test/fixtures';
 import { createLauncherView, findLoaderScript, startLoader, type LauncherConfig } from './launcher';
+import { LOADER_CSS } from './styles';
 
 const PORTAL = 'https://portal.example.com';
 
@@ -105,7 +106,6 @@ describe('widget loader', () => {
     const iframe = frame()!;
     expect(iframe).toHaveAttribute('src', `${PORTAL}/widget/v1/frame/${WIDGET_KEY}`);
     expect(iframe).toHaveAttribute('title', 'Shop help');
-    // The same color scheme as the frame's, so the browser keeps the frame transparent over the glass.
     expect(iframe.style.colorScheme).toBe('light');
     expect(launcher).toHaveAttribute('aria-expanded', 'true');
     expect(root).toHaveClass('ka-is-open');
@@ -130,6 +130,65 @@ describe('widget loader', () => {
     launcher.click();
     expect(launcher).toHaveAttribute('aria-expanded', 'true');
     expect(frame()).toBe(iframe);
+  });
+
+  it('sits in the top layer where the browser has popovers, so transforms and stacking on the page cannot move it', async () => {
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'showPopover');
+    const showPopover = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, value: showPopover });
+    try {
+      const { host } = await startWithConfig();
+      expect(host).toHaveAttribute('popover', 'manual');
+      expect(showPopover).toHaveBeenCalledOnce();
+      expect(showPopover.mock.contexts[0]).toBe(host);
+    } finally {
+      if (original) {
+        Object.defineProperty(HTMLElement.prototype, 'showPopover', original);
+      } else {
+        delete (HTMLElement.prototype as Partial<HTMLElement>).showPopover;
+      }
+    }
+  });
+
+  it('stays in the page where the browser has no popovers, and its host rules win over the page', async () => {
+    const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'showPopover');
+    Object.defineProperty(HTMLElement.prototype, 'showPopover', { configurable: true, value: undefined });
+    try {
+      const { host } = await startWithConfig();
+      expect(host).not.toHaveAttribute('popover');
+      expect(host.parentElement).toBe(document.body);
+      expect(LOADER_CSS).toMatch(/:host \{\s*all: initial !important;/);
+      expect(LOADER_CSS).toMatch(/:host\(\[popover\]\) \{[^}]*position: fixed !important;/);
+    } finally {
+      if (original) {
+        Object.defineProperty(HTMLElement.prototype, 'showPopover', original);
+      } else {
+        delete (HTMLElement.prototype as Partial<HTMLElement>).showPopover;
+      }
+    }
+  });
+
+  it('closes quietly when the chat cannot load, and removes the launcher when the widget is gone', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const { launcher, root, frame } = await startWithConfig();
+
+    launcher.click();
+    const first = frame()!;
+    fromFrame(first.contentWindow, { source: 'knowledge-agent', type: 'failed' });
+    expect(launcher).toHaveAttribute('aria-expanded', 'false');
+    expect(root).not.toHaveClass('ka-is-open');
+    expect(frame()).toBeNull();
+
+    launcher.click();
+    const second = frame()!;
+    expect(second).not.toBe(first);
+
+    fromFrame(second.contentWindow, { source: 'knowledge-agent', type: 'unavailable' });
+    expect(document.querySelector('knowledge-agent-widget')).toBeNull();
+    expect(warn).toHaveBeenCalledTimes(2);
+
+    window.KnowledgeAgent!.identify({ userId: '42', userHash: 'a'.repeat(64) });
+    expect(document.querySelector('knowledge-agent-widget')).toBeNull();
   });
 
   it('passes the signed-in user from the script tag and identify() to the frame, and logout() forgets them', async () => {

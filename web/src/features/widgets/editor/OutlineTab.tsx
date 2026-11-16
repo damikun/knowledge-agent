@@ -2,7 +2,6 @@ import { CircleAlert } from 'lucide-react';
 import type { EditTarget, PreviewScene } from '../../../widget/shared/preview';
 import { AREA_LABELS, SCENE_LABELS, type Registry, type TargetArea, type TargetDef } from './registry';
 
-/** The preview's elements as a list, for keyboard users and for elements the preview doesn't show. */
 export function Outline({
   registry,
   scene,

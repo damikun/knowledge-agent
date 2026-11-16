@@ -1,5 +1,3 @@
-// Line diff via longest common subsequence.
-
 type DiffLineType = 'same' | 'added' | 'removed';
 
 export interface DiffLine {
@@ -7,7 +5,6 @@ export interface DiffLine {
   text: string;
 }
 
-// Above this many line pairs the table gets too large; everything then shows as removed and added.
 const MAX_CELLS = 4_000_000;
 
 function splitLines(text: string): string[] {
@@ -18,7 +15,6 @@ export function diffLines(before: string, after: string): DiffLine[] {
   const a = splitLines(before);
   const b = splitLines(after);
 
-  // Skip the common head and tail so the table covers only the changed middle.
   let start = 0;
   while (start < a.length && start < b.length && a[start] === b[start]) {
     start++;
@@ -39,7 +35,6 @@ export function diffLines(before: string, after: string): DiffLine[] {
     return [...head, ...midA.map((text) => ({ type: 'removed' as const, text })), ...midB.map((text) => ({ type: 'added' as const, text })), ...tail];
   }
 
-  // lengths[i][j]: LCS length of midA[i..] and midB[j..].
   const width = midB.length + 1;
   const lengths = new Uint32Array((midA.length + 1) * width);
   for (let i = midA.length - 1; i >= 0; i--) {
@@ -81,7 +76,6 @@ export function diffStats(lines: readonly DiffLine[]): { added: number; removed:
   };
 }
 
-/** The template, or each chat message under its role. */
 export function promptText(prompt: { text: string | null; messages: ReadonlyArray<{ role: string; content: string }> }): string {
   if (prompt.text !== null && prompt.messages.length === 0) {
     return prompt.text;

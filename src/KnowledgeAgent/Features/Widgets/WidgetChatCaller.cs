@@ -2,7 +2,6 @@ using KnowledgeAgent.Features.Chat;
 
 namespace KnowledgeAgent.Features.Widgets;
 
-// Built in one place, so a playground test gets exactly what visitors get.
 internal static class WidgetChatCaller
 {
     public static ChatCaller ForVisitor(Widget widget, WidgetVisitor visitor) =>

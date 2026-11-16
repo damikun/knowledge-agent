@@ -4,7 +4,6 @@ import { CONVERSATION_ID } from './fixtures';
 import { WIDGET_CONVERSATION_ID } from './inboxApi';
 import { widgetGuid } from './widgetsApi';
 
-/** The summary of the "Shop help" widget with the website helper agent. */
 export function feedbackSummary(overrides: Partial<FeedbackSummaryDto> = {}): FeedbackSummaryDto {
   return {
     widgetId: widgetGuid(1),
@@ -20,7 +19,6 @@ export function feedbackSummary(overrides: Partial<FeedbackSummaryDto> = {}): Fe
   };
 }
 
-/** A visitor's thumbs down on an answer of a widget conversation. */
 export function feedbackDto(overrides: Partial<FeedbackDto> = {}): FeedbackDto {
   return {
     id: '0199c1e2-0000-7000-8000-0000000f0001',
@@ -41,7 +39,6 @@ export function feedbackDto(overrides: Partial<FeedbackDto> = {}): FeedbackDto {
   };
 }
 
-/** A staff member's five stars for a portal conversation with the built-in agent. */
 export const portalRating = feedbackDto({
   id: '0199c1e2-0000-7000-8000-0000000f0002',
   conversationId: CONVERSATION_ID,
@@ -52,7 +49,7 @@ export const portalRating = feedbackDto({
   reasons: [],
   author: 'staff',
   widgetId: null,
-  agentId: null,
+  agentId: agentGuid(1),
   conversationTitle: 'Vacation policy',
   messageText: null,
 });

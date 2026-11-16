@@ -4,9 +4,7 @@ import type { ProviderDto, UpdateProviderRequest } from './types';
 export const PROVIDERS_ANCHOR = 'providers';
 export const PROVIDERS_PATH = `/models#${PROVIDERS_ANCHOR}`;
 
-/** Empty means "use the configured value", except apiKey, where it means "keep the current key". */
 export interface ProviderFormValues {
-  /** Never prefilled: the API doesn't return keys. */
   apiKey: string;
   clearApiKey: boolean;
   endpoint: string;
@@ -32,7 +30,6 @@ function str(value: string | number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value);
 }
 
-/** Keys come from configuration and may contain characters invalid in ids. */
 export function providerDomId(key: string): string {
   return `provider-${key.replace(/[^\w-]/g, '_')}`;
 }
@@ -54,7 +51,6 @@ export function visibleFields(provider: ProviderDto): ProviderTextField[] {
   return fields;
 }
 
-/** Without portal settings the form starts empty so untouched fields stay null and fall back to configuration. */
 export function initialProviderFormValues(provider: ProviderDto): ProviderFormValues {
   const keep = provider.hasOverride;
   return {
@@ -71,7 +67,6 @@ export function hasApiKey(provider: Pick<ProviderDto, 'apiKeySource'>): boolean 
   return provider.apiKeySource === 'portal' || provider.apiKeySource === 'configuration';
 }
 
-/** Null for providers without API keys. */
 export function describeApiKey(provider: Pick<ProviderDto, 'usesApiKey' | 'apiKeySource' | 'apiKeyHint'>): string | null {
   if (!provider.usesApiKey) {
     return null;
@@ -87,12 +82,10 @@ export function describeApiKey(provider: Pick<ProviderDto, 'usesApiKey' | 'apiKe
   }
 }
 
-/** Only known while nothing is saved in the portal. */
 export function hasConfiguredEndpoint(provider: Pick<ProviderDto, 'hasOverride' | 'endpoint'>): boolean {
   return !provider.hasOverride && Boolean(provider.endpoint);
 }
 
-/** The provider needs an endpoint and no configured one is known to apply. */
 export function isEndpointMandatory(provider: Pick<ProviderDto, 'endpointRequired' | 'hasOverride' | 'endpoint'>): boolean {
   return provider.endpointRequired && !hasConfiguredEndpoint(provider);
 }
@@ -106,7 +99,6 @@ function isHttpUrl(value: string): boolean {
   }
 }
 
-/** The key is sent only when typed or cleared; fields the provider lacks are sent as null. */
 export function toProviderUpdateRequest(
   values: ProviderFormValues,
   provider: ProviderDto,

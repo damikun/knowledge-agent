@@ -1,5 +1,6 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { asArray, isRecord, request } from '../../lib/api';
+import { asArray, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { Guid } from '../../lib/types';
 import { conversationKeys } from '../chat/api';
 import { encodeFilter } from './filters';
@@ -27,7 +28,6 @@ import type {
   UpdatePersonRequest,
 } from './types';
 
-// Under the chat's ['conversations'] key, so a person's conversations refresh with the Inbox.
 const peopleKeys = {
   all: ['people'] as const,
   lists: ['people', 'list'] as const,
@@ -162,7 +162,7 @@ function toPersonSummary(value: unknown): PersonSummary {
     lastSeenAt: String(dto.lastSeenAt ?? ''),
     conversationCount: num(dto.conversationCount),
     widgets: asArray<unknown>(dto.widgets).map(toWidget),
-    sessionCount: num(dto.sessionCount),
+    visitCount: num(dto.visitCount),
     returning: dto.returning === true,
     language: text(dto.language),
     lastPageUrl: text(dto.lastPageUrl),
@@ -203,7 +203,7 @@ function toPerson(value: unknown): Person {
       return { ...toWidget(row), firstSeenAt: String(row.firstSeenAt ?? ''), lastSeenAt: String(row.lastSeenAt ?? '') };
     }),
     stats: toStats(dto.stats, lastSeenAt),
-    sessionCount: num(dto.sessionCount),
+    visitCount: num(dto.visitCount),
     returning: dto.returning === true,
     lastPageUrl: text(dto.lastPageUrl),
     lastReferrer: text(dto.lastReferrer),
@@ -226,7 +226,6 @@ function toConversation(value: unknown): PersonConversation {
   };
 }
 
-/** Null for portal conversations. */
 export function toConversationContact(value: unknown): ConversationContact | null {
   if (!isRecord(value) || typeof value.id !== 'string') {
     return null;
@@ -234,11 +233,9 @@ export function toConversationContact(value: unknown): ConversationContact | nul
   return { id: value.id, name: text(value.name) ?? 'Visitor', email: text(value.email), identified: value.identified === true };
 }
 
-const personPath = (id: Guid) => `/api/people/${encodeURIComponent(id)}`;
-
 const peopleApi = {
   list: async (filters: PeopleFilters, cursor: string | null, signal?: AbortSignal): Promise<PeoplePage> => {
-    const dto = await request<unknown>('/api/people', {
+    const dto = await call(endpoints.people.list, {
       query: { ...peopleQuery(filters), cursor, limit: PEOPLE_PAGE_SIZE },
       ...(signal ? { signal } : {}),
     });
@@ -246,11 +243,11 @@ const peopleApi = {
     return { items: asArray<unknown>(page.items).map(toPersonSummary), nextCursor: text(page.nextCursor) };
   },
   count: async (filters: PeopleFilters, signal?: AbortSignal): Promise<number> => {
-    const dto = await request<unknown>('/api/people/count', { query: peopleQuery(filters), ...(signal ? { signal } : {}) });
+    const dto = await call(endpoints.people.count, { query: peopleQuery(filters), ...(signal ? { signal } : {}) });
     return num(isRecord(dto) ? dto.count : 0);
   },
   attributes: async (signal?: AbortSignal): Promise<AttributeRegistry> => {
-    const dto = await request<unknown>('/api/people/attributes', signal ? { signal } : {});
+    const dto = await call(endpoints.people.attributes, signal ? { signal } : {});
     const body = isRecord(dto) ? dto : {};
     const ops: Record<string, string[]> = {};
     if (isRecord(body.ops)) {
@@ -261,25 +258,24 @@ const peopleApi = {
     return { items: asArray<unknown>(body.items).map(toContactAttribute), builtIn: asArray<unknown>(body.builtIn).map(toFilterAttribute), ops };
   },
   values: async (key: string, signal?: AbortSignal): Promise<string[]> => {
-    const dto = await request<unknown>(`/api/people/attributes/${encodeURIComponent(key)}/values`, signal ? { signal } : {});
+    const dto = await call(endpoints.people.attributeValues, { params: { key }, ...(signal ? { signal } : {}) });
     return asArray<unknown>(dto).flatMap((item) => (isRecord(item) && typeof item.value === 'string' ? [item.value] : []));
   },
   updateAttribute: async (key: string, body: Partial<Pick<ContactAttribute, 'label' | 'visible' | 'exposeToAgent' | 'trust'>>) =>
-    toContactAttribute(await request<unknown>(`/api/people/attributes/${encodeURIComponent(key)}`, { method: 'PATCH', body })),
-  deleteAttribute: (key: string) => request<unknown>(`/api/people/attributes/${encodeURIComponent(key)}`, { method: 'DELETE', body: { confirm: true } }),
+    toContactAttribute(await call(endpoints.people.updateAttribute, { params: { key }, body })),
+  deleteAttribute: (key: string) => call(endpoints.people.deleteAttribute, { params: { key }, body: { confirm: true } }),
   setAttributes: (id: Guid, attributes: Record<string, AttributeValue | null>) =>
-    request<unknown>(`${personPath(id)}/attributes`, { method: 'PATCH', body: { attributes } }),
-  segments: async (signal?: AbortSignal): Promise<Segment[]> => asArray<unknown>(await request<unknown>('/api/segments', signal ? { signal } : {})).map(toSegment),
-  createSegment: async (body: SaveSegmentRequest) => toSegment(await request<unknown>('/api/segments', { method: 'POST', body })),
-  updateSegment: async (id: Guid, body: SaveSegmentRequest) => toSegment(await request<unknown>(`/api/segments/${encodeURIComponent(id)}`, { method: 'PATCH', body })),
-  deleteSegment: (id: Guid) => request<unknown>(`/api/segments/${encodeURIComponent(id)}`, { method: 'DELETE' }),
-  get: async (id: Guid, signal?: AbortSignal) => toPerson(await request<unknown>(personPath(id), signal ? { signal } : {})),
-  update: async (id: Guid, body: UpdatePersonRequest) => toPerson(await request<unknown>(personPath(id), { method: 'PATCH', body })),
-  // Erasure can't be undone, so the API requires an explicit confirmation in the body.
-  erase: (id: Guid) => request<unknown>(personPath(id), { method: 'DELETE', body: { confirm: true } }),
-  export: (id: Guid) => request<unknown>(`${personPath(id)}/export`),
+    call(endpoints.people.setAttributes, { params: { id }, body: { attributes } }),
+  segments: async (signal?: AbortSignal): Promise<Segment[]> => asArray<unknown>(await call(endpoints.segments.list, signal ? { signal } : {})).map(toSegment),
+  createSegment: async (body: SaveSegmentRequest) => toSegment(await call(endpoints.segments.create, { body })),
+  updateSegment: async (id: Guid, body: SaveSegmentRequest) => toSegment(await call(endpoints.segments.update, { params: { id }, body })),
+  deleteSegment: (id: Guid) => call(endpoints.segments.remove, { params: { id } }),
+  get: async (id: Guid, signal?: AbortSignal) => toPerson(await call(endpoints.people.get, { params: { id }, ...(signal ? { signal } : {}) })),
+  update: async (id: Guid, body: UpdatePersonRequest) => toPerson(await call(endpoints.people.update, { params: { id }, body })),
+  erase: (id: Guid) => call(endpoints.people.erase, { params: { id }, body: { confirm: true } }),
+  export: (id: Guid) => call(endpoints.people.export, { params: { id } }),
   conversations: async (id: Guid, cursor: string | null, signal?: AbortSignal): Promise<PersonConversationPage> => {
-    const dto = await request<unknown>('/api/conversations/search', {
+    const dto = await call(endpoints.conversations.search, {
       query: { contactId: id, includeTests: true, sort: 'updated', cursor, limit: PERSON_CONVERSATIONS_PAGE_SIZE },
       ...(signal ? { signal } : {}),
     });
@@ -321,7 +317,6 @@ export function useUpdatePerson(id: Guid) {
     onSuccess: (person) => {
       queryClient.setQueryData(peopleKeys.detail(id), person);
       void queryClient.invalidateQueries({ queryKey: peopleKeys.lists });
-      // Conversation lists show the person's name.
       void queryClient.invalidateQueries({ queryKey: conversationKeys.all });
     },
   });
@@ -374,7 +369,6 @@ export function useAttributeValues(key: string, enabled: boolean) {
   return useQuery({ queryKey: peopleKeys.values(key), queryFn: ({ signal }) => peopleApi.values(key, signal), enabled: enabled && key !== '', staleTime: 60_000 });
 }
 
-/** Also used by the Inbox's segment filter. */
 export function useSegments() {
   return useQuery({ queryKey: peopleKeys.segments, queryFn: ({ signal }) => peopleApi.segments(signal), staleTime: 30_000 });
 }
@@ -414,7 +408,6 @@ export function useDeleteAttribute() {
   });
 }
 
-/** null clears a value. */
 export function useSetPersonAttributes(id: Guid) {
   const queryClient = useQueryClient();
   return useMutation({

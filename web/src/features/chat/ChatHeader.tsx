@@ -16,7 +16,6 @@ import type { ConversationActions } from './useConversationActions';
 
 const HEADER_LABELS = 2;
 
-/** "orchestrator-system v3 (langfuse)", or null for a conversation without a stored prompt. */
 export function promptLabel(conversation: Pick<ConversationDto, 'promptName' | 'promptVersion' | 'promptOrigin'> | undefined): string | null {
   if (!conversation?.promptName) {
     return null;
@@ -70,7 +69,6 @@ export function ConversationDetailsButton({ conversation, agentName, scope }: { 
 
 export interface ChatHeaderProps {
   title: string;
-  /** The conversation as the list has it; without it there is nothing to rename, pin, label or delete yet. */
   item: ConversationListItem | undefined;
   agentName: string | null;
   actions: ConversationActions;
@@ -79,7 +77,6 @@ export interface ChatHeaderProps {
   tools: ReactNode;
 }
 
-/** Keyed by the conversation, so a rename or the label picker never carries over. */
 export function ChatHeader({ title, item, agentName, actions, list, onBack, tools }: ChatHeaderProps) {
   const labels = useLabels();
   const [renaming, setRenaming] = useState(false);

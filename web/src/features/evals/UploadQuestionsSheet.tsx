@@ -34,7 +34,6 @@ const FIELD_OPTIONS = (Object.keys(UPLOAD_FIELD_LABELS) as UploadField[]).map((v
 function TemplateLink({ name, content, type }: { name: string; content: string; type: string }) {
   const [href, setHref] = useState<string | null>(null);
   useEffect(() => {
-    // jsdom has no URL.createObjectURL.
     if (typeof URL.createObjectURL !== 'function') {
       return undefined;
     }
@@ -50,7 +49,6 @@ function TemplateLink({ name, content, type }: { name: string; content: string; 
   );
 }
 
-/** Server errors are keyed items[i].field, where i indexes the rows sent, not the file's rows. */
 function serverRowErrors(error: unknown, sent: readonly UploadRow[]): Map<number, string[]> {
   const byLine = new Map<number, string[]>();
   if (!(error instanceof ApiError)) {
@@ -68,7 +66,6 @@ function serverRowErrors(error: unknown, sent: readonly UploadRow[]): Map<number
 
 export interface UploadQuestionsSheetProps {
   datasetId: string;
-  /** duplicateKey values of the dataset's questions. */
   existing: ReadonlySet<string>;
   onClose: () => void;
   onAdded: (result: ImportEvalItemsResultDto) => void;
@@ -96,7 +93,6 @@ export function UploadQuestionsSheet({ datasetId, existing, onClose, onAdded }: 
   });
   const serverErrors = serverRowErrors(upload.error, ready);
   const otherError = upload.isError && serverErrors.size === 0;
-  // Problem rows first, so a truncated preview still shows them.
   const previewRows = [
     ...rows.filter((row) => !row.request || serverErrors.has(row.line)),
     ...rows.filter((row) => row.request && !serverErrors.has(row.line)),
@@ -243,7 +239,6 @@ export function UploadQuestionsSheet({ datasetId, existing, onClose, onAdded }: 
                     value={mapping[index] ?? 'ignore'}
                     options={FIELD_OPTIONS}
                     onChange={(field) =>
-                      // A field maps to one column, so choosing it here clears it elsewhere.
                       setMapping((current) =>
                         current.map((value, at) => (at === index ? field : field !== 'ignore' && value === field ? 'ignore' : value)),
                       )

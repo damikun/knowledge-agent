@@ -29,7 +29,6 @@ export interface TurnError {
 
 type ToolStatus = 'running' | 'success' | 'error' | 'cancelled';
 
-/** What a sub-agent, e.g. the researcher behind delegate_research, streamed while it ran. */
 export interface AgentActivity {
   agent: string;
   provider: string | null;
@@ -41,7 +40,6 @@ export interface AgentActivity {
   status: 'running' | 'completed' | 'cancelled';
   finishReason: string | null;
   iterations: number | null;
-  /** A tool call happened since the last delta, so the next one starts a new paragraph. */
   textBreakPending: boolean;
   reasoningBreakPending: boolean;
 }
@@ -60,25 +58,19 @@ export interface ToolCallView {
   subAgent: AgentActivity | null;
   confirmation?: ToolConfirmation | null;
   result?: string | null;
-  /** What the agent wrote before this call; it is not part of the answer. */
   preamble?: string | null;
 }
 
-/** pending: the question is stored, but no answer has reached this view yet. cancelled: stopped before it was complete. */
 type TurnStatus = 'pending' | 'streaming' | 'complete' | 'error' | 'cancelled';
 
 export interface TurnView {
-  /** The client id for turns streamed in this session, the server id for history. */
   key: string;
-  /** The server id once known; the client id while streaming. */
   id: string;
   persisted: boolean;
   userMessage: string;
   text: string;
-  /** Not persisted by the API. */
   reasoning: string;
   tools: ToolCallView[];
-  /** Every citation produced during the turn, unique by ref. */
   citations: CitationDto[];
   provider: string | null;
   model: string | null;
@@ -87,11 +79,8 @@ export interface TurnView {
   status: TurnStatus;
   finishReason: string | null;
   durationMs: number | null;
-  /** Client time in ms; null for history turns. */
   startedAt: number | null;
-  /** For turns sent from this tab: the last timeline sequence it knew then. Its question is stored after it. */
   sentAfterSequence: number | null;
-  /** A note the agent wrote before tool calls, until the call it introduced arrives. */
   pendingPreamble: string | null;
   textBreakPending: boolean;
   reasoningBreakPending: boolean;
@@ -101,7 +90,6 @@ export interface TurnView {
 export interface ChatState {
   conversationId: string | null;
   title: string | null;
-  /** Turns streamed in this tab. */
   turns: TurnView[];
   streaming: boolean;
 }
@@ -109,12 +97,9 @@ export interface ChatState {
 export type ChatAction =
   | { type: 'reset'; conversationId: string | null }
   | { type: 'send'; id: string; message: string; at: number; sentAfterSequence?: number | null }
-  /** A turn another tab started, or one that was running before a reload, followed through the conversation's events. */
   | { type: 'follow'; turnId: string; message: string; at: number }
-  /** The API refused the message before a turn started, so the question is taken back. */
   | { type: 'refused' }
   | { type: 'event'; event: ChatEvent; at: number }
-  /** Without a preceding `done`, the turn is marked as interrupted. */
   | { type: 'stream-ended'; at: number }
   | { type: 'aborted'; at: number }
   | { type: 'failed'; message: string; code?: string | null; at: number };
@@ -122,7 +107,6 @@ export type ChatAction =
 const ORCHESTRATOR = 'orchestrator';
 export const INTERRUPTED_MESSAGE = 'The response ended unexpectedly. Try sending the message again.';
 
-/** "stopped": someone stopped the answer on the server, which keeps the text so far. Older API versions sent "cancelled". */
 function isStoppedFinish(finishReason: string | null | undefined): boolean {
   return finishReason === 'stopped' || finishReason === 'cancelled';
 }
@@ -189,7 +173,6 @@ function createTool(callId: string, toolName: string, agent: string, parentCallI
   };
 }
 
-/** Arguments arrive as a JSON object; a JSON-encoded string is tolerated too. */
 function normalizeArguments(value: JsonValue | null | undefined): JsonValue | null {
   if (typeof value === 'string') {
     try {
@@ -253,7 +236,6 @@ function findTool(tools: readonly ToolCallView[], callId: string): ToolCallView 
   return undefined;
 }
 
-/** Returns the same array when no tool has `callId`. */
 function updateTool(tools: ToolCallView[], callId: string, update: (tool: ToolCallView) => ToolCallView): ToolCallView[] {
   let changed = false;
   const next = tools.map((tool) => {
@@ -281,7 +263,6 @@ function mapToolsDeep(tools: ToolCallView[], fn: (tool: ToolCallView) => ToolCal
 function withParent(turn: TurnView, parentCallId: string, agent: string, update: (parent: ToolCallView) => ToolCallView): TurnView {
   let tools = turn.tools;
   if (!findTool(tools, parentCallId)) {
-    // A nested event for an unknown parent should not happen; keep the activity visible anyway.
     tools = [...tools, createTool(parentCallId, ToolNames.DelegateResearch, ORCHESTRATOR, null)];
   }
   return {
@@ -350,7 +331,6 @@ function applyToolCall(turn: TurnView, data: ToolCallEvent): TurnView {
   return { ...turn, tools: [...turn.tools, { ...tool, ...preamble }], pendingPreamble: null, textBreakPending: true, reasoningBreakPending: true };
 }
 
-/** The text of an interim step moves from the answer to the tool call it introduced. A sub-agent's text stays its report. */
 function applyStepFinished(turn: TurnView, data: StepFinishedEvent): TurnView {
   if (data.parentCallId || data.kind !== 'interim') {
     return turn;
@@ -358,7 +338,6 @@ function applyStepFinished(turn: TurnView, data: StepFinishedEvent): TurnView {
   return { ...turn, text: '', pendingPreamble: turn.text.trim() || turn.pendingPreamble, textBreakPending: false };
 }
 
-/** The server stores the last note when the last step wrote nothing, so the live view shows the same. */
 function answerOrLastNote(turn: TurnView): string {
   if (turn.text.trim() !== '') {
     return turn.text;
@@ -379,7 +358,6 @@ function applyToolResult(turn: TurnView, data: ToolResultEvent): TurnView {
 
   let next = turn;
   if (!findTool(turn.tools, data.callId)) {
-    // A result without a preceding call: synthesize the call so the result is not lost.
     next = applyToolCall(turn, { ...data, arguments: null });
   }
   return {
@@ -522,14 +500,12 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
       return createChatState(action.conversationId);
 
     case 'send': {
-      // A previous turn that is somehow still open is closed first.
       const settled = updateLastStreamingTurn(state, (turn) => finalize(turn, 'cancelled', action.at));
       const turn = { ...createTurn(action.id, action.message, action.at), sentAfterSequence: action.sentAfterSequence ?? null };
       return { ...settled, turns: [...settled.turns, turn], streaming: true };
     }
 
     case 'follow': {
-      // Keyed by the server id, so the row keeps its key when the stored copy of the turn replaces it.
       const settled = updateLastStreamingTurn(state, (turn) => finalize(turn, 'cancelled', action.at));
       return { ...settled, turns: [...settled.turns, createTurn(action.turnId, action.message, null)], streaming: true };
     }
@@ -579,7 +555,6 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
-/** Sub-agent calls in the flat persisted list reference their parent call. */
 export function buildToolTree(calls: readonly ToolCallDto[]): ToolCallView[] {
   const views = new Map<string, ToolCallView>();
   for (const call of calls) {
@@ -634,7 +609,6 @@ export function turnFromDto(dto: ConversationTurnDto): TurnView {
   };
 }
 
-/** Stored turns, each replaced by its live copy from this tab (which has the reasoning), then live turns not stored yet. */
 export function mergeTurns(history: readonly TurnView[], live: readonly TurnView[]): TurnView[] {
   if (live.length === 0) {
     return history.slice();
@@ -650,7 +624,6 @@ export function mergeTurns(history: readonly TurnView[], live: readonly TurnView
   return merged;
 }
 
-/** Citation tags are unique per conversation. */
 export function citationIndex(turns: readonly TurnView[]): Map<string, CitationDto> {
   const index = new Map<string, CitationDto>();
   for (const turn of turns) {

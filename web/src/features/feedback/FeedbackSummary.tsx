@@ -15,7 +15,6 @@ interface Totals {
   positive: number;
   negative: number;
   ratings: number;
-  /** Sum of stars, so averages combine weighted by the number of ratings. */
   stars: number;
   agentRecorded: number;
 }
@@ -100,7 +99,7 @@ export function Summary({ rows, names }: { rows: readonly FeedbackSummaryDto[]; 
           </h2>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {rows.map((row) => (
-              <SummaryCard key={`${row.widgetId ?? 'portal'}-${row.agentId ?? 'built-in'}`} summary={row} names={names} />
+              <SummaryCard key={`${row.widgetId ?? 'portal'}-${row.agentId ?? 'none'}`} summary={row} names={names} />
             ))}
           </div>
         </section>

@@ -23,16 +23,13 @@ const STATUS_FILTERS: ReadonlyArray<{ value: StatusFilter; label: string; status
   { value: 'all', label: 'All', statuses: [] },
   { value: 'ready', label: 'Ready', statuses: ['ready'] },
   { value: 'indexing', label: 'Indexing', statuses: ['pending', 'processing'] },
-  // Both wait for someone: a failed source for a retry, a waiting one for an embedding model.
   { value: 'attention', label: 'Needs attention', statuses: ['failed', 'waiting'] },
 ];
 
 export interface SourceFilters {
-  /** Debounced and trimmed. */
   query: string;
   type: TypeFilter;
   status: StatusFilter;
-  /** Empty for every site. */
   site?: string;
 }
 
@@ -55,7 +52,6 @@ export function lastPageOffset(total: number, pageSize = SOURCES_PAGE_SIZE): num
   return total <= 0 ? 0 : Math.floor((total - 1) / pageSize) * pageSize;
 }
 
-/** "Showing 26–50 of 1,240". */
 export function pageRangeLabel(page: Pick<SourcePageDto, 'items' | 'offset' | 'total'>): string {
   if (page.items.length === 0) {
     return '';
@@ -65,11 +61,9 @@ export function pageRangeLabel(page: Pick<SourcePageDto, 'items' | 'offset' | 't
 
 export interface LibrarySummaryItem {
   label: string;
-  /** The color of its status dot; the total has none. */
   tone?: Tone;
 }
 
-/** "1,240 sources", "1,200 ready", "12 indexing", "8 need attention"; the last two only when there are any. */
 export function librarySummary(stats: SourceStatsDto): LibrarySummaryItem[] {
   const items: LibrarySummaryItem[] = [{ label: pluralize(stats.total, 'source') }, { label: `${formatNumber(stats.ready)} ready`, tone: 'success' }];
   const indexing = ingestingCount(stats);
@@ -86,10 +80,6 @@ export function librarySummary(stats: SourceStatsDto): LibrarySummaryItem[] {
   return items;
 }
 
-/**
- * The status chips with the library's counts, which replace a separate summary line. The stats cover the whole library,
- * so the counts show only where the list does too: in All sources without a type, site or search filter.
- */
 export function statusFilterOptions(stats: SourceStatsDto | undefined, withCounts: boolean): FilterChipOption<StatusFilter>[] {
   const attention = stats ? stats.failed + stats.waiting : 0;
   const counts: Record<StatusFilter, number> | null =
@@ -98,7 +88,6 @@ export function statusFilterOptions(stats: SourceStatsDto | undefined, withCount
     value,
     label,
     count: counts?.[value],
-    // A dot draws the eye to sources that need someone, wherever the list is.
     dot: value === 'attention' && attention > 0 ? (stats!.failed > 0 ? 'danger' : 'warning') : undefined,
   }));
 }

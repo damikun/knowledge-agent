@@ -185,7 +185,6 @@ export function SidePanel({
           notShown={notShown}
           focusId={focusId}
           onBack={() => {
-            // Render the outline synchronously so the entry just left can take focus back.
             flushSync(onBack);
             document.getElementById(itemId(element.id))?.focus();
           }}

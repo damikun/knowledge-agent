@@ -29,7 +29,6 @@ export interface NavItem {
   to: string;
   label: string;
   icon: LucideIcon;
-  /** Hidden from other roles; routes.tsx guards the pages themselves. */
   adminOnly?: boolean;
 }
 
@@ -104,7 +103,6 @@ function visibleGroups(admin: boolean): NavGroup[] {
   })).filter((group) => group.items.length > 0);
 }
 
-// The mark and icons sit 28 px from the left in both widths, so they don't move when the rail narrows.
 export function Brand({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex h-12 shrink-0 items-center gap-2.5 px-4">
@@ -140,7 +138,6 @@ interface NavigationProps {
   onNavigate?: () => void;
 }
 
-// Chrome shows the focus ring on a clicked link at the next key press, so pointer clicks (detail > 0) blur it.
 function blurAfterPointerClick(event: MouseEvent<HTMLAnchorElement>) {
   if (event.detail > 0) {
     event.currentTarget.blur();
@@ -216,7 +213,6 @@ interface MenuToggleProps {
   admin: boolean;
   collapsed: boolean;
   onToggle: () => void;
-  /** Id of the sidebar, for aria-controls. */
   controls: string;
 }
 

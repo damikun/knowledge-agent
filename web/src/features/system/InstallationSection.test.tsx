@@ -9,7 +9,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// jsdom has no ResizeObserver, which React Flow needs.
 class NoopResizeObserver {
   observe() {}
   unobserve() {}

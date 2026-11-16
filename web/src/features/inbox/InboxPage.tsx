@@ -15,7 +15,6 @@ import type { InboxState, InboxView } from './types';
 import { ConversationList } from './views/ConversationList';
 import { ViewTabs } from './views/ViewTabs';
 
-// Widths of the Inbox's own box, not the window.
 const WITH_DETAILS = 1180;
 const TWO_PANES = 768;
 const DETAILS_KEY = 'inbox.details';
@@ -42,7 +41,6 @@ export function InboxPage() {
   const [params, setParams] = useSearchParams();
   const state = readInboxState(params);
   const admin = isAdmin(useMe().data);
-  // Support users can't read widgets (403), so they see widget ids.
   const widgets = useWidgets(admin);
   const widgetNames = useMemo(
     () => (admin && widgets.data ? new Map(widgets.data.map((widget) => [widget.id.toLowerCase(), widget.name] as const)) : undefined),
@@ -52,17 +50,14 @@ export function InboxPage() {
   const labels = labelsOrEmpty(labelsQuery.data);
   const counts = useInboxCounts({ channel: state.channel, widgetId: state.widgetId, contactId: state.contactId });
   const [managing, setManaging] = useState(false);
-  // Null until measured; tests never measure and get the widest layout.
   const [root, setRoot] = useState<HTMLDivElement | null>(null);
   const size = useElementSize(root);
   const width = size && size.width > 0 ? size.width : null;
   const [inlineDetails, setInlineDetails] = useState(readDetailsPreference);
   const [sheetDetails, setSheetDetails] = useState(false);
   const listId = useId();
-  // Opened from elsewhere (a contact, Analytics), so moves inside the Inbox keep that way back.
   const kept = useKeptReturnState();
 
-  // Deep links to /inbox/{id} without a view show only that conversation; with one (?status=closed) it opens in that view.
   if (routeId) {
     const next = state.viewChosen ? { ...state, conversationId: routeId } : { ...state, conversationId: routeId, only: routeId };
     return <Navigate to={{ pathname: '/inbox', search: `?${toInboxSearch(next).toString()}` }} state={kept} replace />;
@@ -84,7 +79,6 @@ export function InboxPage() {
       {showList ? <ViewTabs
           state={state}
           counts={counts.data}
-          // Choosing a tab ends a contact or single-conversation deep link.
           linkTo={(view) => linkFor({ ...state, view, viewChosen: true, only: '' })}
           panelId={listId}
           context={context !== null}
@@ -123,7 +117,6 @@ export function InboxPage() {
                   try {
                     localStorage.setItem(DETAILS_KEY, next ? 'shown' : 'hidden');
                   } catch {
-                    // Without storage the choice lasts until reload.
                   }
                 }}
                 backTo={layout === 'one' ? linkFor({ ...state, conversationId: null }) : null}

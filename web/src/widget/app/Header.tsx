@@ -22,11 +22,9 @@ function HeaderButton(props: Omit<ComponentProps<'button'>, 'type' | 'className'
 function HeaderMenu({ items }: { items: MenuItem[] }) {
   const { t, mark } = useWidget();
   const [open, setOpen] = useState(false);
-  // Focus returns here when the menu closes.
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
 
-  // Focus the first item; a press anywhere else closes the menu.
   const menuRef = useCallback((menu: HTMLDivElement) => {
     menu.querySelector<HTMLElement>('[role="menuitem"]')?.focus();
     const onPointerDown = (event: PointerEvent) => {
@@ -68,7 +66,6 @@ function HeaderMenu({ items }: { items: MenuItem[] }) {
         focusAt(entries.length - 1);
         break;
       case 'Escape':
-        // Closes the menu only, not the whole chat.
         event.preventDefault();
         event.stopPropagation();
         close(true);

@@ -23,7 +23,6 @@ function LocalTime({ value, fallback }: { value: string | null; fallback: string
   return value ? <time dateTime={value}>{formatDateTime(value)}</time> : <span className="text-fg-muted">{fallback}</span>;
 }
 
-/** Common shapes in words, with the cron expression below as the exact rule. */
 function Cron({ value }: { value: string }) {
   const described = describeCron(value);
   return (

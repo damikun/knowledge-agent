@@ -1,6 +1,5 @@
 import { validateWidget, type WidgetField, type WidgetFormErrors, type WidgetFormValues } from './widgetForm';
 
-/** ?step= keeps the current step, so Back returns to it. */
 export type WidgetWizardStep = 'agent' | 'sites' | 'look' | 'person' | 'review';
 
 export const WIDGET_WIZARD_STEPS: ReadonlyArray<{ id: WidgetWizardStep; label: string; title: string; why: string }> = [
@@ -28,7 +27,6 @@ export const WIDGET_WIZARD_STEPS: ReadonlyArray<{ id: WidgetWizardStep; label: s
 
 export const NUMBERED_WIDGET_STEPS = WIDGET_WIZARD_STEPS.filter((step) => step.id !== 'review');
 
-// So a step's check and the API's errors land on the step that can fix them.
 const STEP_FIELDS: Readonly<Record<WidgetWizardStep, readonly WidgetField[]>> = {
   agent: ['agentId'],
   sites: ['name', 'settings.security.allowedOrigins'],
@@ -45,7 +43,6 @@ export function parseWidgetStep(value: string | null): WidgetWizardStep | null {
   return WIDGET_WIZARD_STEPS.find((step) => step.id === value)?.id ?? null;
 }
 
-/** Fields no step shows belong to review. */
 export function widgetStepOfField(field: string): WidgetWizardStep {
   return WIDGET_WIZARD_STEPS.find((step) => (STEP_FIELDS[step.id] as readonly string[]).includes(field))?.id ?? 'review';
 }

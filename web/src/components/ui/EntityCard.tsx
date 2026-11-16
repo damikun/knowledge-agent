@@ -14,21 +14,16 @@ export interface EntityMeta {
 }
 
 export interface EntityCardProps extends AriaAttributes {
-  /** Names the card for screen readers, unless an aria-label or aria-labelledby is given. */
   title: string;
   id?: string;
   description?: ReactNode;
-  /** Where the card leads. With neither `to` nor `onOpen` the card is not clickable. */
   to?: string;
   onOpen?: () => void;
   visual?: ReactNode;
   meta?: readonly EntityMeta[];
   status?: ReactNode;
-  /** Buttons that stay clickable on their own, such as Delete or a menu. */
   actions?: ReactNode;
-  /** The heading level that fits the page; a card grid right under the page title takes h2. */
   titleAs?: 'h2' | 'h3';
-  /** Built in and not removable: drawn on a quieter, dashed card. */
   builtIn?: boolean;
   className?: string;
 }
@@ -72,7 +67,6 @@ export function EntityCard({
           </div>
         ) : null}
       </div>
-      {/* The title link stretches over the card; the actions sit above it, so no buttons end up inside a link. */}
       <Title id={titleId} className="mt-3 truncate text-sm font-semibold text-fg">
         {to ? (
           <Link to={to} data-card-target className="focus-visible:outline-none after:absolute after:inset-0 after:rounded-2xl">

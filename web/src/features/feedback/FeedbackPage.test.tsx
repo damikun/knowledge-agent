@@ -2,7 +2,7 @@ import { chooseOption } from '../../test/select';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { agentDto, agentGuid, agentsRoutes, builtInAgent } from '../../test/agentsApi';
+import { agentDto, agentGuid, agentsRoutes, assistantAgent } from '../../test/agentsApi';
 import { supportUser } from '../../test/apiFixtures';
 import { feedbackDto, feedbackSummary, portalRating } from '../../test/feedbackApi';
 import { CONVERSATION_ID } from '../../test/fixtures';
@@ -23,7 +23,7 @@ const routes = {
     feedbackSummary(),
     feedbackSummary({
       widgetId: null,
-      agentId: null,
+      agentId: agentGuid(1),
       answers: 0,
       positive: 0,
       negative: 0,
@@ -35,7 +35,7 @@ const routes = {
   ],
   [LIST]: [feedbackDto(), portalRating],
   ...widgetsRoutes(() => [widgetDto()]),
-  ...agentsRoutes(() => [builtInAgent, agentDto()]),
+  ...agentsRoutes(() => [assistantAgent, agentDto()]),
 };
 
 describe('FeedbackPage', () => {
@@ -52,7 +52,7 @@ describe('FeedbackPage', () => {
     expect(within(shop).getByText('From 4 ratings')).toBeInTheDocument();
 
     const portal = screen.getByRole('region', { name: 'Portal chat' });
-    expect(within(portal).getByText('Knowledge Agent')).toBeInTheDocument();
+    expect(within(portal).getByText('Assistant')).toBeInTheDocument();
     expect(within(portal).getByText('No answer ratings')).toBeInTheDocument();
     expect(within(portal).getByText('5.0/5')).toBeInTheDocument();
   });
@@ -94,7 +94,7 @@ describe('FeedbackPage', () => {
     expect(portalItem).toHaveTextContent('Chat rating');
     expect(portalItem).toHaveTextContent('By staff');
     expect(within(portalItem!).getByRole('link', { name: 'Vacation policy' })).toHaveAttribute('href', `/chat/${CONVERSATION_ID}`);
-    expect(portalItem).toHaveTextContent('Portal chat · Knowledge Agent');
+    expect(portalItem).toHaveTextContent('Portal chat · Assistant');
   });
 
   it('filters the feedback and changes the period of both the summary and the list', async () => {

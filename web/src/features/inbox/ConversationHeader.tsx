@@ -14,7 +14,6 @@ import type { InboxConversationDetail } from './types';
 export interface ConversationHeaderProps {
   conversation: InboxConversationDetail;
   title: string;
-  /** Only where the list and the thread take turns. */
   backLink: ReactNode;
   detailsOpen: boolean;
   onDetailsOpenChange: (open: boolean) => void;
@@ -27,14 +26,12 @@ export function ConversationHeader({ conversation, title, backLink, detailsOpen,
   const [confirmClose, setConfirmClose] = useState(false);
   const { status } = conversation;
   const fromWidget = conversation.channel === 'widget';
-  // A failed close shows in its own dialog.
   const actionError = join.error ?? giveBack.error ?? pin.error;
   const busy = join.isPending || giveBack.isPending || close.isPending;
 
   return (
     <div className="shrink-0 space-y-2 border-b border-border-subtle px-4 py-2">
       {backLink}
-      {/* 48px with padding, level with the list's search row. */}
       <div className="flex min-h-8 flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
           <h2 className="min-w-0 truncate text-section text-fg" title={title}>

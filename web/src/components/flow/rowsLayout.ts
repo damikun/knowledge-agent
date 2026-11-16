@@ -1,4 +1,3 @@
-// No dagre here, so the small flows inside editors do not pull the layout engine into their chunks.
 import { nodeHeight, type GraphNode, type PositionedNode } from './graph';
 
 export interface RowsOptions {
@@ -7,7 +6,6 @@ export interface RowsOptions {
   columnGap?: number;
 }
 
-/** Each row is centered under the widest one; a row of two is a branch. */
 export function layoutRows<N extends GraphNode>(rows: readonly (readonly N[])[], options: RowsOptions): PositionedNode<N>[] {
   const rowGap = options.rowGap ?? 32;
   const columnGap = options.columnGap ?? 16;

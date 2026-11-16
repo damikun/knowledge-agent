@@ -1,13 +1,11 @@
 import { useQueries, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { sourceKeys, sourcesApi } from './api';
 
-/** The most ids `GET /api/sources?ids=` accepts in one request. */
 const SOURCE_IDS_PER_REQUEST = 100;
 const TITLE_STALE_MS = 5 * 60_000;
 
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Ids invented by a model (e.g. "handbook") are never sent to the API. */
 export function isSourceId(value: string): boolean {
   return GUID.test(value);
 }
@@ -17,10 +15,6 @@ interface Waiter {
   reject: (error: unknown) => void;
 }
 
-/**
- * Collects the ids requested within one tick (e.g. by every tool card of a conversation) and loads them with one
- * request per 100 ids. Missing sources resolve to null.
- */
 class SourceTitleBatcher {
   #queue = new Map<string, Waiter[]>();
   #scheduled = false;
@@ -79,10 +73,6 @@ function batcherFor(queryClient: QueryClient): SourceTitleBatcher {
   return batcher;
 }
 
-/**
- * Resolves source ids to titles, caching each id separately. Returns undefined for ids that are unknown, deleted or
- * still loading, so callers can fall back to the id.
- */
 export function useSourceTitles(ids: readonly string[]): (id: string) => string | undefined {
   const queryClient = useQueryClient();
   const wanted = [...new Set(ids.map((id) => id.trim().toLowerCase()).filter(isSourceId))];

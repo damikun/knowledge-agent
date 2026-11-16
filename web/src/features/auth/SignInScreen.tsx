@@ -7,7 +7,6 @@ import { errorMessage } from '../../lib/api';
 import { AUTH_ERROR_PARAM, redirectedRecently, returnUrlOf, signIn, signOut, wasSignedOut } from './api';
 import type { CurrentUserDto } from './types';
 
-// The reason comes from the URL, so a crafted link cannot fill the screen with text.
 const MAX_REASON_LENGTH = 300;
 
 function AuthCard({ pageTitle, children }: { pageTitle: string; children: ReactNode }) {
@@ -41,7 +40,6 @@ function signedOutReason(sessionEnded: boolean, search: string): SignedOutReason
   if (wasSignedOut()) {
     return 'signed-out';
   }
-  // Redirecting would throw away what was being typed.
   if (sessionEnded) {
     return 'expired';
   }
@@ -98,7 +96,6 @@ function SignInScreen({ reason }: { reason?: SignedOutReason | 'failed' }) {
   );
 }
 
-/** Signed in, but with neither role the portal knows. */
 export function NoRoleScreen({ user }: { user: CurrentUserDto }) {
   return (
     <AuthCard pageTitle="No access">

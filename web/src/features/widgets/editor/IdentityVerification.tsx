@@ -51,7 +51,6 @@ export function IdentityVerification({ publicKey, identity }: { publicKey: strin
   return (
     <section aria-labelledby={headingId} className="space-y-3 border-t border-border-subtle pt-4">
       <div className="flex flex-wrap items-center gap-2">
-        {/* Not a heading: the disclosure above holds the section's heading level. */}
         <p id={headingId} className="text-sm font-medium text-fg">
           Signed-in users
         </p>

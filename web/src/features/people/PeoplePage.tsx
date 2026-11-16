@@ -29,17 +29,14 @@ const VIEWS: readonly SegmentedOption<View>[] = [
 
 export function PeoplePage() {
   const [params, setParams] = useSearchParams();
-  // Filters change in place; a way back from Analytics survives them.
   const kept = useKeptReturnState();
   const admin = isAdmin(useMe().data);
-  // Admin only; support users can't read widgets.
   const widgets = useWidgets(admin);
   const registry = useAttributeRegistry();
   const segments = useSegments();
   const [columns, setColumns] = useState<string[]>(readColumns);
   const [dialog, setDialog] = useState<{ segment: Segment | null } | null>(null);
   const [segmentsOpen, setSegmentsOpen] = useState(false);
-  // An index, the number of filters for a new one, or null while closed.
   const [editingFilter, setEditingFilter] = useState<number | null>(null);
 
   const view: View = params.get('view') === 'attributes' ? 'attributes' : 'contacts';
@@ -99,7 +96,6 @@ export function PeoplePage() {
     storeColumns(next);
   };
 
-  // Saving keeps the segment's filter plus the added conditions.
   const currentFilter: ContactCondition[] = [...(builtIn?.filter ?? saved?.filter ?? []), ...extra];
   const canSave = currentFilter.length > 0 && !(saved && extra.length === 0);
 

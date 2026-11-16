@@ -1,5 +1,3 @@
-// Colors derived from a widget's brand color, shared by the chat frame and the loader. All contrast math follows WCAG 2.2.
-
 export type Rgb = readonly [number, number, number];
 
 export const DEFAULT_BRAND_COLOR = '#0f766e';
@@ -7,7 +5,6 @@ export const DEFAULT_BRAND_COLOR = '#0f766e';
 export const WHITE: Rgb = [255, 255, 255];
 export const BLACK: Rgb = [0, 0, 0];
 const NEAR_BLACK: Rgb = [17, 17, 17];
-// The frame's light and dark surfaces, where accent-colored text and focus rings appear.
 const LIGHT_SURFACES: readonly Rgb[] = [WHITE, [244, 244, 245]];
 const DARK_SURFACES: readonly Rgb[] = [[24, 24, 27], [39, 39, 42]];
 
@@ -42,12 +39,10 @@ export function mix(from: Rgb, to: Rgb, amount: number): Rgb {
   return [from[0] + (to[0] - from[0]) * amount, from[1] + (to[1] - from[1]) * amount, from[2] + (to[2] - from[2]) * amount];
 }
 
-/** To whole channels, as the color is written as #rrggbb; contrast is checked on that. */
 export function rounded(color: Rgb): Rgb {
   return [Math.round(color[0]), Math.round(color[1]), Math.round(color[2])];
 }
 
-// Moves `color` toward `target` in small steps until it reaches `minimum` contrast against every background.
 function towards(color: Rgb, target: Rgb, backgrounds: readonly Rgb[], minimum: number): Rgb {
   for (let step = 0; step <= 40; step++) {
     const candidate = rounded(mix(color, target, step / 40));
@@ -58,12 +53,10 @@ function towards(color: Rgb, target: Rgb, backgrounds: readonly Rgb[], minimum: 
   return target;
 }
 
-/** White or near-black, whichever reads better on `background`. */
 export function readableOn(background: Rgb): Rgb {
   return contrastRatio(WHITE, background) >= contrastRatio(NEAR_BLACK, background) ? WHITE : NEAR_BLACK;
 }
 
-/** `color` itself when it reaches `minimum` against every background, else moved toward black or white until it does. */
 export function legibleOn(color: Rgb, backgrounds: readonly Rgb[], minimum: number): Rgb {
   if (backgrounds.every((background) => contrastRatio(color, background) >= minimum)) {
     return color;
@@ -71,7 +64,6 @@ export function legibleOn(color: Rgb, backgrounds: readonly Rgb[], minimum: numb
   const darker = towards(color, BLACK, backgrounds, minimum);
   const lighter = towards(color, WHITE, backgrounds, minimum);
   const reaches = (candidate: Rgb) => backgrounds.every((background) => contrastRatio(candidate, background) >= minimum);
-  // The smaller change wins, as long as it reaches the contrast.
   const distance = (candidate: Rgb) => Math.abs(candidate[0] - color[0]) + Math.abs(candidate[1] - color[1]) + Math.abs(candidate[2] - color[2]);
   if (reaches(darker) && (!reaches(lighter) || distance(darker) <= distance(lighter))) {
     return darker;
@@ -79,7 +71,6 @@ export function legibleOn(color: Rgb, backgrounds: readonly Rgb[], minimum: numb
   return reaches(lighter) ? lighter : readableOn(backgrounds[0] ?? WHITE);
 }
 
-/** Hue in degrees, saturation and lightness from 0 to 1. */
 export function toHsl([r, g, b]: Rgb): [number, number, number] {
   const [red, green, blue] = [r / 255, g / 255, b / 255];
   const max = Math.max(red, green, blue);
@@ -104,13 +95,9 @@ export function fromHsl(hue: number, saturation: number, lightness: number): Rgb
 }
 
 export interface BrandPalette {
-  // Background of brand surfaces that carry text: header, visitor bubbles, buttons.
   brand: string;
-  // White or near-black, whichever reads better on `brand`.
   onBrand: string;
-  // Hover shades mix this in: darker under white text, lighter under dark text, so contrast only grows.
   hoverMix: string;
-  // Brand-colored text, links and focus rings on the light surfaces, and on the dark ones.
   accentLight: string;
   accentDark: string;
 }
@@ -119,7 +106,6 @@ export function brandPalette(value: string | null | undefined): BrandPalette {
   const base = parseHexColor(value) ?? parseHexColor(DEFAULT_BRAND_COLOR)!;
   const whiteText = contrastRatio(base, WHITE) >= contrastRatio(base, NEAR_BLACK);
   const text = whiteText ? WHITE : NEAR_BLACK;
-  // Mid tones reach 4.5:1 with neither text color, so the surface moves away from the text until it does.
   const surface = contrastRatio(base, text) >= 4.5 ? base : towards(base, whiteText ? BLACK : WHITE, [text], 4.5);
   const soft = (background: Rgb) => mix(background, base, 0.1);
   return {

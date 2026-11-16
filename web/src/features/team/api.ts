@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { asArray, isRecord, request } from '../../lib/api';
+import { asArray, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { TeamDto, TeamMemberDto } from './types';
 
 const teamKeys = {
@@ -16,7 +17,7 @@ function toTeam(value: unknown): TeamDto {
 }
 
 const teamApi = {
-  getTeam: async (signal?: AbortSignal) => toTeam(await request<unknown>('/api/team', { signal })),
+  getTeam: async (signal?: AbortSignal) => toTeam(await call(endpoints.team.get, { signal })),
 };
 
 export function useTeam() {

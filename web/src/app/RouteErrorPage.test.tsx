@@ -12,7 +12,6 @@ function stubReload() {
   return reload;
 }
 
-// Until the test brings the server up, the reachability check fails like a refused connection.
 function stubServer({ up }: { up: boolean }) {
   const server = {
     up,
@@ -31,14 +30,12 @@ function advance(ms: number) {
   return act(() => vi.advanceTimersByTimeAsync(ms));
 }
 
-// Fresh modules stand for a fresh page load; session storage survives it as it survives a reload.
 async function openFailingPage(error: Error, { production = false } = {}) {
   vi.resetModules();
   const { RouteErrorPage } = await import('./RouteErrorPage');
   const { recoverOnPreloadError } = await import('./moduleReload');
   onTestFinished(recoverOnPreloadError());
   const lazy = () => {
-    // Production builds wrap dynamic imports in Vite's preload helper, which reports the failure first.
     if (production) {
       window.dispatchEvent(Object.assign(new Event('vite:preloadError', { cancelable: true }), { payload: error }));
     }

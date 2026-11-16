@@ -153,7 +153,6 @@ describe('live conversation view', () => {
     let conversation = conversationDto();
     let answer: ReadableStreamDefaultController<Uint8Array> | null = null;
     const { events, loads } = setup(() => conversation, {
-      // The answer runs on another API instance, which this stop request does not reach.
       [`POST /api/conversations/${CONVERSATION_ID}/stop`]: () => jsonResponse({ stopped: false }),
       'POST /api/chat': () =>
         new Response(
@@ -173,7 +172,6 @@ describe('live conversation view', () => {
     expect(await screen.findByText('Stopped')).toBeInTheDocument();
     expect(answer).not.toBeNull();
 
-    // The server goes on with the turn; the reopened stream replays its question and the answer so far.
     await waitFor(() => expect(events.opened).toBe(2));
     await waitFor(() => expect(events.isOpen).toBe(true));
     events.send('message', messageDto({ sequence: 3, text: question, turnId: NEXT_TURN_ID }), 3);

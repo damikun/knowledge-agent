@@ -41,7 +41,6 @@ describe('SourceScopePicker', () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch(sourcesRoutes(() => library));
     renderWithProviders(<Harness />);
-    // Nothing is loaded until the picker opens.
     expect(fetchCalls(fetchMock)).toEqual([]);
 
     const picker = await openPicker(user);
@@ -53,7 +52,6 @@ describe('SourceScopePicker', () => {
     await user.type(within(picker).getByRole('searchbox', { name: 'Search ready sources' }), 'handbook');
     expect(await within(picker).findByRole('checkbox', { name: /Employee handbook/ })).toBeInTheDocument();
     await waitFor(() => expect(within(picker).getAllByRole('checkbox')).toHaveLength(1));
-    // One debounced request for the whole word; processing sources are not offered.
     const queries = searches(fetchMock).filter((url) => url.searchParams.has('query'));
     expect(queries.map((url) => Object.fromEntries(url.searchParams))).toEqual([{ status: 'ready', query: 'handbook', limit: '50' }]);
     expect(within(picker).queryByText('Draft handbook')).toBeNull();
@@ -79,7 +77,6 @@ describe('SourceScopePicker', () => {
     await user.click(await within(picker).findByRole('checkbox', { name: /Leave policy/ }));
     await waitFor(() => expect(within(picker).queryByRole('checkbox', { name: /Employee handbook/ })).toBeNull());
 
-    // Both chips keep their titles although "Employee handbook" is not among the results.
     const chips = within(picker).getByRole('list', { name: 'Selected sources' });
     expect(within(chips).getAllByRole('listitem').map((chip) => chip.textContent)).toEqual(['Employee handbook', 'Leave policy']);
     expect(screen.getByRole('button', { name: 'Source scope: 2 sources' })).toBeInTheDocument();

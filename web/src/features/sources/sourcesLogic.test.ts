@@ -19,10 +19,8 @@ describe('sources polling decision', () => {
 
   it('stops polling when nothing is pending or processing', () => {
     expect(sourcesRefetchInterval(stats({ total: 3, ready: 2, failed: 1 }))).toBe(false);
-    // Waiting sources move on only once an embedding model is saved.
     expect(sourcesRefetchInterval(stats({ total: 2, waiting: 2 }))).toBe(false);
     expect(sourcesRefetchInterval(stats())).toBe(false);
-    // No stats yet (still loading or failed to load): no polling.
     expect(sourcesRefetchInterval(undefined)).toBe(false);
   });
 });
@@ -39,7 +37,6 @@ describe('library paging and filters', () => {
     });
     expect(toListParams({ query: '', type: 'all', status: 'all' }, 0)).toEqual({ query: '', type: null, status: [], site: null, offset: 0, limit: 25 });
     expect(toListParams({ query: '', type: 'all', status: 'ready' }, 0).status).toEqual(['ready']);
-    // Failed sources and sources waiting for an embedding model both need someone.
     expect(toListParams({ query: '', type: 'all', status: 'attention' }, 0).status).toEqual(['failed', 'waiting']);
     expect(toListParams({ query: '', type: 'all', status: 'all', site: 'docs.python.org' }, 50, 50)).toMatchObject({ site: 'docs.python.org', limit: 50 });
   });
@@ -54,7 +51,6 @@ describe('library paging and filters', () => {
       { label: '12 indexing', tone: 'info' },
       { label: '3 need attention', tone: 'danger' },
     ]);
-    // Waiting sources need attention too; without failures they are a warning.
     expect(librarySummary(stats({ total: 1250, ready: 1200, pending: 4, processing: 8, waiting: 35, failed: 3 })).map((item) => item.label)).toEqual([
       '1,250 sources',
       '1,200 ready',

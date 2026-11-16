@@ -5,7 +5,6 @@ export function isQuestion(message: ConversationMessageDto): boolean {
   return message.author === 'user' || message.author === 'visitor';
 }
 
-/** Stored and live messages by sequence; the later copy of a sequence wins. */
 export function mergeMessages(stored: readonly ConversationMessageDto[], live: readonly ConversationMessageDto[]): ConversationMessageDto[] {
   if (live.length === 0) {
     return stored.slice().sort((a, b) => a.sequence - b.sequence);
@@ -21,10 +20,6 @@ export function lastSequence(messages: readonly ConversationMessageDto[]): numbe
   return messages.reduce((max, message) => Math.max(max, message.sequence), 0);
 }
 
-/**
- * Server turn ids by turn key. A turn that ended early here still runs on the server: it is the turn
- * of the first matching question stored after the sequence it was sent at.
- */
 export function ownTurnIds(own: readonly TurnView[], messages: readonly ConversationMessageDto[]): Map<string, string> {
   const ids = new Map<string, string>();
   const taken = new Set<string>();
@@ -51,7 +46,6 @@ export function ownTurnIds(own: readonly TurnView[], messages: readonly Conversa
   return ids;
 }
 
-/** The latest question while no turn shows its answer: the one the turn being written (if any) answers. */
 export function pendingQuestion(messages: readonly ConversationMessageDto[], knownTurnIds: ReadonlySet<string>): ConversationMessageDto | null {
   let latest: ConversationMessageDto | null = null;
   for (const message of messages) {
@@ -73,11 +67,6 @@ export function knownTurnIds({ history, messages, own, followed }: TimelineInput
   return new Set([...history.map((turn) => turn.id), ...ownTurnIds(own, messages).values(), ...followed.map((turn) => turn.id)]);
 }
 
-/**
- * The turns to show. A stored turn gives way to this tab's live copy, which also has the reasoning; a turn this tab
- * stopped gives way to the stored copy, which has the whole answer. A followed turn shows only until it is stored. The
- * latest question shows on its own while its answer has not reached this view.
- */
 export function buildTimeline(input: TimelineInput): TurnView[] {
   const { history, messages, own, followed } = input;
   const ownIds = ownTurnIds(own, messages);

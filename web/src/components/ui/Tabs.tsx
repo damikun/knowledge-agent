@@ -25,7 +25,6 @@ export interface TabsProps<T extends string> {
   className?: string;
 }
 
-/** WAI-ARIA tabs with automatic activation; render the panels with TabPanel. */
 export function Tabs<T extends string>({ idPrefix, items, value, onChange, label, className }: TabsProps<T>) {
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -74,7 +73,6 @@ export function Tabs<T extends string>({ idPrefix, items, value, onChange, label
             aria-controls={tabPanelId(idPrefix, item.id)}
             tabIndex={selected ? 0 : -1}
             onClick={() => onChange(item.id)}
-            // The bar overlaps the row's bottom border; as a border it stays visible in forced-color modes.
             className={clsx(
               'relative inline-flex items-center gap-1.5 px-1 text-sm font-medium whitespace-nowrap',
               selected

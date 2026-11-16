@@ -9,7 +9,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { CardGrid, Page } from '../../components/ui/Page';
 import { Menu } from '../../components/ui/Menu';
 import { formatRelativeTime, hostname, pluralize } from '../../lib/format';
-import { ownAgents, useAgents } from '../agents/api';
+import { useAgents } from '../agents/api';
 import { useIntegrations } from '../notifications/api';
 import { OVERVIEW_DAYS, useOverview } from '../overview/api';
 import type { WidgetActivityDto } from '../overview/types';
@@ -73,7 +73,6 @@ function WidgetList() {
 
   const meta = (widget: WidgetDto): EntityMeta[] => [
     ...(agents.data ? [{ icon: Bot, label: agentName(widget.agentId) }] : []),
-    // Hidden until loaded, rather than showing a wrong "no conversations".
     ...(overview.data ? [{ icon: MessagesSquare, label: activityLabel(activity.get(widget.id.toLowerCase())) }] : []),
   ];
 
@@ -145,8 +144,6 @@ function WidgetEditorPage({ widgetId }: { widgetId: string }) {
   const agents = useAgents();
   const integrations = useIntegrations();
   const widget = widgets.data?.find((item) => item.id.toLowerCase() === widgetId.toLowerCase()) ?? null;
-  // The API rejects the built-in agent for widgets.
-  const usable = useMemo(() => ownAgents(agents.data ?? []), [agents.data]);
 
   const error = options.error ?? agents.error ?? widgets.error;
   if (error) {
@@ -177,7 +174,7 @@ function WidgetEditorPage({ widgetId }: { widgetId: string }) {
       </PageFrame>
     );
   }
-  return <WidgetEditor key={widget.id} widget={widget} options={options.data} agents={usable} integrations={integrations.data} />;
+  return <WidgetEditor key={widget.id} widget={widget} options={options.data} agents={agents.data} integrations={integrations.data} />;
 }
 
 export function WidgetsPage() {

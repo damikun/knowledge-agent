@@ -31,7 +31,6 @@ const ERROR_HINTS: Record<string, string> = {
 
 const SOURCES_SHOWN = 3;
 
-// Stopping keeps the text so far, so a stopped answer is not an error.
 function StoppedNote() {
   return (
     <p className="inline-flex items-center gap-1.5 text-xs text-fg-muted">
@@ -40,7 +39,6 @@ function StoppedNote() {
   );
 }
 
-// Older stored turns and some provider messages carry only the text.
 function errorCode(error: TurnError): string | null {
   if (error.code) {
     return error.code;
@@ -58,7 +56,6 @@ function TurnErrorView({ error }: { error: TurnError }) {
   const hint = code ? ERROR_HINTS[code] : undefined;
   if (!hint || hint === error.message) {
     return (
-      // Provider errors can run to a paragraph, so the message is the body rather than a semibold title.
       <Alert tone="danger" live>
         <p className="text-fg">{error.message}</p>
         {developer && code ? <p className="mt-0.5 font-mono text-xs text-fg-muted">{code}</p> : null}
@@ -241,7 +238,6 @@ function AnswerActions({ turn }: { turn: TurnView }) {
     return null;
   }
   return (
-    // Quiet until the answer is hovered or focused; always there on touch screens, which cannot hover.
     <div
       className="-ml-1.5 flex items-center gap-0.5 opacity-0 transition-opacity duration-100 group-focus-within/answer:opacity-100 group-hover/answer:opacity-100 max-md:opacity-100"
       data-testid="answer-actions"
@@ -331,7 +327,6 @@ function CitedSources({ sources }: { sources: readonly AnswerSource[] }) {
 
 export interface AssistantMessageProps {
   turn: TurnView;
-  /** An answer may cite passages retrieved in earlier turns. */
   conversationCitations?: ReadonlyMap<string, CitationDto>;
 }
 

@@ -104,7 +104,6 @@ describe('chatReducer', () => {
     expect(turn.text).toBe('New employees get **25 days** [S1]. Managers approve requests [S2], and days carry over until March [S3].');
     expect(turn.reasoning).toBe('The user asks about vacation. I should search the handbook.');
 
-    // Usage is summed per agent; a missing totalTokens is derived from input + output.
     expect(turn.usage).toEqual({ inputTokens: 2000, outputTokens: 300, totalTokens: 2300 });
 
     expect(turn.tools.map((t) => t.callId)).toEqual(['call-search', 'call-research']);

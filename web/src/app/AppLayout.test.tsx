@@ -248,7 +248,6 @@ describe('AppLayout', () => {
       const fetchMock = mockFetch({ 'GET /api/auth/me': supportUser });
       renderRouter(routes, { route: path });
 
-      // The chunk of the page still loads first, so this can take a moment.
       expect(await screen.findByRole('heading', { level: 1, name: 'You need the admin role to open this page' }, { timeout: 5_000 })).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Go to the Inbox' })).toHaveAttribute('href', '/inbox');
       expect(navLabels()).toEqual(['Inbox', 'Contacts', 'Feedback']);

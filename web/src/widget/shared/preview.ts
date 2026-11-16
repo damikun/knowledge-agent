@@ -1,17 +1,11 @@
-// The messages between the portal's widget editor and the widget preview (/widget/v1/preview). Both pages come from the
-// portal's origin; each side checks the origin and the sending window before it parses a message here. Every message
-// carries the protocol version, so a preview cached from an older build is ignored instead of misread.
-
 export const PREVIEW_SOURCE = 'knowledge-agent-preview';
 export const PREVIEW_VERSION = 1;
 
-/** The states the preview can show, all with sample data. "launcher" is the closed widget. */
 export const PREVIEW_SCENES = ['launcher', 'start', 'answering', 'conversation', 'contact', 'waiting', 'joined', 'ended'] as const;
 export type PreviewScene = (typeof PREVIEW_SCENES)[number];
 
 export type ColorScheme = 'light' | 'dark';
 
-/** In preview mode the frame marks the elements an admin can edit with this attribute. */
 export const EDIT_ATTRIBUTE = 'data-ka-edit';
 
 export const EDIT_TARGETS = [
@@ -41,30 +35,30 @@ export type EditTarget = (typeof EDIT_TARGETS)[number];
 
 export type EditMark = { [EDIT_ATTRIBUTE]?: EditTarget };
 
-/** In the preview's own viewport, in CSS pixels. */
-export interface PreviewRect {
+export interface PreviewBox {
   x: number;
   y: number;
   width: number;
   height: number;
 }
 
+export type CornerRadii = readonly [topLeft: number, topRight: number, bottomRight: number, bottomLeft: number];
+
+export interface PreviewRect extends PreviewBox {
+  radii?: CornerRadii;
+  panel?: PreviewBox;
+}
+
 export type EditorMessage =
-  // The whole state to show; `config` is the public widget config, which the frame normalizes like a loaded one.
   | { type: 'render'; config: unknown; scene: PreviewScene; colorScheme: ColorScheme }
-  // Report the rectangle of this element from now on, or of the first fallback that shows while it does not.
   | { type: 'track'; target: EditTarget | null; fallbacks: EditTarget[] }
-  // "Test this widget": the real widget, live. Sent again when only the color scheme changes; the conversation stays.
   | { type: 'live'; widgetId: string; colorScheme: ColorScheme };
 
 export type PreviewMessage =
   | { type: 'ready' }
-  // After each render and resize: the marked elements that show in the scene.
   | { type: 'rendered'; scene: PreviewScene; targets: EditTarget[] }
   | { type: 'hover'; target: EditTarget | null; rect: PreviewRect | null }
-  // The admin clicked an element, or something that is not editable (null). The frame then tracks that element.
   | { type: 'select'; target: EditTarget | null; rect: PreviewRect | null }
-  // Where the tracked element is: `anchor` is the element measured, the target or a fallback, null when none shows.
   | { type: 'rect'; target: EditTarget; anchor: EditTarget | null; rect: PreviewRect | null };
 
 type Envelope<T> = T & { source: typeof PREVIEW_SOURCE; version: typeof PREVIEW_VERSION };
@@ -85,19 +79,38 @@ export function isEditTarget(value: unknown): value is EditTarget {
   return isOneOf(EDIT_TARGETS, value);
 }
 
-function readRect(value: unknown): PreviewRect | null | undefined {
-  if (value === null) {
-    return null;
-  }
+function isLength(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+function readBox(value: unknown): PreviewBox | undefined {
   if (!isRecord(value)) {
     return undefined;
   }
   const { x, y, width, height } = value;
-  const numbers = [x, y, width, height];
-  if (!numbers.every((n) => typeof n === 'number' && Number.isFinite(n)) || (width as number) < 0 || (height as number) < 0) {
+  if (!isLength(x) || !isLength(y) || !isLength(width) || !isLength(height) || width < 0 || height < 0) {
     return undefined;
   }
-  return { x: x as number, y: y as number, width: width as number, height: height as number };
+  return { x, y, width, height };
+}
+
+function readRadii(value: unknown): CornerRadii | undefined {
+  return Array.isArray(value) && value.length === 4 && value.every((radius) => isLength(radius) && radius >= 0)
+    ? [value[0], value[1], value[2], value[3]]
+    : undefined;
+}
+
+function readRect(value: unknown): PreviewRect | null | undefined {
+  if (value === null) {
+    return null;
+  }
+  const box = readBox(value);
+  if (!box || !isRecord(value)) {
+    return undefined;
+  }
+  const radii = readRadii(value.radii);
+  const panel = readBox(value.panel);
+  return { ...box, ...(radii ? { radii } : {}), ...(panel ? { panel } : {}) };
 }
 
 function readTarget(value: unknown): EditTarget | null | undefined {
@@ -108,7 +121,6 @@ function payload(data: unknown): Record<string, unknown> | null {
   return isRecord(data) && data.source === PREVIEW_SOURCE && data.version === PREVIEW_VERSION ? data : null;
 }
 
-/** A message the editor sent, or null for anything else. */
 export function parseEditorMessage(data: unknown): EditorMessage | null {
   const message = payload(data);
   switch (message?.type) {
@@ -134,7 +146,6 @@ export function parseEditorMessage(data: unknown): EditorMessage | null {
   }
 }
 
-/** A message the preview sent, or null for anything else. */
 export function parsePreviewMessage(data: unknown): PreviewMessage | null {
   const message = payload(data);
   switch (message?.type) {

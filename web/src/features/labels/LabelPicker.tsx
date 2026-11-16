@@ -13,24 +13,20 @@ import { LABEL_COLORS, type ConversationLabel, type LabelColor } from './types';
 export interface LabelPickerProps {
   conversationId: Guid;
   value: readonly ConversationLabel[];
-  /** Admins may create a label from the search words. */
   canCreate: boolean;
   align?: 'start' | 'end';
 }
 
-// Rotate colors so quickly created labels don't all look alike.
 function nextColor(count: number): LabelColor {
   return LABEL_COLORS[(count + 1) % LABEL_COLORS.length] ?? 'gray';
 }
 
-/** Changes save at once. Removing an auto label keeps it off for good. */
 export function LabelPicker({ conversationId, value, canCreate, align = 'start' }: LabelPickerProps) {
   const ids = useId();
   const anchorRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  // Optimistic selection while the saves catch up.
   const [selected, setSelected] = useState<Set<Guid> | null>(null);
   const labels = useLabels(open);
   const all = labelsOrEmpty(labels.data);

@@ -7,14 +7,12 @@ import { mockFetch, renderWithProviders } from '../../../test/utils';
 import { widgetDto, widgetSettings } from '../../../test/widgetsApi';
 import { HandoverFlow } from './HandoverFlow';
 
-// jsdom has no ResizeObserver.
 class NoopResizeObserver {
   observe() {}
   unobserve() {}
   disconnect() {}
 }
 
-// Not vi.stubGlobal: the lazy graph can still measure after the test, when stubs are already undone.
 const original = globalThis.ResizeObserver;
 beforeAll(() => {
   globalThis.ResizeObserver = NoopResizeObserver as unknown as typeof ResizeObserver;
@@ -61,7 +59,6 @@ describe('HandoverFlow', () => {
       />,
     );
     const graph = await screen.findByRole('region', { name: 'When a visitor asks for a person' });
-    // The lazy graph can be slow on a busy CI runner.
     expect(await within(graph).findByText('Website helper', {}, { timeout: 8_000 })).toBeInTheDocument();
     expect(within(graph).getByText('Waits 15 minutes')).toBeInTheDocument();
     expect(within(graph).getByText('Email after 10 minutes without a reply')).toBeInTheDocument();

@@ -12,7 +12,6 @@ afterEach(() => {
   sessionStorage.clear();
 });
 
-/** Sign-in and sign-out are full-page navigations, so they are recorded instead of performed. */
 function stubNavigation() {
   const assign = vi.fn();
   vi.stubGlobal('location', { ...window.location, assign });
@@ -86,7 +85,6 @@ describe('AuthGate', () => {
     const { queryClient } = renderRouter(routes, { route: '/chat' });
     await screen.findByRole('button', { name: 'Sign in' });
 
-    // Hold the /me check open to see what shows meanwhile.
     let release!: () => void;
     held = new Promise((resolve) => {
       release = resolve;
@@ -181,7 +179,6 @@ describe('AuthGate', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Cannot reach the API');
     expect(screen.queryByRole('button', { name: 'Sign in' })).not.toBeInTheDocument();
 
-    // The query client reacts to focus asynchronously.
     await act(async () => {
       focusManager.setFocused(false);
       focusManager.setFocused(true);

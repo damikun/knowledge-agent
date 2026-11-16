@@ -1,10 +1,8 @@
-/** Shown in snippets while running locally, where a localhost address would mislead. */
 export const PLACEHOLDER_ORIGIN = 'https://yourdomain.com';
 
 const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const MAX_LENGTH = 300;
 
-/** Absolute http(s) with an optional base path; no user info, query, fragment or trailing slash. */
 export function checkPublicAddress(value: string): { url: string | null; error: string | null } {
   const text = value.trim();
   if (text === '') {
@@ -31,7 +29,6 @@ export function checkPublicAddress(value: string): { url: string | null; error: 
   return { url: `${parsed.origin}${parsed.pathname}`.replace(/\/+$/, ''), error: null };
 }
 
-/** The saved public address, else this origin once reachable from outside, else a placeholder. */
 export function publicOrigin(saved?: string | null): string {
   const configured = saved ? checkPublicAddress(saved).url : null;
   if (configured) {

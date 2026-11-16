@@ -76,7 +76,6 @@ function LoadingList() {
   );
 }
 
-// Below the shell's drawer breakpoint the list and the detail take turns.
 const NARROW_QUERY = '(max-width: 767px)';
 
 export function PromptsPage() {
@@ -86,10 +85,8 @@ export function PromptsPage() {
   const view: View = searchParams.get('view') === 'playground' ? 'playground' : 'catalog';
   const prompts = usePrompts();
   const narrow = useMediaQuery(NARROW_QUERY);
-  // Kept across prompts, so comparing previews stays on the preview tab.
   const [detailTab, setDetailTab] = useState<DetailTab>('template');
 
-  // Select the first prompt so the page never opens empty; narrow windows show the list first instead.
   const first = prompts.data ? groupPrompts(prompts.data)[0]?.prompts[0]?.name : undefined;
   const firstPath = !name && first && view === 'catalog' && !narrow ? `/prompts/${encodeURIComponent(first)}` : null;
 

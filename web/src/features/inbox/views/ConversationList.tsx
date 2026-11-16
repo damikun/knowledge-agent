@@ -21,20 +21,15 @@ const NO_WORDS: readonly string[] = [];
 export interface ConversationListProps {
   state: InboxState;
   onChange: (next: InboxState) => void;
-  /** Names the list for screen readers; the view tabs show it visually. */
   header: ReactNode;
   linkTo: (conversationId: string) => string;
-  /** By lower-case id; undefined for support users, who can't read widgets. */
   widgetNames: ReadonlyMap<string, string> | undefined;
   canFilterByWidget: boolean;
-  /** Empty hides the label filter, e.g. on an API without labels. */
   labels: readonly Label[];
   onManageLabels?: () => void;
-  /** For an empty view without search or filters. */
   emptyText: { title: string; description: string };
 }
 
-// Built from the conversation itself, since search can't look up an id.
 function onlyRow(conversation: InboxConversationDetail): ConversationSearchItem {
   const last = conversation.messages.filter((message) => !message.staffOnly && message.text).at(-1);
   return {
@@ -60,7 +55,6 @@ function onlyRow(conversation: InboxConversationDetail): ConversationSearchItem 
   };
 }
 
-/** The list holds only the conversation a page opened; removing the chip shows the normal view. */
 function OnlyThisConversation({
   state,
   onChange,
@@ -113,7 +107,6 @@ function ViewList({ state, onChange, header, linkTo, widgetNames, canFilterByWid
   const { input, setInput } = useSearchInput(state.q, (q) => onChange({ ...state, q }));
   const narrowed = activeFilterCount(state);
   const words = useMemo(() => state.q.trim().split(/\s+/).filter(Boolean), [state.q]);
-  // Stable callbacks, so a list refresh re-renders only changed rows.
   const { mutate: pin } = usePinConversation();
   const { mutate: setUnread } = useReadState();
   const { mutate: assign } = useAssignConversation();
@@ -121,7 +114,6 @@ function ViewList({ state, onChange, header, linkTo, widgetNames, canFilterByWid
   const meId = meData?.id;
   const meName = meData?.name;
   const me = useMemo(() => (meId ? { id: meId, name: meName ?? '' } : null), [meId, meName]);
-  // Loads the next page when the end scrolls into view.
   const { hasNextPage, isFetchingNextPage, fetchNextPage } = search;
   const sentinelRef = useLoadMoreWhenVisible({ hasNextPage, isFetchingNextPage, fetchNextPage });
 

@@ -24,12 +24,9 @@ export interface CategoryStyle {
   solid: string;
   subtle: string;
   text: string;
-  /** Shown in the color picker; the API names stay as they are. */
   name: string;
 }
 
-// Muted tag-* tokens, apart from the status tones so a label never reads as an alarm.
-// "pink" shows as clay and "purple" as heather.
 export const CATEGORY_TONES: Readonly<Record<CategoryColor, CategoryStyle>> = {
   gray: { solid: 'bg-tag-gray', subtle: 'bg-tag-gray-subtle', text: 'text-tag-gray-text', name: 'Gray' },
   blue: { solid: 'bg-tag-blue', subtle: 'bg-tag-blue-subtle', text: 'text-tag-blue-text', name: 'Blue' },

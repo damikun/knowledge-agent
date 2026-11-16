@@ -6,11 +6,15 @@ import { Button } from '../../components/ui/Button';
 import { Popover } from '../../components/ui/Popover';
 import { StatusDot } from '../../components/ui/StatusDot';
 import type { Tone } from '../../components/ui/tone';
+import { pathOf } from '../../lib/endpoint';
+import { endpoints } from '../../lib/endpoints';
 import { useProfiles } from '../models/api';
 import { findEmbeddingProfile } from '../models/embedding';
 import { useSystemInfo } from './api';
 import { describeModel, findProfile, isApiUnreachable, ORCHESTRATOR_PROFILE } from './status';
 import { useReturnState } from '../../lib/returnTo';
+
+const API_DOCS_URL = pathOf(endpoints.system.apiReference);
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -106,7 +110,7 @@ export function SystemStatus() {
                     v{info.data.version} · {info.data.environment}
                   </span>
                   <span className="flex items-center gap-3">
-                    <a href="/scalar" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-fg">
+                    <a href={API_DOCS_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-fg">
                       API docs <ExternalLink className="size-3" aria-hidden />
                     </a>
                     <Link to="/models" state={returnState} onClick={() => setOpen(false)} className="text-accent-text hover:underline">

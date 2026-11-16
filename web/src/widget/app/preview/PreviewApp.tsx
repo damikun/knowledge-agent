@@ -7,14 +7,14 @@ import { postToEditor, readEditorMessage } from '../host';
 import { paintTheme, resolveFor } from '../theme';
 import { normalizeConfig, type WidgetConfig } from '../types';
 import { useWindowEvent } from '../useWindowEvent';
+import { readyConfig, type Widget } from '../widgetRuntime';
+import { noHost } from '../hostLink';
+import { isBusy } from '../chatState';
 import { WidgetProvider } from '../WidgetProvider';
 import { LiveChatPreview, useLiveSession } from './LivePreview';
 import { PreviewPicker } from './picker';
 import { SamplePage } from './SamplePage';
-import { SceneSession, sceneConfig, sceneState, type ChatScene } from './scenes';
-
-// /widget/v1/preview: the widget on a sample page for the portal's editor. It only shows what the editor sends and
-// never calls the public API, except in live mode ("Test this widget").
+import { sceneChat, sceneConfig, sceneState, sceneVisitor, type ChatScene } from './scenes';
 
 interface Shown {
   config: WidgetConfig;
@@ -24,7 +24,6 @@ interface Shown {
 
 interface Stage {
   launcher: LauncherView;
-  // A light DOM child of the launcher's host, slotted into its panel where host pages show the frame.
   chat: HTMLElement;
   picker: PreviewPicker;
 }
@@ -33,18 +32,14 @@ function mark(target: EditTarget): EditMark {
   return { [EDIT_ATTRIBUTE]: target };
 }
 
-function stayOpen(): void {
-  // The preview has nothing to close the panel for.
-}
-
-// Keyed by the scene, so each scene starts from its own sample conversation.
-function SceneChat({ config, scene, onBusy }: { config: WidgetConfig; scene: ChatScene; onBusy: (busy: boolean) => void }) {
-  const [session] = useState(() => new SceneSession(sceneState(scene)));
-  // A new config object would change the context and render the whole chat again.
+function SceneChat({ config, scene }: { config: WidgetConfig; scene: ChatScene }) {
+  const [chat] = useState(() => sceneChat(sceneState(scene)));
+  const [visitor] = useState(() => sceneVisitor(scene));
   const shown = useMemo(() => sceneConfig(config, scene), [config, scene]);
+  const widget = useMemo<Widget>(() => ({ config: readyConfig(shown), visitor, chat, host: noHost }), [shown, visitor, chat]);
   return (
-    <WidgetProvider config={shown} mark={mark}>
-      <ChatPanel session={session} onClose={stayOpen} onBusy={onBusy} />
+    <WidgetProvider widget={widget} mark={mark}>
+      <ChatPanel />
     </WidgetProvider>
   );
 }
@@ -86,7 +81,6 @@ export function PreviewApp() {
     if (message?.type === 'render') {
       const config = normalizeConfig(message.config);
       if (config) {
-        // Render synchronously, so the next report and the editor's next message see the new state.
         flushSync(() => setShown({ config, scene: message.scene, colorScheme: message.colorScheme }));
         stage.picker.rendered(message.scene);
       }
@@ -97,14 +91,12 @@ export function PreviewApp() {
     }
   });
 
-  // Messages from the editor are handled once the stage is there, which the editor waits for.
   useEffect(() => {
     if (stage) {
       postToEditor({ type: 'ready' });
     }
   }, [stage]);
 
-  // Live, the launcher opens and closes the panel as on a visitor's site, and nothing is picked for editing.
   useEffect(() => {
     if (!stage || !liveWidget) {
       return undefined;
@@ -112,7 +104,6 @@ export function PreviewApp() {
     stage.picker.dispose();
     stage.launcher.button.removeAttribute(EDIT_ATTRIBUTE);
     stage.launcher.setOpen(true);
-    // Read from the launcher, as the chat's own close button closes it too.
     const toggle = () => stage.launcher.setOpen(!stage.launcher.root.classList.contains('ka-is-open'));
     stage.launcher.button.addEventListener('click', toggle);
     return () => stage.launcher.button.removeEventListener('click', toggle);
@@ -122,7 +113,6 @@ export function PreviewApp() {
   const config = live ? liveConfig : (shown?.config ?? null);
   const scene = live ? null : (shown?.scene ?? null);
   const colorScheme = live?.colorScheme ?? shown?.colorScheme ?? 'light';
-  // "auto" follows the visitor's system, which the editor's light and dark switch stands for.
   const mode = config ? (config.theme === 'auto' ? colorScheme : config.theme) : null;
 
   useLayoutEffect(() => {
@@ -135,6 +125,7 @@ export function PreviewApp() {
   useLayoutEffect(() => {
     if (stage && scene) {
       stage.launcher.setOpen(scene !== 'launcher');
+      stage.launcher.setBusy(scene !== 'launcher' && isBusy(sceneState(scene)));
     }
   }, [stage, scene]);
 
@@ -151,9 +142,7 @@ export function PreviewApp() {
     >
       <SamplePage />
       <div ref={mountStage} />
-      {stage && config && scene && scene !== 'launcher'
-        ? createPortal(<SceneChat key={scene} config={config} scene={scene} onBusy={setBusy} />, stage.chat)
-        : null}
+      {stage && config && scene && scene !== 'launcher' ? createPortal(<SceneChat key={scene} config={config} scene={scene} />, stage.chat) : null}
       {stage && live && liveSession.state === 'ready'
         ? createPortal(
             <LiveChatPreview widgetId={live.widgetId} config={liveSession.config} first={liveSession.first} onClose={closeLive} onBusy={setBusy} />,

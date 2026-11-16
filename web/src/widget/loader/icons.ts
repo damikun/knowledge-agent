@@ -1,6 +1,3 @@
-// Lucide icons (ISC license) for the launcher, built with DOM calls: host pages that enforce Trusted Types refuse
-// innerHTML.
-
 type IconNode = ReadonlyArray<readonly [string, Readonly<Record<string, string>>]>;
 
 const SVG_NS = 'http://www.w3.org/2000/svg';

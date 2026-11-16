@@ -1,7 +1,7 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { agentDto, agentGuid, agentsRoutes, builtInAgent } from '../../test/agentsApi';
+import { agentDto, agentGuid, agentsRoutes, assistantAgent } from '../../test/agentsApi';
 import { stubWideScreen } from '../../test/chat';
 import { CONVERSATION_ID, conversationDto, messageDto, sourceDto, turnDto, turnMessages } from '../../test/fixtures';
 import { sourcesRoutes } from '../../test/sourcesApi';
@@ -38,7 +38,7 @@ describe('Playground', () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch({
       ...sourcesRoutes(() => [sourceDto()]),
-      ...agentsRoutes(() => [builtInAgent, helper]),
+      ...agentsRoutes(() => [assistantAgent, helper]),
       ...widgetsRoutes(() => [offWidget, shop]),
       'GET /api/conversations': [],
       'POST /api/chat': () => sseResponse([doneEvent]),
@@ -66,7 +66,7 @@ describe('Playground', () => {
     const user = userEvent.setup();
     const fetchMock = mockFetch({
       ...sourcesRoutes(() => [sourceDto()]),
-      ...agentsRoutes(() => [builtInAgent, helper]),
+      ...agentsRoutes(() => [assistantAgent, helper]),
       ...widgetsRoutes(() => [shop]),
       'GET /api/conversations': [],
       'POST /api/chat': () => sseResponse([doneEvent]),

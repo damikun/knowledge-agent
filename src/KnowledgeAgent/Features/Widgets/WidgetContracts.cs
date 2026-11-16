@@ -61,18 +61,15 @@ public sealed record WidgetPublicConfigDto(
 {
     public bool RequireIdentity { get; init; }
 
-    // Answers link only to these hosts; see LinkHosts.
     public IReadOnlyList<string> LinkHosts { get; init; } = [];
 }
 
-// Page comes from the loader because the frame cannot read the host page's address.
 public sealed record VisitorSessionRequest(
     string? Token = null,
     VisitorUserRequest? User = null,
     Dictionary<string, JsonElement>? Attributes = null,
     VisitorPageRequest? Page = null);
 
-// Url and Referrer are stored without query or fragment, which often carry tokens or personal data.
 public sealed record VisitorPageRequest(string? Url = null, string? Referrer = null, string? Language = null);
 
 public sealed record VisitorSessionDto(string Token, Guid VisitorId, Guid? ConversationId, DateTimeOffset ExpiresAt, string? Name, string? Email)
@@ -92,6 +89,12 @@ public sealed record WidgetPreviewSessionDto(VisitorSessionDto Session, WidgetPu
 public sealed record VisitorMessageRequest(string Message, Guid? ConversationId = null, KnowledgeAgent.Features.Chat.ToolConfirmationRequest? Confirmation = null);
 
 public sealed record VisitorConversationDto(Guid Id, string Status, IReadOnlyList<VisitorMessageDto> Messages, int? Rating = null);
+
+public sealed record VisitorConversationListDto(IReadOnlyList<VisitorConversationSummaryDto> Conversations);
+
+public sealed record VisitorConversationSummaryDto(Guid Id, string Status, DateTimeOffset UpdatedAt, VisitorMessagePreviewDto? LastMessage);
+
+public sealed record VisitorMessagePreviewDto(string Author, string? AuthorName, string Text, DateTimeOffset CreatedAt);
 
 public sealed record VisitorMessageDto(
     Guid Id,

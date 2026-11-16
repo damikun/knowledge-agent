@@ -9,18 +9,13 @@ export type EditableKind = 'text' | 'email' | 'number' | 'date' | 'boolean';
 
 export interface EditableRowProps {
   label: string;
-  /** '' for none. */
   value: string;
-  /** Defaults to the value or a muted "Not set". */
   display?: ReactNode;
   kind?: EditableKind;
-  /** Without it the row is read-only. */
   onSave?: (value: string) => Promise<unknown>;
   badge?: ReactNode;
-  /** Shown while editing. */
   warning?: ReactNode;
   maxLength?: number;
-  /** On by default. */
   clearable?: boolean;
 }
 
@@ -29,7 +24,6 @@ const BOOLEAN_OPTIONS = [
   { value: 'false', label: 'No' },
 ] as const;
 
-// Stable callback refs, so they run on mount and not on every render.
 function focusAndSelect(input: HTMLInputElement | null) {
   input?.focus();
   input?.select();
@@ -45,7 +39,6 @@ export function EditableRow({ label, value, display, kind = 'text', onSave, badg
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // After the first edit, the edit button takes focus back whenever the row returns to reading.
   const [edited, setEdited] = useState(false);
 
   const start = () => {

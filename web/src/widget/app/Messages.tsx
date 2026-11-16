@@ -2,7 +2,7 @@ import { LoaderCircle } from 'lucide-react';
 import { useId, useMemo, type ReactNode } from 'react';
 import { numberCitations, stripPartialTag, type NumberedSource } from './citations';
 import { useWidget } from './context';
-import type { StreamingAnswer } from './controller';
+import type { StreamingAnswer } from './chatState';
 import { Markdown } from './Markdown';
 import type { Citation } from './types';
 
@@ -14,7 +14,6 @@ export interface AvatarProps {
   name: string;
   imageUrl?: string | null;
   size?: 'sm' | 'md';
-  // The header may have a color of its own; there the initial takes the header's text color.
   inHeader?: boolean;
 }
 
@@ -170,7 +169,6 @@ export function StreamingAnswerView({ answer }: { answer: StreamingAnswer }) {
     <AssistantRow editable>
       {hasText ? <AnswerContent text={answer.text} citations={answer.citations} streaming={!answer.done} /> : null}
       {answer.status && !hasText ? (
-        // Announced by the chat's own live region, so it is not a live region itself.
         <p data-testid="answer-status" className="flex min-w-0 items-center gap-1.5 text-xs text-muted">
           <LoaderCircle className="size-3.5 shrink-0 motion-safe:animate-spin" aria-hidden="true" />
           <span className="truncate">{answer.status}</span>

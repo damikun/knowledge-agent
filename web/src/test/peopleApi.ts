@@ -1,4 +1,3 @@
-// Contacts in the shapes of /api/people, for page and accessibility tests.
 import { widgetGuid } from './widgetsApi';
 
 export const ADA_ID = '0199c1e2-0000-7000-8000-00000000ada1';
@@ -15,7 +14,7 @@ export const ada = {
   lastSeenAt: '2026-11-04T09:00:00Z',
   conversationCount: 3,
   widgets: [{ id: widgetGuid(1), name: 'Shop help' }],
-  sessionCount: 4,
+  visitCount: 4,
   returning: true,
   language: 'en-GB',
   lastPageUrl: 'https://shop.example.com/pricing',

@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ApiError, isRecord, request } from '../../lib/api';
+import { ApiError, call, isRecord } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { Guid } from '../../lib/types';
 import { conversationKeys } from '../chat/api';
 import { LABEL_COLORS, type ConversationLabel, type Label, type LabelColor, type LabelInput } from './types';
 
 const labelKeys = {
-  // The chat keeps its own label query under this prefix, so the list needs its own key.
   all: ['labels'] as const,
   list: ['labels', 'list'] as const,
 };
@@ -28,7 +28,6 @@ function toLabel(value: unknown): Label {
   };
 }
 
-/** A bare array or `{ items }`; anything else is no labels. */
 function items(value: unknown): unknown[] {
   if (Array.isArray(value)) {
     return value;
@@ -48,41 +47,19 @@ export function toConversationLabels(value: unknown): ConversationLabel[] {
   });
 }
 
-const conversationPath = (id: Guid) => `/api/conversations/${encodeURIComponent(id)}`;
-
 export const labelsApi = {
-  list: async (signal?: AbortSignal) => items(await request<unknown>('/api/labels', { signal })).map(toLabel),
-  create: async (input: LabelInput) => toLabel(await request<unknown>('/api/labels', { method: 'POST', body: input })),
-  update: async (id: Guid, input: Partial<LabelInput>) =>
-    toLabel(
-      await request<unknown>(`/api/labels/${encodeURIComponent(id)}`, {
-        method: 'PATCH',
-        body: input,
-      }),
-    ),
-  remove: (id: Guid) =>
-    request<void>(`/api/labels/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-    }),
-  /** An auto label left out is never applied to the conversation again. */
+  list: async (signal?: AbortSignal) => items(await call(endpoints.labels.list, { signal })).map(toLabel),
+  create: async (input: LabelInput) => toLabel(await call(endpoints.labels.create, { body: input })),
+  update: async (id: Guid, input: Partial<LabelInput>) => toLabel(await call(endpoints.labels.update, { params: { id }, body: input })),
+  remove: (id: Guid): Promise<void> => call(endpoints.labels.remove, { params: { id } }),
   setForConversation: async (id: Guid, labelIds: Guid[]) =>
-    toConversationLabels(
-      await request<unknown>(`${conversationPath(id)}/labels`, {
-        method: 'PUT',
-        body: { labelIds },
-      }),
-    ),
-  /** Re-queues auto-labeling for the last `days`; returns how many were queued. */
+    toConversationLabels(await call(endpoints.conversations.setLabels, { params: { id }, body: { labelIds } })),
   relabel: async (days: number) => {
-    const dto = await request<unknown>('/api/labels/relabel', {
-      method: 'POST',
-      query: { days },
-    });
+    const dto = await call(endpoints.labels.relabel, { query: { days } });
     return isRecord(dto) && typeof dto.queued === 'number' ? dto.queued : 0;
   },
 };
 
-/** Null on an API without labels (404), so label features hide instead of failing. */
 export function useLabels(enabled = true) {
   return useQuery<Label[] | null>({
     queryKey: labelKeys.list,
@@ -102,12 +79,10 @@ export function useLabels(enabled = true) {
   });
 }
 
-/** Empty while loading, on errors and on unexpected responses. */
 export function labelsOrEmpty(data: unknown): Label[] {
   return Array.isArray(data) ? (data as Label[]) : [];
 }
 
-/** Whether the API supports labels at all. */
 export function labelsAvailable(data: unknown): boolean {
   return Array.isArray(data);
 }
@@ -115,7 +90,6 @@ export function labelsAvailable(data: unknown): boolean {
 export function useSetConversationLabels(conversationId: Guid) {
   const queryClient = useQueryClient();
   return useMutation({
-    // Serialized, so quick toggles reach the server in order.
     scope: { id: `conversation-labels-${conversationId}` },
     mutationFn: (labelIds: Guid[]) => labelsApi.setForConversation(conversationId, labelIds),
     onSuccess: () => {
@@ -125,7 +99,6 @@ export function useSetConversationLabels(conversationId: Guid) {
   });
 }
 
-/** Label name and color show in many places, analytics included. */
 export function useRefreshAfterLabelChange() {
   const queryClient = useQueryClient();
   return () => {

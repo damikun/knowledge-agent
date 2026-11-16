@@ -12,9 +12,7 @@ export interface SideSheetProps {
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
-  /** 480 or 560 px; full width on phones. */
   size?: 'md' | 'lg';
-  /** A modal sheet dims the page and keeps focus inside; a non-modal one leaves the page usable beside it. */
   modal?: boolean;
   initialFocus?: RefObject<HTMLElement | null>;
 }

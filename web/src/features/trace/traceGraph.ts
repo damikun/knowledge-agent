@@ -50,7 +50,6 @@ function argument(call: ToolCallView, name: string): string | null {
 function transferNode(call: ToolCallView): TraceNode {
   const reason = argument(call, 'reason');
   const target = call.toolName === ToolNames.TransferToAgent ? argument(call, 'agent') : null;
-  // The summary only arrives with the result; until then show the agent key.
   const title = call.status === 'success' && call.summary ? call.summary : target ? `Handing to ${target}` : toolMeta(call.toolName).label;
   return {
     id: `call:${call.callId}`,
@@ -107,7 +106,6 @@ export function buildTraceGraph(turn: TurnView, sourceTitle?: (id: string) => st
     nodes.push(node);
     link(previous, node.id);
     previous = node.id;
-    // A researcher's steps run inside its call, so they hang off it in a side chain.
     let inner = node.id;
     for (const child of call.children) {
       const childNode = callNode(child, sourceTitle);

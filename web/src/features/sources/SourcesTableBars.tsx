@@ -10,17 +10,13 @@ import type { SourcePageDto } from './types';
 const PAGE_SIZE_OPTIONS = PAGE_SIZES.map((size) => ({ value: String(size), label: String(size) }));
 
 export interface SelectionBarProps {
-  /** Such as "3 sources selected"; null while nothing is selected. */
   text: string | null;
-  /** Offered when the whole page is selected and more sources match. */
   onSelectAll?: { total: number; select: () => void };
   onMove: () => void;
   onClear: () => void;
 }
 
-/** What is selected and what to do with it, above the table. */
 export function SelectionBar({ text, onSelectAll, onMove, onClear }: SelectionBarProps) {
-  // The count stays mounted while nothing is selected, so screen readers announce every change.
   return (
     <div className={clsx(text && 'flex flex-wrap items-center gap-2 border-b border-border-subtle bg-surface-subtle px-6 py-2')}>
       <span role="status" className={text ? 'mr-1 text-small font-medium text-fg' : 'sr-only'}>
@@ -47,7 +43,6 @@ export function SelectionBar({ text, onSelectAll, onMove, onClear }: SelectionBa
 
 export interface SourcesPagerProps {
   page: SourcePageDto;
-  /** The previous page shows while the next one loads. */
   placeholder: boolean;
   pageSize: number;
   onPageSize: (size: number) => void;
@@ -57,7 +52,6 @@ export interface SourcesPagerProps {
   onShowPage: (offset: number) => void;
 }
 
-/** The range shown, the page size, a refresh and the page buttons, below the table. */
 export function SourcesPager({ page, placeholder, pageSize, onPageSize, polling, refreshing, onRefresh, onShowPage }: SourcesPagerProps) {
   const multiplePages = page.offset > 0 || page.nextOffset !== null;
   return (

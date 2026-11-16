@@ -9,7 +9,6 @@ export interface ProfileRole {
   description: string;
 }
 
-/** The others sit under Advanced on the Models page. */
 export const MAIN_PROFILES = ['orchestrator', 'embedding', 'rerank', 'contextualizer'] as const;
 
 export const PROFILE_ROLES: Readonly<Record<string, ProfileRole>> = {
@@ -26,7 +25,6 @@ export function profileRole(name: string): ProfileRole {
   return PROFILE_ROLES[name.toLowerCase()] ?? { label: name, description: 'A model profile from configuration.' };
 }
 
-/** Empty means "use the default". */
 export interface ProfileFormValues {
   provider: string;
   model: string;
@@ -47,7 +45,6 @@ export function isEmbeddingProfile(profile: Pick<ModelProfileDto, 'kind'>): bool
   return profile.kind?.toLowerCase() === 'embedding';
 }
 
-/** Rerank on auto without a reranker is the normal state without a reranker key, not a failure. */
 export function isRerankingOff(profile: Pick<ModelProfileDto, 'kind' | 'error' | 'effective' | 'configured' | 'override'>): boolean {
   const provider = (profile.override ?? profile.configured)?.provider ?? 'auto';
   return profile.kind?.toLowerCase() === 'rerank' && !profile.effective && !!profile.error && provider.toLowerCase() === 'auto';
@@ -130,7 +127,6 @@ export function providerSetupHint(provider: Pick<ProviderDto, 'key' | 'type'>): 
   }
 }
 
-/** Rerank profiles also take chat models, which rerank through the LLM. */
 export function providersForKind(providers: readonly ProviderDto[], kind: string): ProviderDto[] {
   switch (kind.toLowerCase()) {
     case 'embedding':

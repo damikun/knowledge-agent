@@ -2,7 +2,6 @@ import { clsx } from 'clsx';
 import type { ComponentProps } from 'react';
 import { TONES, type Tone } from './tone';
 
-/** `accent` is the info tone; `outline` renders as neutral. */
 export type BadgeTone = Tone | 'accent' | 'outline';
 
 function badgeTone(tone: BadgeTone): Tone {

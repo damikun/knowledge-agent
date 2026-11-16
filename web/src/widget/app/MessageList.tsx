@@ -1,19 +1,21 @@
 import { LoaderCircle } from 'lucide-react';
 import { memo } from 'react';
-import { useWidget } from './context';
-import type { ChatSession, ChatState, PendingTurn } from './controller';
+import { useChat, useChatState, useWidget } from './context';
+import type { PendingTurn } from './chatState';
 import { AnswerFeedback } from './Feedback';
 import { AnswerContent, AssistantRow, StaffRow, StreamingAnswerView, SystemNote, ThinkingDots, VisitorBubble } from './Messages';
 import type { VisitorMessage } from './types';
-import { useOnline } from './useChatController';
+import { useOnline } from './useOnline';
 
 function answerStored(pending: PendingTurn, messages: readonly VisitorMessage[]): boolean {
   const question = pending.questionSequence;
   return question !== null && messages.some((message) => message.author === 'assistant' && message.sequence > question);
 }
 
-function StoredMessage({ message, state, session }: { message: VisitorMessage; state: ChatState; session: ChatSession }) {
+function StoredMessage({ message }: { message: VisitorMessage }) {
   const { config } = useWidget();
+  const session = useChat();
+  const conversationId = useChatState((state) => state.conversationId);
   switch (message.author) {
     case 'visitor':
       return <VisitorBubble text={message.text} />;
@@ -22,7 +24,7 @@ function StoredMessage({ message, state, session }: { message: VisitorMessage; s
         <AssistantRow
           editable
           footer={
-            config.feedbackEnabled && state.conversationId ? (
+            config.feedbackEnabled && conversationId ? (
               <AnswerFeedback rating={message.rating} onRate={(rating, comment) => session.rateAnswer(message.id, rating, comment)} />
             ) : null
           }
@@ -38,15 +40,13 @@ function StoredMessage({ message, state, session }: { message: VisitorMessage; s
 }
 
 export interface MessageListProps {
-  state: ChatState;
-  session: ChatSession;
   showSuggestions: boolean;
   onAsk: (question: string) => Promise<void>;
 }
 
-// Memoized, so typing in the message box doesn't re-render every message.
-export const MessageList = memo(function MessageList({ state, session, showSuggestions, onAsk }: MessageListProps) {
+export const MessageList = memo(function MessageList({ showSuggestions, onAsk }: MessageListProps) {
   const { config, t, mark } = useWidget();
+  const state = useChatState();
   const online = useOnline();
   const { pending, messages, status } = state;
   return (
@@ -66,7 +66,7 @@ export const MessageList = memo(function MessageList({ state, session, showSugge
         ) : null}
         {messages.map((message) => (
           <li key={message.id} className="motion-safe:animate-rise">
-            <StoredMessage message={message} state={state} session={session} />
+            <StoredMessage message={message} />
           </li>
         ))}
         {pending && pending.questionSequence === null ? (

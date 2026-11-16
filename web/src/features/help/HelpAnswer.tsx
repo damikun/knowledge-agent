@@ -58,7 +58,6 @@ export interface HelpAnswerProps {
   onNavigate?: () => void;
 }
 
-/** Renders an answer; [S1] tags become links to the cited help section, and portal paths stay in the portal. */
 export function HelpAnswer({ text, citations, streaming = false, activity, onNavigate }: HelpAnswerProps) {
   const returnState = useReturnState();
   const byRef = useMemo(() => new Map(citations.map((citation) => [citation.ref.toUpperCase(), citation] as const)), [citations]);
@@ -75,7 +74,6 @@ export function HelpAnswer({ text, citations, streaming = false, activity, onNav
   }, [text, byRef]);
   const numbers = useMemo(() => new Map(cited.map((citation, index) => [citation.sourceId, index + 1] as const)), [cited]);
 
-  // Memoized, or the Markdown re-renders on every panel change.
   const renderCitation = useCallback(
     (ref: string) => {
       const citation = byRef.get(ref.toUpperCase());

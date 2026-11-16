@@ -53,17 +53,13 @@ function createComponents(renderCitation?: (ref: string) => ReactNode, renderLin
 
 const defaultComponents = createComponents();
 
-/** Renders a link the default would not, such as a path in the portal; null keeps the default. */
 export type RenderLink = (href: string, children: ReactNode) => ReactNode | null;
 
 export interface MarkdownProps {
   text: string;
   variant?: 'default' | 'muted';
-  /** Renders a [S#] tag instead of a numbered marker. Pass a memoized function, or the markdown re-renders every time. */
   renderCitation?: (ref: string) => ReactNode;
-  /** Pass a memoized function, like renderCitation. */
   renderLink?: RenderLink;
-  /** Hosts links may go to besides the portal itself; others show as text with their address. Pass a stable array. */
   linkHosts?: readonly string[];
 }
 

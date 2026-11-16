@@ -32,7 +32,8 @@
     "react-dom": "^19.3.1",
     "react-markdown": "^10.1.0",
     "react-router": "^8.5.0",
-    "remark-gfm": "^4.0.1"
+    "remark-gfm": "^4.0.1",
+    "zustand": "^5.0.16"
   },
   "devDependencies": {
     "@tailwindcss/typography": "^0.5.20",

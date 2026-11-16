@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { isAbortError } from '../../../lib/sse';
-import { fetchPreviewSession, WidgetApi, type PreviewSession } from '../api';
+import { fetchPreviewSession, type PreviewSession } from '../api';
 import { ChatPanel } from '../ChatPanel';
-import { ChatController } from '../controller';
 import { normalizeConfig, type WidgetConfig } from '../types';
-import { useOwnedController } from '../useChatController';
+import { useOwnedRuntime, WidgetRuntime } from '../widgetRuntime';
 import { WidgetProvider } from '../WidgetProvider';
 
 export type LiveSession =
@@ -41,7 +40,6 @@ export function useLiveSession(widgetId: string | null): LiveSession {
   return loaded && loaded.widgetId === widgetId ? loaded.session : LOADING;
 }
 
-// The public API with a preview session, which the server treats as a test; a new one is fetched when it runs out.
 export function LiveChatPreview({
   widgetId,
   config,
@@ -55,9 +53,20 @@ export function LiveChatPreview({
   onClose: () => void;
   onBusy: (busy: boolean) => void;
 }) {
-  const controller = useOwnedController(`${widgetId}:${config.key}`, () => {
+  const runtime = useOwnedRuntime(`${widgetId}:${config.key}`, () => {
     let initial: PreviewSession | null = first;
-    return new ChatController(new WidgetApi(config.key), {
+    return new WidgetRuntime(config.key, {
+      config,
+      host: {
+        post: (message) => {
+          if (message.type === 'busy') {
+            onBusy(message.busy);
+          } else if (message.type === 'close') {
+            onClose();
+          }
+        },
+        listen: () => () => undefined,
+      },
       storageKey: `ka-widget-preview:${widgetId}`,
       session: async () => {
         const session = initial?.session;
@@ -66,9 +75,9 @@ export function LiveChatPreview({
       },
     });
   });
-  return controller ? (
-    <WidgetProvider config={config}>
-      <ChatPanel session={controller} onClose={onClose} onBusy={onBusy} />
+  return runtime ? (
+    <WidgetProvider widget={runtime}>
+      <ChatPanel />
     </WidgetProvider>
   ) : null;
 }

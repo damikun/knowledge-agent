@@ -1,7 +1,5 @@
-/* The frame's own styles, separate from src/index.css. Only this folder is scanned for classes. */
 @import 'tailwindcss' source('.');
 
-/* theme.ts sets data-theme, data-glow and the --ka-* colors on <html>. The frame is transparent over the loader's panel. */
 @custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 @theme inline {
@@ -26,7 +24,6 @@
   --color-user-ink: var(--ka-user-bubble-text);
   --color-bot: var(--ka-assistant-bubble);
   --color-bot-ink: var(--ka-assistant-bubble-text);
-  /* A soft spring: a little overshoot, then settled. */
   --ease-spring: linear(0, 0.18 4.6%, 0.58 11%, 0.96 19.6%, 1.06 25%, 1.08 29%, 1.05 36%, 1.01 46%, 0.995 58%, 1);
   --animate-rise: ka-rise 0.42s var(--ease-spring) both;
 }
@@ -45,7 +42,6 @@
 }
 
 @layer base {
-  /* What shows before theme.ts runs: the default preset in light mode. */
   :root {
     --ka-accent: #0f766e;
     --ka-on-accent: #ffffff;
@@ -89,7 +85,6 @@
     margin: 0;
   }
 
-  /* [data-ka-chat]: in the editor preview the chat sits in a shadow root and doesn't inherit from <body>. */
   body,
   [data-ka-chat] {
     background: transparent;
@@ -119,7 +114,6 @@
     }
   }
 
-  /* Bubbles on the glass are a little translucent; here they are solid. */
   @media (prefers-reduced-transparency: reduce) {
     :root {
       --ka-assistant-bubble: var(--ka-panel);
@@ -128,7 +122,6 @@
 }
 
 @layer components {
-  /* Answers in Markdown: compact, inside a chat bubble. */
   .ka-md {
     line-height: 1.55;
     overflow-wrap: anywhere;
@@ -227,7 +220,6 @@
     text-align: left;
   }
 
-  /* A numbered source marker in place of an [S1] tag. */
   .ka-marker {
     margin-left: 0.2em;
     border-radius: 999px;
@@ -239,7 +231,6 @@
     font-variant-numeric: tabular-nums;
   }
 
-  /* A padded box masked to its border, with a blurred copy behind it for the glow. */
   .ka-glow-ring {
     position: relative;
     isolation: isolate;

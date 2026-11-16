@@ -115,7 +115,6 @@ export interface ProfileSheetProps {
   providers: ProviderDto[];
 }
 
-/** Configuration settings stay, so the change can be undone. */
 export function ProfileSheet({ open, onClose, profile, providers }: ProfileSheetProps) {
   const queryClient = useQueryClient();
   const role = profileRole(profile.name);
@@ -154,7 +153,6 @@ export function ProfileSheet({ open, onClose, profile, providers }: ProfileSheet
           <div className="space-y-4">
             <ProfileDetails profile={profile} />
             {hasOverride ? (
-              // Confirmed inline: a dialog over the sheet would stack two modals.
               confirmReset ? (
                 <Alert
                   tone="warning"

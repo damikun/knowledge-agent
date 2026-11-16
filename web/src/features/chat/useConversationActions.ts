@@ -5,20 +5,17 @@ import { errorMessage } from '../../lib/api';
 import { chatApi, conversationKeys, patchListItem, updateListItems } from './api';
 import type { ConversationDto, ConversationLabelDto, ConversationListItem, LabelDto } from './types';
 
-/** How long Undo is offered before the conversation is really deleted; a little longer than the toast stays. */
 const UNDO_DELETE_MS = 7000;
 
 export interface ConversationActions {
   hidden: ReadonlySet<string>;
   rename: (item: ConversationListItem, title: string) => void;
   togglePin: (item: ConversationListItem) => void;
-  /** Sets the labels a person chose; labels a rule added stay as they are unless unticked. */
   setLabels: (item: ConversationListItem, labels: readonly LabelDto[]) => void;
   remove: (item: ConversationListItem) => void;
 }
 
 export interface ConversationActionsOptions {
-  /** Called when a conversation disappears from the list; returns whether it was the open one. */
   onRemoved?: (id: string) => boolean;
   onRestored?: (id: string, wasOpen: boolean) => void;
 }
@@ -36,9 +33,7 @@ export function useConversationActions({ onRemoved, onRestored }: ConversationAc
   const queryClient = useQueryClient();
   const [hidden, setHidden] = useState<ReadonlySet<string>>(() => new Set());
   const pending = useRef(new Map<string, PendingDelete>());
-  // Label changes for one conversation go out one after another, so the last choice is the one stored.
   const labelQueue = useRef(new Map<string, Promise<unknown>>());
-  // Called later, from a delete and its Undo, with the page's latest handlers; the actions stay stable for memoized rows.
   const removed = useEffectEvent((id: string) => onRemoved?.(id) ?? false);
   const restored = useEffectEvent((id: string, wasOpen: boolean) => onRestored?.(id, wasOpen));
 
@@ -57,7 +52,6 @@ export function useConversationActions({ onRemoved, onRestored }: ConversationAc
   const failed = useCallback(
     (title: string, error: unknown) => {
       toast({ title, description: errorMessage(error), tone: 'danger' });
-      // The optimistic change may be wrong now; the server has the truth.
       void queryClient.invalidateQueries({ queryKey: conversationKeys.lists });
     },
     [queryClient],
@@ -85,7 +79,6 @@ export function useConversationActions({ onRemoved, onRestored }: ConversationAc
     [queryClient, failed, setHiddenId],
   );
 
-  // Leaving the page carries out pending deletes.
   useEffect(() => {
     const waiting = pending.current;
     return () => {
@@ -134,7 +127,6 @@ export function useConversationActions({ onRemoved, onRestored }: ConversationAc
         source: before.get(label.id)?.source ?? 'manual',
       }));
       patchListItem(queryClient, item.id, { labels: next });
-      // The API sets the manual labels; an automatic one the person kept is not sent, so it stays automatic.
       const labelIds = next.filter((label) => label.source === 'manual').map((label) => label.id);
       const previous = labelQueue.current.get(item.id) ?? Promise.resolve();
       const request = previous

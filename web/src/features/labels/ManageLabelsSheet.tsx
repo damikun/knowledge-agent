@@ -17,7 +17,6 @@ import { LabelChip } from './LabelChip';
 import { LABEL_STYLES } from './labelStyles';
 import { LABEL_COLORS, type Label, type LabelColor, type LabelInput } from './types';
 
-/** The server queues at most 500 conversations. */
 const RELABEL_DAYS = 30;
 
 const EMPTY: LabelInput = {
@@ -166,7 +165,6 @@ export interface ManageLabelsSheetProps {
 export function ManageLabelsSheet({ open, onClose }: ManageLabelsSheetProps) {
   const labels = useLabels(open);
   const refresh = useRefreshAfterLabelChange();
-  // null: no form; 'new': a new label; otherwise the id being edited.
   const [editing, setEditing] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Label | null>(null);
   const [confirmRelabel, setConfirmRelabel] = useState(false);

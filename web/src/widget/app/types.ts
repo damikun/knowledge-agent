@@ -1,6 +1,3 @@
-// The public widget API as the frame sees it (/api/public/widgets/{key}), plus normalizers that keep the frame
-// working when a field is missing, such as in an unsaved preview config.
-
 import { DEFAULT_BRAND_COLOR, parseHexColor } from '../shared/color';
 import { DEFAULT_PRESET, isThemePreset, readThemeColors, type ThemeColors, type ThemePreset } from '../shared/theme';
 
@@ -18,7 +15,6 @@ export interface WidgetConfig {
   launcherIcon: string;
   launcherIconUrl: string | null;
   brandColor: string;
-  // The mode; the look is the preset.
   theme: ThemeChoice;
   preset: ThemePreset;
   colors: ThemeColors;
@@ -34,7 +30,6 @@ export interface WidgetConfig {
   contactCapture: ContactCapture;
   texts: Record<string, string>;
   maxMessageLength: number;
-  // Hosts answers may link to: "example.com" also allows www., "*.example.com" its subdomains.
   linkHosts: string[];
 }
 
@@ -45,7 +40,6 @@ export interface VisitorSession {
   expiresAt: string | null;
   name: string | null;
   email: string | null;
-  // Attributes the server did not store, with why; the frame warns about them in the console.
   rejectedAttributes?: AttributeRejection[];
 }
 
@@ -82,23 +76,17 @@ export interface VisitorConversation {
   messages: VisitorMessage[];
 }
 
-// Events of a turn, from POST /messages or from the `turn` events of the live stream.
 export type TurnEvent =
   | { type: 'conversation'; conversationId: string }
   | { type: 'tool-call'; toolName: string }
   | { type: 'tool-result'; citations: Citation[] }
-  // step numbers the model calls of a turn; older servers send none.
-  | { type: 'text-delta'; text: string; step: number | null }
-  // interim: tools run next, so the text so far was a note on the way, not the answer.
-  | { type: 'step-finished'; step: number; kind: 'interim' | 'final' }
+  | { type: 'text-delta'; text: string }
+  | { type: 'step-finished'; kind: 'interim' | 'final' }
   | { type: 'error'; message: string; code: string | null }
   | { type: 'done'; conversationId: string }
-  // An action the agent asked about, which runs only after the visitor presses Confirm.
   | { type: 'confirmation-required'; callId: string; title: string; details: ConfirmationDetail[] }
-  // The agent offered a person; the widget shows its own button.
   | { type: 'handover-offered'; callId: string };
 
-// One argument of an action, as the server put it.
 export interface ConfirmationDetail {
   label: string;
   value: string;
@@ -167,7 +155,6 @@ export function normalizeConfig(value: unknown): WidgetConfig | null {
   };
 }
 
-// The live stream has sent "handoverpending" where the REST API says "handover_pending", so both are accepted.
 export function normalizeStatus(value: unknown): ConversationStatus | null {
   if (typeof value !== 'string') {
     return null;
@@ -186,7 +173,6 @@ export function normalizeStatus(value: unknown): ConversationStatus | null {
   }
 }
 
-// Stored messages carry title/url, stream events sourceTitle/sourceUrl.
 function normalizeCitations(value: unknown): Citation[] {
   if (!Array.isArray(value)) {
     return [];
@@ -234,6 +220,32 @@ export function normalizeConversation(value: unknown, id: string): VisitorConver
   };
 }
 
+export interface ConversationSummary {
+  id: string;
+  status: ConversationStatus;
+  updatedAt: string;
+  lastMessage: { author: MessageAuthor; authorName: string | null; text: string } | null;
+}
+
+export function normalizeSummaries(value: unknown): ConversationSummary[] {
+  const items = isRecord(value) && Array.isArray(value.conversations) ? value.conversations : [];
+  return items.filter(isRecord).flatMap((item) => {
+    if (typeof item.id !== 'string') {
+      return [];
+    }
+    const last = isRecord(item.lastMessage) ? item.lastMessage : null;
+    const author = last && (AUTHORS as readonly unknown[]).includes(last.author) ? (last.author as MessageAuthor) : null;
+    return [
+      {
+        id: item.id,
+        status: normalizeStatus(item.status) ?? 'ai',
+        updatedAt: typeof item.updatedAt === 'string' ? item.updatedAt : '',
+        lastMessage: last && author ? { author, authorName: text(last.authorName), text: typeof last.text === 'string' ? last.text : '' } : null,
+      },
+    ];
+  });
+}
+
 export function normalizeSession(value: unknown): VisitorSession | null {
   if (!isRecord(value) || typeof value.token !== 'string' || value.token === '') {
     return null;
@@ -261,11 +273,9 @@ export function parseTurnEvent(type: string, data: unknown): TurnEvent | null {
     case 'tool-result':
       return { type, citations: normalizeCitations(data.citations) };
     case 'text-delta':
-      return typeof data.text === 'string'
-        ? { type, text: data.text, step: typeof data.step === 'number' && data.step > 0 ? data.step : null }
-        : null;
+      return typeof data.text === 'string' ? { type, text: data.text } : null;
     case 'step-finished':
-      return typeof data.step === 'number' && (data.kind === 'interim' || data.kind === 'final') ? { type, step: data.step, kind: data.kind } : null;
+      return data.kind === 'interim' || data.kind === 'final' ? { type, kind: data.kind } : null;
     case 'error':
       return { type, message: text(data.message) ?? '', code: text(data.code) };
     case 'done':

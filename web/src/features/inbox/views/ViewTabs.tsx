@@ -13,7 +13,6 @@ export interface ViewTabsProps {
   counts: InboxCounts | undefined;
   linkTo: (view: InboxView) => To;
   panelId: string;
-  /** Set for deep links: no tab is current and no count claims the list. */
   context?: boolean;
 }
 
@@ -21,7 +20,6 @@ const GAP = 4;
 const SEPARATOR = 17;
 const MORE = 96;
 
-/** Mine shows its unread count, the others their total. */
 function pillOf(
   view: InboxView,
   counts: InboxCounts | undefined,
@@ -89,7 +87,6 @@ function tabClass(view: InboxViewDefinition, active: boolean) {
   );
 }
 
-/** How many tabs fit, in order; all of them when unmeasured (e.g. in tests). */
 export function tabsThatFit(widths: readonly number[], available: number | null): number {
   if (available === null || widths.length === 0 || widths.some((width) => width === 0)) {
     return INBOX_VIEWS.length;
@@ -109,7 +106,6 @@ export function tabsThatFit(widths: readonly number[], available: number | null)
   return count;
 }
 
-/** Tabs that don't fit move into a More menu from the end, so labels are never truncated. */
 export function ViewTabs({ state, counts: allCounts, linkTo, panelId, context = false }: ViewTabsProps) {
   const counts = context ? undefined : allCounts;
   const current = context ? null : state.view;
@@ -132,14 +128,12 @@ export function ViewTabs({ state, counts: allCounts, linkTo, panelId, context = 
     }
     const observer = new ResizeObserver(([entry]) => {
       setAvailable(entry && entry.contentRect.width > 0 ? entry.contentRect.width : null);
-      // Again once the web font loads, since it widens the labels.
       measure();
     });
     observer.observe(bar);
     return () => observer.disconnect();
   }, [measure]);
 
-  // The hidden copies change width with the counts.
   useLayoutEffect(measure, [counts, measure]);
 
   const shown = tabsThatFit(widths, available);
@@ -224,7 +218,6 @@ export function ViewTabs({ state, counts: allCounts, linkTo, panelId, context = 
           </div>
         ) : null}
       </div>
-      {/* Invisible copies of every tab, for measuring their widths. */}
       <div aria-hidden inert className="pointer-events-none invisible absolute top-0 left-0 flex h-0 overflow-hidden">
         {INBOX_VIEWS.map((view, index) => (
           <span

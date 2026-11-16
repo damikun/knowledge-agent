@@ -2,7 +2,6 @@ import type { HelpSetupDto } from './types';
 
 const MAX = 4;
 
-// Keyed by the first path segment.
 const BY_PAGE: Readonly<Record<string, readonly string[]>> = {
   home: ['What are the setup steps?', 'How do I test the agent before visitors do?'],
   inbox: ['How do I take over a conversation?', 'How do I hand a conversation back to the assistant?', 'How do labels work?'],
@@ -31,7 +30,6 @@ export function pageSegment(pathname: string): string {
   return pathname.split(/[/?#]/).find((part) => part !== '')?.toLowerCase() ?? '';
 }
 
-/** The next setup step first (admins), then the page's questions, then general ones; at most four. */
 export function helpSuggestions(pathname: string, setup: HelpSetupDto | null, admin: boolean): string[] {
   const segment = pageSegment(pathname);
   const questions: string[] = [];

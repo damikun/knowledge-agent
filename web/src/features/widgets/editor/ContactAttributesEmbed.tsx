@@ -23,6 +23,10 @@ export function ContactAttributesEmbed({ publicKey, identityEnabled }: { publicK
         Attributes such as plan or company let you filter contacts and build segments. Send them with identify() for signed-in users, or with update() for
         anyone. Values from update() on an anonymous page are marked as not verified, because a visitor can change them.
       </p>
+      <p className="text-xs text-fg-muted">
+        A key you send replaces its value, a key you leave out keeps it, and null clears it. Values are text, numbers, true or false, or dates as ISO
+        text; keys use lowercase letters, digits and _.
+      </p>
       <CopyBlock code={updateSnippet()} label="Copy update() snippet" />
       <p className="text-sm font-medium text-fg">From your server</p>
       <p className="text-xs text-fg-muted">

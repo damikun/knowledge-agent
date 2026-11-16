@@ -33,7 +33,6 @@ export function AppLayout() {
   return (
     <BreadcrumbContext value={setItem}>
       <CurrentPlaceContext value={place}>
-        {/* React 19 hoists <title> into the head. */}
         <title>{[item, section?.label, PRODUCT].filter(Boolean).join(' · ')}</title>
         <div className="relative flex h-dvh overflow-hidden bg-sidebar">
           <a

@@ -1,7 +1,6 @@
 import type { EmailSettingsDto, IntegrationsDto, SlackSettingsDto } from '../features/notifications/types';
 import { jsonResponse, type FetchHandler } from './utils';
 
-/** Email that is off and not saved in the portal, as on a new installation. */
 export function emailSettings(overrides: Partial<EmailSettingsDto> = {}): EmailSettingsDto {
   return {
     enabled: false,
@@ -31,7 +30,6 @@ export function emailSettings(overrides: Partial<EmailSettingsDto> = {}): EmailS
   };
 }
 
-/** Email that sends and reads replies, saved in the portal with both passwords. */
 export const workingEmail = emailSettings({
   enabled: true,
   smtpHost: 'smtp.example.com',
@@ -76,7 +74,6 @@ export const workingSlack = slackSettings({
   connected: true,
 });
 
-/** mockFetch route for GET /api/integrations; the getter is read per request. */
 export function integrationsRoutes(get: () => IntegrationsDto): Record<string, FetchHandler> {
   return { 'GET /api/integrations': () => jsonResponse(get()) };
 }

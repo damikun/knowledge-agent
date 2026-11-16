@@ -50,7 +50,6 @@ function CardNodeView({ data }: NodeProps<CardNode>) {
         node.dimmed && !selected && 'opacity-60',
       )}
     >
-      {/* Handles on every side, so a layout can bring edges in from any direction. */}
       <Handle id="top" type="target" position={Position.Top} isConnectable={false} />
       <Handle id="left" type="target" position={Position.Left} isConnectable={false} />
       <div className="flex min-w-0 items-center gap-2">
@@ -96,7 +95,6 @@ function ZoomButton({ label, icon: Icon, onClick }: { label: string; icon: Lucid
   );
 }
 
-// Our own buttons instead of React Flow's Controls, so they look like every other control in the portal.
 const zoomDuration = () => (prefersReducedMotion() ? 0 : 150);
 
 function ZoomControls() {
@@ -127,14 +125,10 @@ export interface FlowCanvasProps<N extends GraphNode> {
   edges: readonly GraphEdge[];
   direction: LayoutDirection;
   iconOf: (node: N) => LucideIcon;
-  /** Clicking a node, or Enter or Space on a focused one. */
   onActivate: (node: N) => void;
-  /** For the node's accessible name, e.g. "Opens the agent editor". */
   actionOf?: (node: N) => string;
-  /** "link" when activating navigates, "button" when it opens something in place. */
   nodeRole?: 'link' | 'button';
   selectedId?: string | null;
-  /** False: no pan, wheel zoom or zoom buttons, so the page scrolls over it. */
   interactive?: boolean;
   className?: string;
 }
@@ -156,7 +150,6 @@ function Canvas<N extends GraphNode>({
   interactive = true,
   className,
 }: FlowCanvasProps<N>) {
-  // useId may contain characters a url(#id) reference cannot carry.
   const markerId = `ka-arrow-${useId().replace(/[^a-zA-Z0-9]/g, '')}`;
   const byId = useMemo(() => new Map(positioned.map((item) => [item.node.id, item.node])), [positioned]);
   const signature = useMemo(() => positioned.map((p) => `${p.node.id}:${p.x}:${p.y}:${p.height}`).join('|'), [positioned]);
@@ -198,7 +191,6 @@ function Canvas<N extends GraphNode>({
     [edges, byId, markerId, direction],
   );
 
-  // React Flow's own Enter only selects; it bubbles here, where it does what a click does.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if (event.key !== 'Enter' && event.key !== ' ') {
       return;
@@ -265,7 +257,6 @@ function Canvas<N extends GraphNode>({
   );
 }
 
-/** A read-only React Flow graph in the portal's tokens: fixed layout, fit to view, zoom buttons and keyboard access. */
 export function FlowCanvas<N extends GraphNode>(props: FlowCanvasProps<N>) {
   return (
     <ReactFlowProvider>

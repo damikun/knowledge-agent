@@ -146,7 +146,6 @@ export function IntegrationCard({ icon: Icon, title, status, fromConfiguration, 
   );
 }
 
-/** Undefined while the widgets load. */
 export function widgetsSendingTo(widgets: readonly WidgetDto[] | undefined, channel: string): WidgetDto[] | undefined {
   return widgets?.filter((widget) => widget.settings.behavior.handoverEnabled && widget.settings.handover.channel === channel);
 }

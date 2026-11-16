@@ -19,7 +19,6 @@ export function itemSource(item: EvalDatasetItemDto): EvalItemSource {
   return item.source ?? (item.conversationId ? 'conversation' : 'manual');
 }
 
-/** Every word must match somewhere in the item. */
 export function filterDatasetItems(items: readonly EvalDatasetItemDto[], query: string, source: ItemSourceFilter = 'all'): EvalDatasetItemDto[] {
   const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   return items.filter((item) => {
@@ -48,7 +47,6 @@ function pageCount(total: number, size = ITEMS_PAGE_SIZE): number {
   return Math.max(1, Math.ceil(total / size));
 }
 
-/** `page` is 0-based and clamped, so deleting the last rows never leaves an empty page. */
 export function pageOf<T>(items: readonly T[], page: number, size = ITEMS_PAGE_SIZE): { rows: T[]; page: number } {
   const last = pageCount(items.length, size) - 1;
   const current = Math.min(Math.max(0, page), last);
@@ -65,7 +63,6 @@ export function expectedPreview(item: Pick<EvalDatasetItemDto, 'answerable' | 'r
   return item.expectedFacts.length > 0 ? `Must mention: ${item.expectedFacts.join('; ')}` : '';
 }
 
-/** Keeps the original's source. */
 export function duplicateRequest(item: EvalDatasetItemDto): SaveEvalItemRequest {
   return {
     question: item.question,
@@ -85,7 +82,6 @@ export function existingKeys(items: readonly EvalDatasetItemDto[] | undefined): 
   return new Set((items ?? []).map((item) => duplicateKey(item.question, item.history)));
 }
 
-/** Matched by name and source, as runs record them. */
 export function latestCompletedRun(
   dataset: Pick<EvalDatasetDto, 'name' | 'source'>,
   runs: readonly EvalRunSummaryDto[] | undefined,

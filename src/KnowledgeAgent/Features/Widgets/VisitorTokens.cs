@@ -8,8 +8,6 @@ namespace KnowledgeAgent.Features.Widgets;
 
 public sealed record VisitorIdentity(Guid WidgetId, Guid VisitorId, bool Verified = false, bool Preview = false);
 
-// Visitor tokens are encrypted and signed with the Data Protection key ring that the instances share, so any instance
-// can read them and nobody can forge one for another visitor or widget.
 internal sealed class VisitorTokens(IDataProtectionProvider dataProtection, IOptions<WidgetOptions> options, TimeProvider timeProvider)
 {
     private readonly ITimeLimitedDataProtector _protector =
@@ -45,7 +43,6 @@ internal sealed class VisitorTokens(IDataProtectionProvider dataProtection, IOpt
                 return null;
             }
 
-            // Tokens issued before identity verification have two parts; the flags follow in a fixed order.
             var parts = payload.Split('.');
             var flags = parts.Skip(2).ToArray();
             var verified = flags.FirstOrDefault() == VerifiedFlag;
@@ -65,7 +62,6 @@ internal sealed class VisitorTokens(IDataProtectionProvider dataProtection, IOpt
     }
 }
 
-// Sliding one-minute windows per key, per instance: enough to stop a single client from flooding the agent.
 internal sealed class WidgetRateLimiter(TimeProvider timeProvider)
 {
     private static readonly TimeSpan Window = TimeSpan.FromMinutes(1);
@@ -86,7 +82,6 @@ internal sealed class WidgetRateLimiter(TimeProvider timeProvider)
             var window = _windows.GetOrAdd(key, _ => new Queue<DateTimeOffset>());
             lock (window)
             {
-                // A cleanup removed this window between the lookup and the lock: count in the one that replaces it.
                 if (!_windows.TryGetValue(key, out var current) || !ReferenceEquals(current, window))
                 {
                     continue;

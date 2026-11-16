@@ -1,14 +1,12 @@
+import { pathOf } from '../../lib/endpoint';
+import { widgetEndpoints } from '../shared/endpoints';
 import { isThemePreset, readThemeColors, resolveTheme, DEFAULT_PRESET, type ColorMode, type ThemeColors, type ThemePreset } from '../shared/theme';
 import { CLOSE_ICON, createIcon, LAUNCHER_ICONS } from './icons';
 import { LOADER_CSS } from './styles';
 
-// The host page's side: a launcher in a shadow root and the chat iframe it opens. Messages are origin-checked both ways.
-
 const MESSAGE_SOURCE = 'knowledge-agent';
 const SCRIPT_SELECTOR = 'script[data-widget][src*="/widget/v1/loader.js"]';
 
-// A signed-in user of the host page. userHash is HMAC-SHA256(identity secret, userId) as hex, computed on the
-// host's server; the widget's server checks it, so a page cannot pretend to be someone else.
 export type AttributeValue = string | number | boolean | null;
 
 export interface KnowledgeAgentUser {
@@ -16,11 +14,9 @@ export interface KnowledgeAgentUser {
   userHash: string;
   name?: string;
   email?: string;
-  // Sent key: set (overwritten); key left out: kept as before; null: cleared. Dates as ISO text, such as '2025-01-31'.
   attributes?: Record<string, AttributeValue>;
 }
 
-// Where the visitor is: what the frame cannot see itself. The server keeps URLs without query or fragment.
 export interface KnowledgeAgentPage {
   url: string;
   referrer: string | null;
@@ -31,17 +27,12 @@ export interface KnowledgeAgentApi {
   open: () => void;
   close: () => void;
   toggle: () => void;
-  // Tells the chat who is signed in; call it again after another user signs in.
   identify: (user: KnowledgeAgentUser) => void;
-  // Attributes of the visitor, also before identify() and for anonymous visitors (they count as unverified then).
-  // They reach the server when the chat opens, and at once while it is open.
   update: (values: { attributes: Record<string, AttributeValue> }) => void;
-  // Forgets the user and starts a fresh anonymous chat, for sign-out.
   logout: () => void;
 }
 
 export interface LoaderHandle {
-  // Resolves once the launcher shows, or false when the widget could not load.
   ready: Promise<boolean>;
   destroy: () => void;
 }
@@ -58,14 +49,12 @@ export interface LauncherConfig {
   launcherIcon: string;
   launcherIconUrl: string | null;
   brandColor: string;
-  // The mode: auto, light or dark.
   theme: string;
   preset: ThemePreset;
   colors: ThemeColors;
   position: string;
   launcherLabel: string | null;
   texts: Record<string, string>;
-  // Only identified users see the launcher.
   requireIdentity?: boolean;
 }
 
@@ -106,7 +95,6 @@ function readConfig(value: unknown): LauncherConfig | null {
 
 const MAX_ATTRIBUTES = 100;
 
-// Text, numbers, true or false, and null to clear; anything else is left out with a warning.
 function readAttributes(value: unknown): Record<string, AttributeValue> {
   const attributes: Record<string, AttributeValue> = {};
   if (!isRecord(value)) {
@@ -126,7 +114,6 @@ function readAttributes(value: unknown): Record<string, AttributeValue> {
 
 const LANGUAGE_TAG = /^[a-z]{2,3}(-[a-z0-9]{1,8})*$/i;
 
-// The frame takes the host page's language, which the widget's title, greeting and answers usually share (WCAG 3.1.1).
 function frameQuery(): string {
   const language = document.documentElement.lang.trim();
   return LANGUAGE_TAG.test(language) ? `?lang=${encodeURIComponent(language)}` : '';
@@ -140,7 +127,6 @@ function currentPage(): KnowledgeAgentPage {
   };
 }
 
-// Checks what the host page passes, so a typo shows in the console instead of a silently anonymous chat.
 function readUser(value: unknown): KnowledgeAgentUser | null {
   if (!isRecord(value)) {
     return null;
@@ -165,7 +151,6 @@ function readUser(value: unknown): KnowledgeAgentUser | null {
   return user;
 }
 
-// <script ... data-user-id="42" data-user-hash="..."> for pages that render the signed-in user on the server.
 function userFromScript(script: HTMLScriptElement | null): KnowledgeAgentUser | null {
   const data = script?.dataset;
   if (!data?.userId) {
@@ -203,7 +188,6 @@ function whenBodyReady(): Promise<void> {
 }
 
 function adoptStyles(root: ShadowRoot): void {
-  // A constructed sheet also works under a host page CSP that forbids inline <style>.
   if ('adoptedStyleSheets' in root && typeof CSSStyleSheet === 'function' && 'replaceSync' in CSSStyleSheet.prototype) {
     try {
       const sheet = new CSSStyleSheet();
@@ -211,7 +195,6 @@ function adoptStyles(root: ShadowRoot): void {
       root.adoptedStyleSheets = [sheet];
       return;
     } catch {
-      // Fall back to a <style> element.
     }
   }
   const style = document.createElement('style');
@@ -219,29 +202,37 @@ function adoptStyles(root: ShadowRoot): void {
   root.append(style);
 }
 
+function showOnTop(host: HTMLElement): void {
+  if (typeof host.showPopover !== 'function') {
+    document.body.append(host);
+    return;
+  }
+  host.setAttribute('popover', 'manual');
+  document.body.append(host);
+  try {
+    host.showPopover();
+  } catch {
+    host.removeAttribute('popover');
+  }
+}
+
 export interface LauncherView {
-  // The custom element that holds the shadow root; the caller adds it to the page.
   readonly host: HTMLElement;
   readonly root: HTMLDivElement;
-  // Where the chat goes, on the panel's glass or solid surface: the frame on host pages, a slot in the editor's preview.
   readonly panel: HTMLDivElement;
   readonly button: HTMLButtonElement;
   render: (config: LauncherConfig, mode: ColorMode) => void;
   setOpen: (open: boolean) => void;
   setUnread: (count: number) => void;
-  // While an answer is written: the glow around the panel, in presets with the glow.
   setBusy: (busy: boolean) => void;
 }
 
-// The panel's surface is drawn here in the host page, since only there can a backdrop filter blur the page behind it.
-// `render` may run again with a changed config, as the editor preview does on every edit.
 export function createLauncherView(origin: string): LauncherView {
   const host = document.createElement('knowledge-agent-widget');
   const shadow = host.attachShadow({ mode: 'open' });
   adoptStyles(shadow);
 
   const root = element('div', 'ka-root');
-  // The outer box carries the glow, which must not be clipped; the surface clips the chat to the panel's corners.
   const frame = element('div', 'ka-panel', { id: 'ka-panel' });
   const panel = element('div', 'ka-surface');
   frame.append(panel);
@@ -351,11 +342,9 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
   let wantOpen = false;
   let destroyed = false;
   let user = userFromScript(script ?? null);
-  // Everything update() said so far; the frame sends it with each new session.
   let attributes: Record<string, AttributeValue> = {};
   const systemDark = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null;
 
-  // "auto" follows the visitor's system, like the frame does.
   const modeOf = (loaded: LauncherConfig): ColorMode =>
     loaded.theme === 'light' || loaded.theme === 'dark' ? loaded.theme : systemDark?.matches ? 'dark' : 'light';
 
@@ -369,7 +358,6 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
     iframe?.contentWindow?.postMessage({ source: MESSAGE_SOURCE, type }, origin);
   };
 
-  // To the frame's origin only: the user hash is no secret, but nothing else needs to see it.
   const postUser = () => {
     iframe?.contentWindow?.postMessage({ source: MESSAGE_SOURCE, type: 'identity', user, attributes, page: currentPage() }, origin);
   };
@@ -387,11 +375,9 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
       return;
     }
     iframe = document.createElement('iframe');
-    iframe.src = `${origin}/widget/v1/frame/${encodeURIComponent(key)}${frameQuery()}`;
+    iframe.src = `${origin}${pathOf(widgetEndpoints.frame, { key })}${frameQuery()}`;
     iframe.title = config.title;
-    // Browsers paint a frame opaque when its color scheme differs from the iframe element's, which would hide the glass.
     iframe.style.colorScheme = config.theme === 'light' || config.theme === 'dark' ? config.theme : 'light dark';
-    // The frame needs its own origin (storage, same-origin API calls), forms and new tabs for source links.
     iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox');
     iframe.addEventListener('load', () => {
       if (isOpen) {
@@ -426,7 +412,6 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
     if (!isOpen) {
       return;
     }
-    // Focus inside the frame shows as the shadow host; only then does it return to the launcher.
     const focusWasInside = document.activeElement === view.host;
     isOpen = false;
     view.setOpen(false);
@@ -462,6 +447,17 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
       case 'busy':
         view?.setBusy(data.busy === true);
         break;
+      case 'failed':
+        console.warn('Knowledge Agent: the chat could not load; it tries again when opened.');
+        close();
+        iframe.remove();
+        iframe = null;
+        break;
+      case 'unavailable':
+        console.warn('Knowledge Agent: this chat widget is turned off or no longer exists.');
+        config = null;
+        removeView();
+        break;
       default:
         break;
     }
@@ -470,7 +466,6 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
   const render = (loaded: LauncherConfig) => {
     config = loaded;
     if (loaded.requireIdentity && !user) {
-      // The widget is for signed-in users; identify() shows it.
       return;
     }
     view = createLauncherView(origin);
@@ -482,7 +477,7 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
         close();
       }
     });
-    document.body.append(view.host);
+    showOnTop(view.host);
     if (wantOpen) {
       open();
     }
@@ -490,7 +485,7 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
 
   const ready = (async () => {
     try {
-      const response = await fetch(`${origin}/api/public/widgets/${encodeURIComponent(key)}/config`, {
+      const response = await fetch(`${origin}${pathOf(widgetEndpoints.config, { key })}`, {
         credentials: 'omit',
         headers: { Accept: 'application/json' },
       });
@@ -546,7 +541,6 @@ export function startLoader(script: HTMLScriptElement | null = findLoaderScript(
 
   const logout = () => {
     user = null;
-    // What the page said about the signed-in user is theirs, not the next visitor's.
     attributes = {};
     post('logout');
     if (config?.requireIdentity) {

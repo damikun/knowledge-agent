@@ -84,7 +84,6 @@ function DatasetCard({ dataset, lastRun, langfuseConfigured, onRun, onCopy, onRe
   const langfuseUrl = safeExternalUrl(dataset.langfuseUrl);
   const sync = useMutation({
     mutationFn: () => (custom && dataset.id ? evalsApi.syncCustomDataset(dataset.id) : evalsApi.syncEvalDataset(dataset.name)),
-    // Picks up the new Langfuse id and link.
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: evalKeys.datasets }),
   });
 
@@ -225,7 +224,6 @@ export function DatasetsSection({ creating, onCreatingChange, runs }: DatasetsSe
     },
   });
 
-  // Old /evals?dataset={id} links.
   const legacy = params.get('dataset');
   if (legacy) {
     return <Navigate to={datasetPath(legacy)} replace />;

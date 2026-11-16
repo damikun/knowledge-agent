@@ -25,7 +25,6 @@ import { useChatDisplay } from './chatDisplay';
 import { useCitation } from './citationContext';
 import type { CitationDto } from './types';
 
-/** Favicons would mean a third-party request for every source. */
 export function sourceIcon(source: Pick<AnswerSource, 'url'>): LucideIcon {
   return source.url ? Globe : FileText;
 }
@@ -89,7 +88,6 @@ function SourceHoverCard({ source, citation, onNavigate }: { source: AnswerSourc
   );
 }
 
-/** Hover or focus shows the source card; a click or Enter pins it, for touch and for tabbing to its link. */
 function CitationMarker({ source, citation }: { source: AnswerSource; citation: CitationDto }) {
   const [open, setOpen] = useState(false);
   const { refs, floatingStyles, context } = useFloating({
@@ -146,7 +144,6 @@ function UnknownMarker({ citationRef }: { citationRef: string }) {
   );
 }
 
-/** Passages of one source share its number, so a source shows once per group. */
 export function CitationGroup({ refs }: { refs: readonly string[] }) {
   const { byRef } = useAnswerSources();
   const seen = new Set<number>();
@@ -172,7 +169,6 @@ export function CitationGroup({ refs }: { refs: readonly string[] }) {
   );
 }
 
-/** Outside a numbered answer (sub-agent notes), a known passage still gets a card, marked by its own tag. */
 function FallbackMarker({ citationRef }: { citationRef: string }) {
   const citation = useCitation(citationRef);
   if (!citation) {

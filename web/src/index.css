@@ -2,8 +2,6 @@
 @import './styles/tokens.css';
 @plugin '@tailwindcss/typography';
 
-/* lib/theme.ts toggles .dark on <html>; the tokens switch with it, so components need no dark: variants. */
-
 @layer base {
   html {
     color-scheme: light;
@@ -28,7 +26,6 @@
     text-wrap: pretty;
   }
 
-  /* Keyboard-only rings. The focus color has at least 3:1 against every surface in both themes. */
   :where(
     a,
     button,
@@ -46,7 +43,6 @@
     outline-offset: 2px;
   }
 
-  /* Programmatic focus targets (main landmark, dialog panels) need no ring. */
   :where([tabindex='-1']):focus {
     outline: none;
   }
@@ -60,7 +56,6 @@
     scrollbar-color: var(--ka-border-hover) transparent;
   }
 
-  /* Set by lib/theme.ts for one frame, so a theme switch is never animated. */
   :root[data-switching-theme] *,
   :root[data-switching-theme] *::before,
   :root[data-switching-theme] *::after {
@@ -78,7 +73,6 @@
     }
   }
 
-  /* Forced-color modes drop backgrounds and shadows: keep controls outlined and the focus ring in the highlight color. */
   @media (forced-colors: active) {
     :where(button, [role='tab'], [role='switch'], [role='option']) {
       border: 1px solid ButtonText;
@@ -91,7 +85,6 @@
   }
 }
 
-/* 32px single-line fields. Text fields always show the focus edge; a select trigger only when tabbed to. */
 @utility field {
   display: block;
   width: 100%;
@@ -151,7 +144,6 @@
   background-size: 16px 16px;
 }
 
-/* Markdown answers. The tokens follow the theme, so one block serves both. */
 .prose-zinc {
   --tw-prose-body: var(--ka-fg);
   --tw-prose-headings: var(--ka-fg);

@@ -16,7 +16,6 @@ import { useReturnState } from '../../lib/returnTo';
 const SCOPE_RESULT_LIMIT = 50;
 
 export interface SourceScopePickerProps {
-  /** Empty means all sources. */
   value: string[];
   onChange: (value: string[]) => void;
   disabled?: boolean;
@@ -29,9 +28,7 @@ export function SourceScopePicker({ value, onChange, disabled = false }: SourceS
   const buttonRef = useRef<HTMLButtonElement>(null);
   const searchId = useId();
   const selected = useMemo(() => new Set(value), [value]);
-  // Remembered so the chips keep their labels when a later search no longer lists the source.
   const [pickedTitles, setPickedTitles] = useState<Readonly<Record<string, string>>>({});
-  // Ids selected elsewhere (e.g. by the parent) are looked up by id.
   const fetchedTitle = useSourceTitles(value.filter((id) => pickedTitles[id] === undefined));
   const titleOf = (id: string): string | undefined => pickedTitles[id] ?? fetchedTitle(id);
 
@@ -63,7 +60,6 @@ export function SourceScopePicker({ value, onChange, disabled = false }: SourceS
         aria-haspopup="dialog"
         aria-label={`Source scope: ${label}`}
         title={value.length > 0 ? value.map((id) => titleOf(id) ?? id).join(', ') : undefined}
-        // A chosen scope reads as a selection, so it is easy to tell that answers are limited.
         className={clsx(
           'inline-flex h-7 min-w-0 items-center gap-1.5 rounded-md px-2 text-small font-medium transition-colors duration-100 ease-out disabled:opacity-50',
           value.length > 0 ? 'bg-fill-active text-fg' : 'text-fg-secondary hover:bg-fill-hover hover:text-fg',

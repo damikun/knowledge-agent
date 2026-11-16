@@ -31,12 +31,10 @@ const DOT: Record<string, string> = {
 };
 
 export interface SegmentListProps {
-  /** A built-in id (all, identified, returning, new) or a saved segment's id. */
   value: string;
   onChange: (id: string) => void;
   admin: boolean;
   onEdit: (segment: Segment) => void;
-  /** Saves the current filter, or opens the filter builder when there is none. */
   onNew: () => void;
   className?: string;
 }
@@ -45,7 +43,6 @@ function Count({ value, className }: { value: number; className?: string }) {
   return <span className={clsx('shrink-0 text-xs text-fg-muted tabular-nums', className)}>{formatNumber(value)}</span>;
 }
 
-// Counts the built-in view regardless of the list's search and filters.
 function BuiltInCount({ filter }: { filter: readonly ContactCondition[] }) {
   const count = usePeopleCount({ q: '', widgetId: '', identified: '', conditions: [...filter], segmentId: '' });
   return count.data === undefined ? null : <Count value={count.data} />;
@@ -103,7 +100,6 @@ export function SegmentList({ value, onChange, admin, onEdit, onNew, className }
           <ul className="space-y-0.5">
             {segments.data.map((segment) =>
               item(segment.id, segment.name, {
-                // The menu replaces the count on hover and focus; on touch it sits beside it.
                 count: <Count value={segment.count} className="group-focus-within:invisible group-hover:invisible pointer-coarse:visible" />,
                 color: segment.color,
                 segment,
@@ -152,7 +148,6 @@ export function SegmentList({ value, onChange, admin, onEdit, onNew, className }
 export interface SegmentDialogProps {
   open: boolean;
   onClose: () => void;
-  /** Null saves the filter as a new segment. */
   segment: Segment | null;
   filter: ContactCondition[];
   onSaved: (segment: Segment) => void;
@@ -161,7 +156,6 @@ export interface SegmentDialogProps {
 export function SegmentDialog({ open, onClose, segment, filter, onSaved }: SegmentDialogProps) {
   const id = useId();
   const save = useSaveSegment();
-  // Mounted per opening, so each starts from the segment it edits.
   const [name, setName] = useState(segment?.name ?? '');
   const [description, setDescription] = useState(segment?.description ?? '');
   const [color, setColor] = useState<string>(segment?.color ?? 'gray');

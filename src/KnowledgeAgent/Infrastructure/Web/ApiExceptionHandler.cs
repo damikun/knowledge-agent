@@ -2,6 +2,7 @@ using KnowledgeAgent.Features.Chat;
 using KnowledgeAgent.Features.Chat.Live;
 using KnowledgeAgent.Features.Handover;
 using KnowledgeAgent.Features.Prompts;
+using KnowledgeAgent.Features.Widgets;
 using KnowledgeAgent.Infrastructure.AI;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +15,6 @@ internal sealed partial class ApiExceptionHandler(
     IProblemDetailsService problemDetailsService,
     ILogger<ApiExceptionHandler> logger) : IExceptionHandler
 {
-    // Non-standard status for requests the client aborted, following the nginx convention.
     internal const int ClientClosedRequest = 499;
 
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
@@ -35,7 +35,6 @@ internal sealed partial class ApiExceptionHandler(
 
         if (httpContext.Response.HasStarted)
         {
-            // Too late for a problem response once streaming has started, so the server aborts the request.
             return false;
         }
 
@@ -45,7 +44,6 @@ internal sealed partial class ApiExceptionHandler(
             return true;
         }
 
-        // The writers follow the Accept header; a chat stream accepts only text/event-stream and still gets the problem.
         await httpContext.Response.WriteAsJsonAsync(problem, (System.Text.Json.JsonSerializerOptions?)null, "application/problem+json", cancellationToken);
         return true;
     }
@@ -92,6 +90,18 @@ internal sealed partial class ApiExceptionHandler(
             Detail = "Someone from the team has joined this chat, so it stays with them.",
             Extensions = { ["code"] = ChatErrorCodes.PersonJoined },
         },
+        WidgetNotFoundException => new ProblemDetails
+        {
+            Status = StatusCodes.Status404NotFound,
+            Title = "Not Found",
+            Detail = exception.Message,
+        },
+        VisitorSessionExpiredException => new ProblemDetails
+        {
+            Status = StatusCodes.Status401Unauthorized,
+            Title = "Session expired",
+            Detail = exception.Message,
+        },
         ConversationNotFoundException => new ProblemDetails
         {
             Status = StatusCodes.Status404NotFound,
@@ -116,7 +126,6 @@ internal sealed partial class ApiExceptionHandler(
             Title = badRequest.StatusCode == StatusCodes.Status413PayloadTooLarge ? "Request body too large" : "Bad request",
             Detail = badRequest.Message,
         },
-        // No detail, so internal error messages never reach the caller.
         _ => new ProblemDetails
         {
             Status = StatusCodes.Status500InternalServerError,

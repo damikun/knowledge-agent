@@ -1,13 +1,11 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
-// Until someone chooses, windows narrower than a 13-inch laptop get icons only. The choice is kept per browser.
 type SidebarPreference = 'auto' | 'expanded' | 'collapsed';
 
 const SIDEBAR_STORAGE_KEY = 'knowledge-agent.sidebar';
 const ROOMY_QUERY = '(min-width: 1280px)';
 
 const listeners = new Set<() => void>();
-// Holds the choice when storage is unavailable (private windows, blocked site data), for this page view.
 let unstored: SidebarPreference = 'auto';
 
 function readPreference(): SidebarPreference {
@@ -24,7 +22,6 @@ function setPreference(preference: SidebarPreference): void {
   try {
     localStorage.setItem(SIDEBAR_STORAGE_KEY, preference);
   } catch {
-    // Kept in `unstored` instead.
   }
   listeners.forEach((listener) => listener());
 }

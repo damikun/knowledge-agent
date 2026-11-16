@@ -12,12 +12,10 @@ export function Thread({ turns, messages = NO_MESSAGES }: { turns: TurnView[]; m
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottom = useRef(true);
 
-  // Citations of finished turns: stable while a new answer streams, so older messages do not re-render.
   const finished = turns.filter((turn) => turn.status !== 'streaming');
   const finishedKey = finished.map((turn) => `${turn.key}:${turn.id}:${turn.citations.length}`).join('|');
   const index = useMemo(() => citationIndex(finished), [finishedKey]);
   const items = useMemo(() => withSystemNotices(turns, messages), [turns, messages]);
-  // The thread remounts per conversation: answers finished when it opens are not news, one still being written is.
   const [openedWith] = useState(() => {
     const opening = turns.at(-1);
     return opening && opening.status !== 'streaming' && opening.status !== 'pending' ? opening.key : undefined;

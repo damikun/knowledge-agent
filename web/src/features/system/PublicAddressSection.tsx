@@ -41,7 +41,6 @@ export function PublicAddressSection() {
   const address = toPublicAddress(info.data?.publicAddress);
   const value = draft ?? address.url ?? '';
 
-  // Opened from a "Set your public address" link: scroll to the field and focus it.
   useScrollToHash({ enabled: loaded, block: 'center', resolve: (hash) => (hash === PUBLIC_ADDRESS_ANCHOR ? inputRef.current : null) });
 
   const serverErrors = save.error instanceof ApiError && save.error.isValidation ? save.error.errorsFor('url') : [];

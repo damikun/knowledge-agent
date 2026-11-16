@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { asArray, request } from '../../lib/api';
+import { asArray, call } from '../../lib/api';
+import { endpoints } from '../../lib/endpoints';
 import type { Guid } from '../../lib/types';
 import { evalRunRefetchInterval, evalRunsRefetchInterval } from './polling';
 import type {
@@ -39,7 +40,6 @@ export function normalizeEvalRunListParams(params: EvalRunListParams = {}): Eval
   return result;
 }
 
-/** Older APIs omit warnings. */
 function normalizeEvalRun(run: EvalRunDto): EvalRunDto {
   return {
     ...run,
@@ -49,7 +49,6 @@ function normalizeEvalRun(run: EvalRunDto): EvalRunDto {
   };
 }
 
-/** Fills fields older APIs leave out. */
 function normalizeItem(item: EvalDatasetItemDto): EvalDatasetItemDto {
   return {
     ...item,
@@ -58,41 +57,34 @@ function normalizeItem(item: EvalDatasetItemDto): EvalDatasetItemDto {
   };
 }
 
-const datasetPath = (id: Guid) => `/api/evals/datasets/${encodeURIComponent(id)}`;
-
 export const evalsApi = {
-  listEvalDatasets: (signal?: AbortSignal) => request<EvalDatasetListDto>('/api/evals/datasets', { signal }),
-  /** 400 when Langfuse is not configured. */
-  syncEvalDataset: (name: string) => request<EvalDatasetSyncResultDto>(`/api/evals/datasets/${encodeURIComponent(name)}/sync`, { method: 'POST' }),
-  createDataset: (body: CreateEvalDatasetRequest) => request<EvalDatasetDto>('/api/evals/datasets', { method: 'POST', body }),
-  updateDataset: (id: Guid, body: { name?: string; description?: string }) =>
-    request<EvalDatasetDto>(`${datasetPath(id)}`, { method: 'PATCH', body }),
-  deleteDataset: (id: Guid) => request<void>(datasetPath(id), { method: 'DELETE' }),
-  /** 400 when Langfuse is not configured. */
-  syncCustomDataset: (id: Guid) => request<EvalDatasetSyncResultDto>(`${datasetPath(id)}/sync`, { method: 'POST' }),
+  listEvalDatasets: (signal?: AbortSignal): Promise<EvalDatasetListDto> => call(endpoints.evals.listDatasets, { signal }),
+  syncEvalDataset: (name: string): Promise<EvalDatasetSyncResultDto> => call(endpoints.evals.syncNamedDataset, { params: { name } }),
+  createDataset: (body: CreateEvalDatasetRequest): Promise<EvalDatasetDto> => call(endpoints.evals.createDataset, { body }),
+  updateDataset: (id: Guid, body: { name?: string; description?: string }): Promise<EvalDatasetDto> =>
+    call(endpoints.evals.updateDataset, { params: { id }, body }),
+  deleteDataset: (id: Guid): Promise<void> => call(endpoints.evals.deleteDataset, { params: { id } }),
+  syncCustomDataset: (id: Guid): Promise<EvalDatasetSyncResultDto> => call(endpoints.evals.syncDataset, { params: { id } }),
   listItems: async (id: Guid, signal?: AbortSignal) =>
-    asArray<EvalDatasetItemDto>(await request<unknown>(`${datasetPath(id)}/items`, { signal })).map(normalizeItem),
-  /** Up to 1000 questions in one transaction; questions the dataset has are skipped. */
-  importItems: (id: Guid, items: SaveEvalItemRequest[]) =>
-    request<ImportEvalItemsResultDto>(`${datasetPath(id)}/items/batch`, { method: 'POST', body: { items } }),
-  deleteItems: (id: Guid, ids: Guid[]) => request<{ deleted: number }>(`${datasetPath(id)}/items/delete`, { method: 'POST', body: { ids } }),
-  addItem: (id: Guid, body: SaveEvalItemRequest) => request<EvalDatasetItemDto>(`${datasetPath(id)}/items`, { method: 'POST', body }),
-  updateItem: (id: Guid, itemId: Guid, body: SaveEvalItemRequest) =>
-    request<EvalDatasetItemDto>(`${datasetPath(id)}/items/${encodeURIComponent(itemId)}`, { method: 'PUT', body }),
-  deleteItem: (id: Guid, itemId: Guid) => request<void>(`${datasetPath(id)}/items/${encodeURIComponent(itemId)}`, { method: 'DELETE' }),
-  /** Newest first. */
+    asArray<EvalDatasetItemDto>(await call(endpoints.evals.listItems, { params: { id }, signal })).map(normalizeItem),
+  importItems: (id: Guid, items: SaveEvalItemRequest[]): Promise<ImportEvalItemsResultDto> =>
+    call(endpoints.evals.importItems, { params: { id }, body: { items } }),
+  deleteItems: (id: Guid, ids: Guid[]): Promise<{ deleted: number }> => call(endpoints.evals.deleteItems, { params: { id }, body: { ids } }),
+  addItem: (id: Guid, body: SaveEvalItemRequest): Promise<EvalDatasetItemDto> => call(endpoints.evals.addItem, { params: { id }, body }),
+  updateItem: (id: Guid, itemId: Guid, body: SaveEvalItemRequest): Promise<EvalDatasetItemDto> =>
+    call(endpoints.evals.updateItem, { params: { id, itemId }, body }),
+  deleteItem: (id: Guid, itemId: Guid): Promise<void> => call(endpoints.evals.deleteItem, { params: { id, itemId } }),
   listEvalRuns: async (params: EvalRunListParams = {}, signal?: AbortSignal) => {
     const normalized = normalizeEvalRunListParams(params);
     return asArray<EvalRunSummaryDto>(
-      await request<unknown>('/api/evals/runs', { query: { limit: normalized.limit, dataset: normalized.dataset }, signal }),
+      await call(endpoints.evals.listRuns, { query: { limit: normalized.limit, dataset: normalized.dataset }, signal }),
     );
   },
-  startEvalRun: (body: StartEvalRunRequest) => request<EvalRunSummaryDto | undefined>('/api/evals/runs', { method: 'POST', body }),
+  startEvalRun: (body: StartEvalRunRequest): Promise<EvalRunSummaryDto | undefined> => call(endpoints.evals.startRun, { body }),
   getEvalRun: async (id: Guid, signal?: AbortSignal) =>
-    normalizeEvalRun(await request<EvalRunDto>(`/api/evals/runs/${encodeURIComponent(id)}`, { signal })),
-  cancelEvalRun: (id: Guid) => request<EvalRunSummaryDto | undefined>(`/api/evals/runs/${encodeURIComponent(id)}/cancel`, { method: 'POST' }),
-  /** 409 while the run is queued or running. */
-  deleteEvalRun: (id: Guid) => request<void>(`/api/evals/runs/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+    normalizeEvalRun(await call(endpoints.evals.getRun, { params: { id }, signal })),
+  cancelEvalRun: (id: Guid): Promise<EvalRunSummaryDto | undefined> => call(endpoints.evals.cancelRun, { params: { id } }),
+  deleteEvalRun: (id: Guid): Promise<void> => call(endpoints.evals.deleteRun, { params: { id } }),
 };
 
 export function useEvalDatasets() {
@@ -105,7 +97,6 @@ export function useEvalDatasetItems(id: string | null) {
 
 export interface EvalRunsOptions {
   enabled?: boolean;
-  /** Refetch while a listed run is queued or running (default true). */
   poll?: boolean;
 }
 

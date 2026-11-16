@@ -2,7 +2,6 @@ import type { JsonObject } from '../../lib/types';
 
 export type JsonParseResult = { ok: true; value: JsonObject } | { ok: false; error: string };
 
-/** Must be a JSON object; empty text means no variables. */
 export function parseVariables(text: string): JsonParseResult {
   if (!text.trim()) {
     return { ok: true, value: {} };

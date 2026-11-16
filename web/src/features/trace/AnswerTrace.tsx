@@ -4,7 +4,6 @@ import type { AnswerTraceProps } from './AnswerTraceGraph';
 
 export type { AnswerTraceProps } from './AnswerTraceGraph';
 
-// Lazy, so React Flow and dagre stay out of the playground chunk.
 const AnswerTraceGraph = lazy(() => import('./AnswerTraceGraph'));
 
 export function AnswerTrace(props: AnswerTraceProps) {

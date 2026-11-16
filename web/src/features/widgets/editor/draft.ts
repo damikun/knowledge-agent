@@ -1,8 +1,6 @@
 import { useCallback, useMemo, useReducer } from 'react';
 import type { ColorMode, WidgetFormValues } from '../widgetForm';
 
-// Changes are actions on a draft path: a form key, texts.<key>, or colors.<mode>.<token>.
-
 type FieldKey = Exclude<keyof WidgetFormValues, 'texts' | 'colors'>;
 export type TextPath = `texts.${string}`;
 export type ColorPath = `colors.${ColorMode}.${string}`;
@@ -16,7 +14,6 @@ type DraftChange =
 
 export type DraftAction =
   | ({ type: 'set' } & DraftChange)
-  // Ends the current undo step.
   | { type: 'checkpoint' }
   | { type: 'undo' }
   | { type: 'redo' }
@@ -29,7 +26,6 @@ export interface DraftState {
   values: WidgetFormValues;
   past: readonly WidgetFormValues[];
   future: readonly WidgetFormValues[];
-  // Further changes to this path extend its undo step, so typing a word is one step.
   editing: DraftPath | null;
 }
 
@@ -86,14 +82,12 @@ function writePath(values: WidgetFormValues, change: DraftChange): WidgetFormVal
   return Object.is(values[change.path], change.value) ? values : { ...values, [change.path]: change.value };
 }
 
-// Sorted, without empty values: an empty text or color is the same as none.
 function setEntries(record: Record<string, string>): Array<[string, string]> {
   return Object.entries(record)
     .filter(([, value]) => value !== '')
     .sort(([a], [b]) => a.localeCompare(b));
 }
 
-// Row keys are React-only, and empty values equal none.
 function comparable(values: WidgetFormValues): string {
   return JSON.stringify({
     ...values,
@@ -181,7 +175,6 @@ export interface WidgetDraft {
 
 export function useWidgetDraft(initial: () => WidgetFormValues): WidgetDraft {
   const [state, dispatch] = useReducer(draftReducer, undefined, () => createDraft(initial()));
-  // TypeScript can't relate a generic path to its value in the action union; the SetPath signature does.
   const set = useCallback<SetPath>((path, value) => dispatch({ type: 'set', path, value } as DraftAction), []);
   const dirty = useMemo(() => !sameValues(state.values, state.saved), [state.values, state.saved]);
   return { values: state.values, saved: state.saved, dirty, canUndo: state.past.length > 0, canRedo: state.future.length > 0, set, dispatch };

@@ -49,7 +49,6 @@ export interface SourceStatusBadgeProps {
   source: Pick<SourceDto, 'status' | 'error' | 'stage' | 'embeddedChunks' | 'chunkCount' | 'crawl'>;
 }
 
-// A website's crawl counts pages instead of chunks.
 function progressOf(source: SourceStatusBadgeProps['source'], normalized: SourceStatus, stage: IngestionStage | null) {
   if (normalized === 'processing' && source.crawl) {
     const total = Math.max(1, source.crawl.pagesFound);
@@ -75,7 +74,6 @@ export function SourceStatusBadge({ source }: SourceStatusBadgeProps) {
   const label = progress ? progress.label : stage ? STAGES[stage].label : info.label;
   const animated = normalized === 'pending' || normalized === 'processing';
   const reason = (normalized === 'failed' || normalized === 'waiting' || normalized === 'needsbrowser') && source.error ? source.error : null;
-  // A colored icon and plain text: a column of pills competes with the titles, and Ready is the normal state.
   const badge = (
     <span
       title={
@@ -104,7 +102,6 @@ export function SourceStatusBadge({ source }: SourceStatusBadgeProps) {
         <CircleX className="size-3.5 text-danger" aria-hidden />
       )}
       {label}
-      {/* Tooltips do not reach screen readers, and the table spells out only the errors of failed sources. */}
       {(normalized === 'waiting' || normalized === 'needsbrowser') && reason ? <span className="sr-only">: {reason}</span> : null}
     </span>
   );

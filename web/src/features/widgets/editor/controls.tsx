@@ -32,7 +32,6 @@ function TextControl({ property, kit, controlId, errors, action }: ControlProps<
         placeholder={property.placeholder}
         value={value}
         onChange={(event) => kit.set(property.id, event.target.value)}
-        // Mono text is 12px, so fix the height to match the 32px of other inputs.
         className={clsx('field', property.mono && 'h-8 py-0 font-mono text-xs')}
       />
     </Field>
@@ -288,7 +287,7 @@ function AgentControl({ property, kit, controlId, errors, action }: ControlProps
       action={action}
       hint={
         <>
-          Answers the visitors. The portal's built-in agent cannot be used.{' '}
+          Answers the visitors.{' '}
           <TextLink to="/agents" state={returnState}>
             Manage agents
           </TextLink>

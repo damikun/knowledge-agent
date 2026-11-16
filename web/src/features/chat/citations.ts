@@ -2,7 +2,6 @@ import type { Link, Nodes, Parent, PhrasingContent, Root, Text } from 'mdast';
 
 export type CitationSegment = { type: 'text'; value: string } | { type: 'citation'; ref: string };
 
-// The agent cites search hits as [S12]; grouped forms such as [S1, S2] or [S1; S2] are accepted too.
 const CITATION_PATTERN = /\[\s*([Ss]\d+(?:\s*[,;]\s*[Ss]\d+)*)\s*\]/g;
 const SEPARATOR = /\s*[,;]\s*/;
 const CITATION_HREF_PREFIX = '#cite-';
@@ -16,7 +15,6 @@ export function splitCitations(text: string): CitationSegment[] {
   let last = 0;
   for (const match of text.matchAll(CITATION_PATTERN)) {
     const index = match.index;
-    // A following "(" means a markdown link such as [S1](https://...), not a citation.
     if (text.charAt(index + match[0].length) === '(') {
       continue;
     }
@@ -54,7 +52,6 @@ export function refFromHref(href: string | null | undefined): string | null {
   return href && href.startsWith(CITATION_HREF_PREFIX) ? href.slice(CITATION_HREF_PREFIX.length) : null;
 }
 
-/** The refs of a citation link; tags next to each other, such as [S1][S3], share one link. */
 export function refsFromHref(href: string | null | undefined): string[] {
   return (refFromHref(href) ?? '').split(',').filter(Boolean);
 }
@@ -63,7 +60,6 @@ function citationLink(refs: string[]): Link {
   return { type: 'link', url: citationHref(refs.join(',')), title: null, children: [{ type: 'text', value: refs.join(', ') }] };
 }
 
-/** Tags with nothing but spaces between them become one group, so the answer shows one cluster of markers. */
 function groupSegments(segments: CitationSegment[]): Array<{ type: 'text'; value: string } | { type: 'citations'; refs: string[] }> {
   const groups: Array<{ type: 'text'; value: string } | { type: 'citations'; refs: string[] }> = [];
   for (let i = 0; i < segments.length; i++) {
@@ -105,13 +101,11 @@ function transform(node: Parent): void {
       children.splice(i, 1, ...replacement);
       i += replacement.length - 1;
     } else if (child.type !== 'link' && child.type !== 'linkReference' && isParent(child)) {
-      // Code (inline and fenced) has no text children, so tags in code stay literal.
       transform(child);
     }
   }
 }
 
-/** remark plugin that turns [S#] tags into citation links, which Markdown renders as numbered markers. */
 export function remarkCitations() {
   return (tree: Root) => {
     transform(tree);

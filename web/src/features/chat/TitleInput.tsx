@@ -3,15 +3,12 @@ import { useRef, useState } from 'react';
 
 export interface TitleInputProps {
   title: string;
-  /** The new title, or null when Esc cancelled. Called once. */
   onDone: (title: string | null) => void;
   className?: string;
 }
 
 export function TitleInput({ title, onDone, className }: TitleInputProps) {
   const [value, setValue] = useState(title);
-  // Enter ends the rename and unmounts the field, and some browsers then also send a blur: only the first end counts. A
-  // ref, because the blur comes in the same event, before any new render.
   const done = useRef(false);
   const finish = (next: string | null) => {
     if (!done.current) {

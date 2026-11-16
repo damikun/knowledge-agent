@@ -12,16 +12,13 @@ import { sourcesApi } from '../sources/api';
 import { evalKeys } from './api';
 import type { EvalDatasetItemDto, EvalTurn, SaveEvalItemRequest } from './types';
 
-/** Facts are one per line, tags comma-separated. */
 export interface QuestionDraft {
   question: string;
   referenceAnswer: string;
   facts: string;
-  /** Source titles, which runs match on. */
   sources: string[];
   tags: string;
   answerable: boolean;
-  /** Oldest first. */
   history: EvalTurn[];
 }
 
@@ -63,17 +60,14 @@ export function toRequest(
       .split(',')
       .map((tag) => tag.trim())
       .filter(Boolean),
-    // Omitted for single-turn questions to keep the request shape older APIs accept.
     ...(history.length > 0 ? { history } : {}),
     ...origin,
   };
 }
 
-/** Titles can also be typed in, for sources not added yet. */
 function SourcePicker({ id, value, onChange, errors }: { id: string; value: string[]; onChange: (value: string[]) => void; errors: string[] }) {
   const [query, setQuery] = useState('');
   const words = query.trim();
-  // Only while typing, so the source list isn't loaded unless needed.
   const results = useQuery({
     queryKey: evalKeys.sourcePicker(words),
     queryFn: ({ signal }) => sourcesApi.listSources({ query: words, status: ['ready'], limit: 6 }, signal),
@@ -178,7 +172,6 @@ function HistoryEditor({
       <p className="text-xs text-fg-muted">A run asks the visitor’s turns first, in one conversation, then the question above. The agent’s turns are for reference.</p>
       <ol className="space-y-3">
         {turns.map((turn, index) => (
-          // Turns have no ids; the index is stable since only the last turn is appended.
           <li key={index} className="space-y-1.5">
             <div className="flex items-center justify-between gap-2">
               <SegmentedControl

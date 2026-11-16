@@ -101,7 +101,6 @@ function LoadingVersions() {
   );
 }
 
-/** Publishing a newer draft or rolling back to an older version both move the live label. */
 export function PromptVersions({
   name,
   onEdit,
@@ -133,7 +132,6 @@ export function PromptVersions({
   }
 
   const live = data.versions.find((version) => version.live) ?? null;
-  // Select a new draft first if there is one, else the live version.
   const selected =
     data.versions.find((version) => version.version === selectedVersion) ??
     data.versions.find((version) => live && version.version > live.version) ??

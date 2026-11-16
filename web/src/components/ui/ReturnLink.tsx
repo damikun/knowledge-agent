@@ -6,12 +6,10 @@ import { historyIndex, returnTitle, type ReturnTo } from '../../lib/returnTo';
 
 export interface ReturnLinkProps {
   returnTo: ReturnTo;
-  /** With text, a quiet text link; without, a 32px back arrow. */
   children?: ReactNode;
   className?: string;
 }
 
-/** A real link, so a middle click works. A plain click goes back in history when the origin is the previous entry. */
 export function ReturnLink({ returnTo, children, className }: ReturnLinkProps) {
   const navigate = useNavigate();
   const label = `Back to ${returnTo.label}`;

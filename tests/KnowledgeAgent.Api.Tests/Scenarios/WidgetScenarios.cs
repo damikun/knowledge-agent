@@ -25,11 +25,9 @@ public abstract class WidgetScenarios(AppFixture fixture)
     {
         var app = await fixture.GetAppAsync();
         var agent = await CreateAgentAsync(app, folderId: null);
-        var builtin = (await app.Client.GetJsonAsync<AgentDto[]>("/api/agents")).Single(item => item.IsBuiltIn);
-
         var invalid = new SaveWidgetRequest(
             "Shop help",
-            builtin.Id,
+            Guid.NewGuid(),
             Settings: new WidgetSettings
             {
                 Appearance = new WidgetAppearance
@@ -193,8 +191,20 @@ public abstract class WidgetScenarios(AppFixture fixture)
         resumed.VisitorId.ShouldBe(session.VisitorId);
         resumed.ConversationId.ShouldBe(conversationId);
 
+        var listed = (await GetAsVisitorAsync<VisitorConversationListDto>(app, $"{publicBase}/conversations", session.Token)).Conversations.ShouldHaveSingleItem();
+        listed.Id.ShouldBe(conversationId);
+        listed.Status.ShouldBe("ai");
+        listed.LastMessage.ShouldNotBeNull().Author.ShouldBe("assistant");
+        listed.LastMessage.Text.ShouldNotBeNullOrWhiteSpace();
+        listed.LastMessage.Text.Length.ShouldBeLessThanOrEqualTo(160);
+
         var stranger = await StartSessionAsync(app, widget.PublicKey);
         stranger.VisitorId.ShouldNotBe(session.VisitorId);
+        (await GetAsVisitorAsync<VisitorConversationListDto>(app, $"{publicBase}/conversations", stranger.Token)).Conversations.ShouldBeEmpty();
+        using (var noToken = await app.Client.GetAsync($"{publicBase}/conversations", Ct))
+        {
+            await noToken.ReadProblemAsync(HttpStatusCode.Unauthorized);
+        }
         using (var peek = new HttpRequestMessage(HttpMethod.Get, $"{publicBase}/conversations/{conversationId}"))
         {
             peek.Headers.Authorization = new AuthenticationHeaderValue("Bearer", stranger.Token);
@@ -266,7 +276,6 @@ public abstract class WidgetScenarios(AppFixture fixture)
             await missing.ReadProblemAsync(HttpStatusCode.NotFound);
         }
 
-        // The daily cap is 1, and the preview does not use it up.
         var first = await SendAsync(app, widget.PublicKey, preview.Token, new VisitorMessageRequest("Hello?"));
         first.Errors.ShouldBeEmpty(first.Describe());
         var conversationId = first.ConversationId;

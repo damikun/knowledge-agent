@@ -5,7 +5,6 @@ import type { ConversationLabel, LabelColor } from './types';
 export interface LabelChipProps {
   name: string;
   color: LabelColor;
-  /** Auto labels announce it to screen readers and on hover. */
   source?: ConversationLabel['source'];
   className?: string;
 }
@@ -32,7 +31,6 @@ export function LabelChip({ name, color, source, className }: LabelChipProps) {
 
 export interface LabelChipsProps {
   labels: readonly ConversationLabel[];
-  /** Chips shown before the rest collapse into "+N". */
   max?: number;
   className?: string;
 }

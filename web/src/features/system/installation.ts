@@ -1,7 +1,5 @@
 import type { ComponentStatus, JobEngine, SystemComponentHealthDto, SystemHealthDto } from './types';
 
-// The installation's parts and the paths between them, drawn by the System page and by toMermaid().
-
 export type InstallationZone = 'outside' | 'server' | 'tracing';
 
 export type InstallationNodeId =
@@ -22,7 +20,6 @@ export type InstallationNodeId =
 
 export interface ConfigureLink {
   label: string;
-  /** A portal path or an external docs URL. */
   href: string;
   external?: boolean;
 }
@@ -31,15 +28,11 @@ export interface InstallationNodeDef {
   id: InstallationNodeId;
   title: string;
   role: string;
-  /** Null for people and outside services. */
   image: string | null;
   about: string;
   zone: InstallationZone;
-  /** Smaller cards for the stores behind the trace service. */
   small?: boolean;
-  /** Overrides the usual card width. */
   width?: number;
-  /** Top-left corner on the canvas. */
   x: number;
   y: number;
   configure: ConfigureLink | null;
@@ -52,7 +45,6 @@ export interface InstallationEdgeDef {
   source: InstallationNodeId;
   target: InstallationNodeId;
   label?: string;
-  /** Optional or asynchronous paths, drawn dashed. */
   dashed?: boolean;
   from: Side;
   to: Side;
@@ -69,7 +61,6 @@ const docs = (page: string, anchor: string, label = 'Read the configuration docs
 const NODE_SIZE = { width: 200, height: 84 } as const;
 const SMALL_NODE_SIZE = { width: 136, height: 64 } as const;
 
-/** ClickHouse sits outside the tracing frame because the search index lives there too. */
 export const BOUNDARIES = {
   server: { label: 'Your server', x: 206, y: 130, width: 1064, height: 570 },
   tracing: { label: 'Tracing', x: 936, y: 410, width: 314, height: 250 },
@@ -278,29 +269,24 @@ export const STATUS_TONES = {
 } as const satisfies Record<ComponentStatus, string>;
 
 export interface InstallationNode extends InstallationNodeDef {
-  /** Null for people outside the server, which can't be checked. */
   status: ComponentStatus | null;
   detail: string;
   checkedAt: string | null;
-  /** Not set up or not used in this installation. */
   dimmed: boolean;
 }
 
 interface InstallationEdge extends InstallationEdgeDef {
-  /** A path this installation doesn't use, e.g. the search index when it's kept in memory. */
   muted: boolean;
 }
 
 export interface Installation {
   nodes: InstallationNode[];
   edges: InstallationEdge[];
-  /** False when the API couldn't say, e.g. an older API without the health endpoint. */
   known: boolean;
 }
 
 const UNKNOWN = 'The API did not report this part, so its state is not known.';
 
-/** Merges the static picture with each node's reported state and the variants that run. */
 export function buildInstallation(health: SystemHealthDto | null | undefined, engine: JobEngine | null | undefined): Installation {
   const byKey = new Map<string, SystemComponentHealthDto>((health?.components ?? []).map((component) => [component.key, component]));
   const known = health != null;
@@ -320,7 +306,6 @@ export function buildInstallation(health: SystemHealthDto | null | undefined, en
   const vectorsInMemory = vectors?.variant === 'inmemory';
   const langfuseOff = langfuse.status === 'notConfigured';
 
-  // The API doesn't check the stores behind Langfuse; they follow Langfuse's own state.
   const store = (): Pick<InstallationNode, 'status' | 'detail' | 'checkedAt'> =>
     langfuseOff
       ? { status: 'notConfigured', detail: 'Not used, because Langfuse is not set up.', checkedAt: langfuse.checkedAt }
@@ -335,7 +320,6 @@ export function buildInstallation(health: SystemHealthDto | null | undefined, en
       case 'providers':
         return { ...base, ...from('models') };
       case 'portal':
-        // Anyone viewing this page is using the portal.
         return { ...base, status: 'healthy', detail: 'You are using it right now.', checkedAt: null };
       case 'api':
         return {
@@ -398,7 +382,6 @@ export function nodeSize(node: Pick<InstallationNodeDef, 'small' | 'width'>): { 
   return { width: node.width ?? size.width, height: size.height };
 }
 
-/** For sizing the frame before React Flow measures anything. */
 export function installationSize(): { width: number; height: number } {
   const right = Math.max(...INSTALLATION_NODES.map((node) => node.x + nodeSize(node).width), BOUNDARIES.server.x + BOUNDARIES.server.width);
   const bottom = Math.max(...INSTALLATION_NODES.map((node) => node.y + nodeSize(node).height), BOUNDARIES.server.y + BOUNDARIES.server.height);
@@ -410,7 +393,6 @@ function mermaidLabel(node: InstallationNodeDef): string {
   return `${node.id}["${parts.join('<br/>').replace(/"/g, '#quot;')}"]`;
 }
 
-/** The same picture as a Mermaid flowchart. */
 export function toMermaid(): string {
   const zone = (z: InstallationZone) => INSTALLATION_NODES.filter((node) => node.zone === z);
   const lines = ['flowchart LR'];

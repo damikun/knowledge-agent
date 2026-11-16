@@ -2,12 +2,10 @@ import type { SourceDto, SourceFolderDto, SourceFolderListDto, SourcePageDto, So
 import { sourceDto } from './fixtures';
 import { jsonResponse, type FetchHandler } from './utils';
 
-/** A GUID-shaped source id (`n` = 1 → "00000000-0000-4000-8000-000000000001"). */
 export function sourceGuid(n: number): string {
   return `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
 }
 
-/** `count` ready sources "Source 1" … "Source n"; higher numbers are newer. */
 export function numberedSources(count: number, overrides: (n: number) => Partial<SourceDto> = () => ({})): SourceDto[] {
   return Array.from({ length: count }, (_, index) => {
     const n = index + 1;
@@ -29,7 +27,6 @@ export interface SourceFilterValues {
   site?: string | null;
 }
 
-/** The sources the filters of GET /api/sources (or the matching part of POST /api/sources/move) select. */
 export function filterSources(sources: readonly SourceDto[], filters: SourceFilterValues): SourceDto[] {
   const words = (filters.query ?? '').trim().toLowerCase().split(/\s+/).filter(Boolean);
   const statuses = (filters.status ?? '').split(',').filter(Boolean);
@@ -51,7 +48,6 @@ const filterValues = (params: URLSearchParams): SourceFilterValues => ({
   site: params.get('site'),
 });
 
-/** GET /api/sources as the API answers it: filtering, ordering and paging over `sources`. */
 function sourcePage(sources: readonly SourceDto[], url: URL): SourcePageDto {
   const params = url.searchParams;
   const query = (params.get('query') ?? '').trim().toLowerCase();
@@ -61,7 +57,6 @@ function sourcePage(sources: readonly SourceDto[], url: URL): SourcePageDto {
     .map((id) => id.toLowerCase());
   const offset = Number(params.get('offset') ?? 0);
   const limit = Number(params.get('limit') ?? 25);
-  // Without a parent the API leaves crawled pages out, unless ids name them.
   const parent = params.get('parent');
   const startsWithQuery = (s: SourceDto) => Number(s.title.toLowerCase().startsWith(query));
   const matches = filterSources(sources, filterValues(params))
@@ -85,10 +80,8 @@ function countBy(sources: readonly SourceDto[], key: (source: SourceDto) => stri
   return counts;
 }
 
-/** GET /api/sources/stats for `sources`. */
 export function sourceStats(sources: readonly SourceDto[]): SourceStatsDto {
   const ready = sources.filter((s) => s.status === 'ready');
-  // Statuses count what the library lists, so the pages of a website are left out.
   const listed = sources.filter((s) => !s.parentId);
   const withStatus = (status: SourceDto['status']) => listed.filter((s) => s.status === status).length;
   return {
@@ -108,7 +101,6 @@ export function sourceFolder(id: string, name: string, parentId: string | null =
   return { id, name, parentId, sourceCount: 0, createdAt: '2026-10-20T08:00:00Z', updatedAt: '2026-10-20T08:00:00Z' };
 }
 
-/** GET /api/sources/sites: sites of the matching sources, the most first. */
 function siteCounts(sources: readonly SourceDto[], url: URL): SourceSiteDto[] {
   const counts = countBy(filterSources(sources, { ...filterValues(url.searchParams), site: null }), (s) => s.site);
   return Object.entries(counts)
@@ -116,7 +108,6 @@ function siteCounts(sources: readonly SourceDto[], url: URL): SourceSiteDto[] {
     .sort((a, b) => b.count - a.count || a.site.localeCompare(b.site));
 }
 
-/** GET /api/sources/folders for `folders`, counting `sources` per folder. */
 function folderList(folders: readonly SourceFolderDto[], sources: readonly SourceDto[]): SourceFolderListDto {
   return {
     folders: folders.map((folder) => ({ ...folder, sourceCount: sources.filter((s) => s.folderId === folder.id).length })),
@@ -125,7 +116,6 @@ function folderList(folders: readonly SourceFolderDto[], sources: readonly Sourc
   };
 }
 
-/** mockFetch routes for GET /api/sources, /stats and /folders; the getters are read per request, so tests can change the data. */
 export function sourcesRoutes(
   getSources: () => readonly SourceDto[],
   getFolders: () => readonly SourceFolderDto[] = () => [],

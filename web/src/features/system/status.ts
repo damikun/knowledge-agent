@@ -8,7 +8,6 @@ export function findProfile(profiles: readonly ModelProfileDto[] | undefined, na
   return profiles?.find((p) => p.name.toLowerCase() === name.toLowerCase());
 }
 
-/** Null while profiles load or when chat and embeddings both resolve to a model. */
 export function setupMessage(profiles: readonly ModelProfileDto[] | undefined): string | null {
   const orchestrator = findProfile(profiles, ORCHESTRATOR_PROFILE);
   const embedding = findEmbeddingProfile(profiles);

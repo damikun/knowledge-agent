@@ -6,7 +6,6 @@ using Microsoft.Extensions.Logging;
 
 namespace KnowledgeAgent.Features.Widgets;
 
-// UserHash is hex HMAC-SHA256(identity secret, UserId); Name, Email and Attributes are not signed.
 public sealed record VisitorUserRequest(
     string? UserId,
     string? UserHash,
@@ -20,7 +19,6 @@ public sealed class IdentityRequiredException() : Exception("This chat is only f
 
 internal sealed partial class WidgetIdentity(IDataProtectionProvider dataProtection, ILogger<WidgetIdentity> logger)
 {
-    // Changing the purpose makes every saved secret undecryptable.
     private readonly IDataProtector _protector = dataProtection.CreateProtector("KnowledgeAgent.Widgets.IdentitySecret.v1");
 
     public static string NewSecret() => "ka_ivs_" + Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
@@ -30,7 +28,6 @@ internal sealed partial class WidgetIdentity(IDataProtectionProvider dataProtect
     public static string Hash(string secret, string userId) =>
         Convert.ToHexStringLower(HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(userId)));
 
-    // Null for no secret, a wrong hash or out-of-bounds fields: the user is then anonymous, or refused if verification is required.
     public VerifiedUser? Verify(Widget widget, VisitorUserRequest? user)
     {
         if (user is null || widget.ProtectedIdentitySecret is null)
@@ -57,7 +54,6 @@ internal sealed partial class WidgetIdentity(IDataProtectionProvider dataProtect
             return null;
         }
 
-        // Constant time, so the response time tells nothing about how much of the hash was right.
         var expected = HMACSHA256.HashData(Encoding.UTF8.GetBytes(secret), Encoding.UTF8.GetBytes(userId));
         if (!CryptographicOperations.FixedTimeEquals(expected, Convert.FromHexString(hash)))
         {
@@ -77,8 +73,6 @@ internal sealed partial class WidgetIdentity(IDataProtectionProvider dataProtect
     public static IReadOnlyDictionary<string, JsonElement> Attributes(Dictionary<string, JsonElement>? attributes) =>
         (attributes ?? []).Take(People.ContactAttributeLimits.MaxKeysPerRequest + 1).ToDictionary(StringComparer.Ordinal);
 
-    // Server-to-server requests: X-KA-Signature is hex(HMAC-SHA256(identity secret, "{timestamp}.{userId}.{body}"))
-    // with X-KA-Timestamp in Unix seconds, at most five minutes off, so a captured request cannot be replayed later.
     public static readonly TimeSpan MaxClockSkew = TimeSpan.FromMinutes(5);
 
     public static string Sign(string secret, long timestamp, string userId, ReadOnlySpan<byte> body)

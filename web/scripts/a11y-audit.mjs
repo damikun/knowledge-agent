@@ -1,7 +1,3 @@
-// axe-core (WCAG 2.2 AA) on every portal route and the widget, in light and dark, against a running stack.
-// Usage:
-//   npm run a11y                       (the portal on http://localhost:5173 and Keycloak must be running)
-//   npm run a11y -- --out=/tmp/wcag --only=/home,/sources --themes=dark
 import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -181,7 +177,6 @@ async function widgetStates(context, theme) {
     if (frame) {
       await frame.waitForLoadState('networkidle').catch(() => undefined);
       await page.waitForTimeout(800);
-      // The frame is transparent over the loader's panel, which axe cannot see from inside it, so paint the panel color.
       await frame.evaluate(() => {
         const page = /** @type {any} */ (globalThis);
         page.document.body.style.background = page.getComputedStyle(page.document.documentElement).getPropertyValue('--ka-panel');
@@ -204,7 +199,6 @@ async function main() {
   const results = [];
 
   for (const theme of themes) {
-    // The widget frame's CSP only allows its own scripts, so the injected axe needs bypassCSP.
     const context = await browser.newContext({ storageState, colorScheme: theme, viewport: { width: 1280, height: 800 }, bypassCSP: true });
     await context.addInitScript(([key, value]) => localStorage.setItem(key, value), [THEME_KEY, theme]);
     const page = await context.newPage();

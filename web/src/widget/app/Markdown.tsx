@@ -18,14 +18,11 @@ function ownHost(): string | undefined {
 
 export interface MarkdownProps {
   text: string;
-  // Null leaves [S#] tags alone, for staff replies.
   citationMode: CitationMode | null;
   markers?: ReadonlyMap<string, number>;
-  // Staff write their replies themselves, so their links need no allowlist.
   anyLink?: boolean;
 }
 
-// Raw HTML is never rendered: react-markdown shows it as text unless rehype-raw is added.
 export const Markdown = memo(function Markdown({ text, citationMode, markers = NO_MARKERS, anyLink = false }: MarkdownProps) {
   const { t, config } = useWidget();
   const { linkHosts } = config;

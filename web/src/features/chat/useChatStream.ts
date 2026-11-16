@@ -8,7 +8,6 @@ import type { ChatRequestDto, ConversationEvent } from './types';
 
 export interface ChatStreamCallbacks {
   onConversation?: (event: ConversationEvent) => void;
-  /** The previous answer in the conversation is still being written, so the message was not taken. */
   onBusy?: (request: ChatRequestDto) => void;
   onSettled?: (state: ChatSettled) => void;
 }
@@ -16,18 +15,15 @@ export interface ChatStreamCallbacks {
 export interface ChatSettled {
   conversationId: string | null;
   completed: boolean;
-  /** The stream created its conversation, and was neither reset nor replaced by another send before it ended. */
   created: boolean;
 }
 
 interface ChatSendOptions {
-  /** The last timeline sequence this tab knows; the question will be stored after it. */
   sentAfterSequence?: number | null;
 }
 
 export interface ChatStream {
   state: ChatState;
-  /** Stop was pressed and the API is stopping the answer; the stream then ends with `done`. */
   stopping: boolean;
   send: (request: ChatRequestDto, options?: ChatSendOptions) => Promise<void>;
   stop: () => void;
@@ -36,10 +32,8 @@ export interface ChatStream {
 
 interface RunningStream {
   controller: AbortController;
-  /** Known from the start for an existing conversation, otherwise from the `conversation` event. */
   conversationId: string | null;
   stopRequested: boolean;
-  /** A `conversation` event said the conversation is new; a later one with a new title does not. */
   created: boolean;
 }
 
@@ -47,7 +41,6 @@ export function useChatStream(callbacks: ChatStreamCallbacks = {}): ChatStream {
   const [state, dispatch] = useReducer(chatReducer, null, () => createChatState());
   const [stopping, setStopping] = useState(false);
   const runningRef = useRef<RunningStream | null>(null);
-  // The running stream calls the latest callbacks, so the page's handlers can read its current route and state.
   const onConversation = useEffectEvent((event: ConversationEvent) => callbacks.onConversation?.(event));
   const onBusy = useEffectEvent((request: ChatRequestDto) => callbacks.onBusy?.(request));
   const onSettled = useEffectEvent((settled: ChatSettled) => callbacks.onSettled?.(settled));
@@ -82,7 +75,6 @@ export function useChatStream(callbacks: ChatStreamCallbacks = {}): ChatStream {
       if (controller.signal.aborted) {
         dispatch({ type: 'aborted', at: Date.now() });
       } else if (!completed && isCurrent()) {
-        // After Stop was pressed, a stream that ends without `done` shows as stopped rather than interrupted.
         dispatch(running.stopRequested ? { type: 'aborted', at: Date.now() } : { type: 'stream-ended', at: Date.now() });
       }
     } catch (error) {
@@ -104,8 +96,6 @@ export function useChatStream(callbacks: ChatStreamCallbacks = {}): ChatStream {
     }
   }, []);
 
-  // The API stops the answer, keeps the text so far and ends the stream with `done`. Without a conversation id yet, or
-  // when the API has no answer to stop, this tab only stops reading, and the live view shows what the server keeps.
   const stop = useCallback(() => {
     const running = runningRef.current;
     if (!running || running.stopRequested || running.controller.signal.aborted) {

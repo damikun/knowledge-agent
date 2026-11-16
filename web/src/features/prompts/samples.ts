@@ -37,7 +37,6 @@ const SAMPLE_SOURCES: JsonValue[] = [
 const SAMPLE_QUESTION = 'How many vacation days do new employees get, and who approves them?';
 const SAMPLE_ANSWER = 'New employees get 25 vacation days per year [S1]; requests are approved by the line manager [S2].';
 
-/** Guessed from the variable name. */
 export function guessSampleValue(name: string): JsonValue {
   const n = name.toLowerCase();
   if (n.endsWith('count') || n.startsWith('max') || n.startsWith('min') || n.endsWith('limit')) {
@@ -52,7 +51,6 @@ export function guessSampleValue(name: string): JsonValue {
   if (n.endsWith('truncated')) {
     return false;
   }
-  // isAdmin, hasSources, allowX, enabledX, use_x (camelCase or snake_case boundary).
   if (/^(is|has|allow|enable|use|show)([A-Z_]|$)/.test(name) || n.endsWith('enabled')) {
     return true;
   }

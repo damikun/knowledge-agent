@@ -133,7 +133,6 @@ describe('Conversation list', () => {
     });
     renderChat();
     await waitFor(() => expect(rowLinks()).toHaveLength(1));
-    // jsdom has no IntersectionObserver, so the list offers a button instead of loading on scroll.
     await user.click(screen.getByRole('button', { name: 'Load more' }));
     await waitFor(() => expect(rowLinks().map((link) => link.textContent)).toEqual(['First page', 'Second page']));
     expect(requestUrls(fetchMock, 'GET /api/conversations').map((url) => url.searchParams.get('limit'))).toEqual(['50', '50']);

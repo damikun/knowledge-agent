@@ -1,14 +1,18 @@
+import { pathOf, type Endpoint, type Query } from '../../lib/endpoint';
 import { isAbortError, readSseStream } from '../../lib/sse';
+import { widgetEndpoints } from '../shared/endpoints';
 import type { HostAttributeValue, HostPage, HostUser } from './host';
 import {
   isRecord,
   normalizeConversation,
   normalizeMessage,
   normalizeSession,
+  normalizeSummaries,
   parseLiveEvent,
   parseTurnEvent,
   readRejections,
   type AttributeRejection,
+  type ConversationSummary,
   type LiveEvent,
   type TurnEvent,
   type VisitorConversation,
@@ -30,7 +34,6 @@ interface WidgetApiErrorInit {
   cause?: unknown;
 }
 
-// `status` is 0 when the API could not be reached.
 export class WidgetApiError extends Error {
   readonly status: number;
   readonly code: string | null;
@@ -75,9 +78,7 @@ async function toApiError(response: Response): Promise<WidgetApiError> {
     if (isRecord(parsed)) {
       problem = parsed;
     }
-  } catch {
-    // Not JSON, such as a proxy's error page.
-  }
+  } catch {}
   const fieldErrors: Record<string, string[]> = {};
   if (isRecord(problem.errors)) {
     for (const [field, messages] of Object.entries(problem.errors)) {
@@ -102,80 +103,54 @@ function networkError(cause: unknown): WidgetApiError {
   return new WidgetApiError({ status: 0, message: 'The chat service cannot be reached.', cause });
 }
 
-interface RequestOptions {
-  method?: 'GET' | 'POST';
-  token?: string | null;
-  body?: unknown;
-  signal?: AbortSignal;
+export interface Contact {
+  name?: string;
+  email?: string;
+}
+
+export interface Feedback {
+  rating: number;
+  messageId?: string;
+  comment?: string;
+}
+
+export interface VisitorAuth {
+  readonly signal: AbortSignal;
+  token(): Promise<string>;
+  renew(): Promise<string>;
 }
 
 export type SendOutcome =
-  | { kind: 'stream'; events: AsyncGenerator<TurnEvent, void, undefined> }
-  // 202: a person handles the conversation, so the message went to them and no answer streams.
-  | { kind: 'relayed'; message: VisitorMessage | null };
+  { kind: 'stream'; events: AsyncGenerator<TurnEvent, void, undefined> } | { kind: 'relayed'; message: VisitorMessage | null };
 
 export interface FollowOptions {
   after: number;
-  // Reconnects send `after` as Last-Event-ID, as EventSource does.
   resume: boolean;
   signal: AbortSignal;
   onOpen?: () => void;
 }
 
-// Same-origin and relative, as the frame's Content-Security-Policy only allows 'self'.
+interface Call {
+  id?: string;
+  query?: Query;
+  body?: unknown;
+  accept?: string;
+  headers?: Record<string, string>;
+  signal?: AbortSignal | undefined;
+}
+
+type WidgetEndpoint = Endpoint<`${string}{key}${string}`>;
+
 export class WidgetApi {
-  private readonly base: string;
+  constructor(
+    private readonly key: string,
+    private readonly visitor: () => VisitorAuth,
+  ) {}
 
-  constructor(widgetKey: string) {
-    this.base = `/api/public/widgets/${encodeURIComponent(widgetKey)}`;
+  async getConfig(signal?: AbortSignal): Promise<unknown> {
+    return readJson(await this.anonymous(widgetEndpoints.config, { signal }));
   }
 
-  private headers(method: string, token: string | null | undefined, extra: Record<string, string> = {}): Record<string, string> {
-    const headers: Record<string, string> = { Accept: 'application/json', ...extra };
-    if (method === 'POST') {
-      headers['X-KA-Request'] = '1';
-    }
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-    return headers;
-  }
-
-  private async fetch(path: string, init: RequestInit): Promise<Response> {
-    try {
-      return await fetch(`${this.base}${path}`, init);
-    } catch (error) {
-      throw isAbortError(error) ? error : networkError(error);
-    }
-  }
-
-  private async request<T>(path: string, { method = 'GET', token, body, signal }: RequestOptions = {}): Promise<T> {
-    const extra: Record<string, string> = body === undefined ? {} : { 'Content-Type': 'application/json' };
-    const response = await this.fetch(path, {
-      method,
-      headers: this.headers(method, token, extra),
-      body: body === undefined ? null : JSON.stringify(body),
-      signal: signal ?? null,
-    });
-    if (!response.ok) {
-      throw await toApiError(response);
-    }
-    if (response.status === 204) {
-      return undefined as T;
-    }
-    const raw = await response.text();
-    try {
-      return (raw.trim() ? JSON.parse(raw) : undefined) as T;
-    } catch (error) {
-      throw new WidgetApiError({ status: response.status, message: 'The chat service sent an invalid response.', cause: error });
-    }
-  }
-
-  getConfig(signal?: AbortSignal): Promise<unknown> {
-    return this.request<unknown>('/config', signal ? { signal } : {});
-  }
-
-  // user is the signed-in user of the host page; the API checks its hash and otherwise treats the visitor as anonymous.
   async startSession(
     token: string | null,
     user: HostUser | null = null,
@@ -194,25 +169,20 @@ export class WidgetApi {
     if (context.page) {
       body.page = context.page;
     }
-    const session = normalizeSession(await this.request<unknown>('/sessions', { method: 'POST', body }));
+    const session = normalizeSession(await readJson(await this.anonymous(widgetEndpoints.startSession, { body })));
     if (!session) {
       throw new WidgetApiError({ status: 0, message: 'The chat service sent an invalid session.' });
     }
     return session;
   }
 
-  // Returns the keys the server refused, with the reason.
-  async updateAttributes(token: string, attributes: Record<string, HostAttributeValue>): Promise<AttributeRejection[]> {
-    const result = await this.request<unknown>('/attributes', { method: 'POST', token, body: { attributes } });
+  async updateAttributes(attributes: Record<string, HostAttributeValue>): Promise<AttributeRejection[]> {
+    const result = await this.json(widgetEndpoints.updateAttributes, { body: { attributes } });
     return readRejections(isRecord(result) ? result.rejected : null);
   }
 
-  async getConversation(token: string, id: string): Promise<VisitorConversation> {
-    return normalizeConversation(await this.request<unknown>(`/conversations/${encodeURIComponent(id)}`, { token }), id);
-  }
-
-  async saveContact(token: string, contact: { name?: string; email?: string }): Promise<{ name: string | null; email: string | null }> {
-    const result = await this.request<unknown>('/contact', { method: 'POST', token, body: contact });
+  async saveContact(contact: Contact): Promise<{ name: string | null; email: string | null }> {
+    const result = await this.json(widgetEndpoints.saveContact, { body: contact });
     const record = isRecord(result) ? result : {};
     return {
       name: typeof record.name === 'string' ? record.name : null,
@@ -220,79 +190,134 @@ export class WidgetApi {
     };
   }
 
-  async requestHandover(token: string, id: string, contact: { name?: string; email?: string }): Promise<{ status: string; started: boolean }> {
-    const result = await this.request<unknown>(`/conversations/${encodeURIComponent(id)}/handover`, { method: 'POST', token, body: contact });
+  async listConversations(signal?: AbortSignal): Promise<ConversationSummary[]> {
+    return normalizeSummaries(await this.json(widgetEndpoints.listConversations, { signal }));
+  }
+
+  async getConversation(id: string, signal?: AbortSignal): Promise<VisitorConversation> {
+    return normalizeConversation(await this.json(widgetEndpoints.getConversation, { id, signal }), id);
+  }
+
+  async closeConversation(id: string, signal?: AbortSignal): Promise<void> {
+    await this.json(widgetEndpoints.closeConversation, { id, signal });
+  }
+
+  async requestHandover(id: string, contact: Contact, signal?: AbortSignal): Promise<{ status: string; started: boolean }> {
+    const result = await this.json(widgetEndpoints.requestHandover, { id, body: contact, signal });
     const record = isRecord(result) ? result : {};
     return { status: typeof record.status === 'string' ? record.status : 'ai', started: record.started === true };
   }
 
-  // 409 with PERSON_JOINED once someone from the team has joined.
-  cancelHandover(token: string, id: string): Promise<void> {
-    return this.request<void>(`/conversations/${encodeURIComponent(id)}/handover/cancel`, { method: 'POST', token });
+  async cancelHandover(id: string, signal?: AbortSignal): Promise<void> {
+    await this.json(widgetEndpoints.cancelHandover, { id, signal });
   }
 
-  closeConversation(token: string, id: string): Promise<void> {
-    return this.request<void>(`/conversations/${encodeURIComponent(id)}/close`, { method: 'POST', token });
-  }
-
-  sendFeedback(token: string, id: string, feedback: { rating: number; messageId?: string; comment?: string }): Promise<unknown> {
-    return this.request<unknown>(`/conversations/${encodeURIComponent(id)}/feedback`, { method: 'POST', token, body: feedback });
+  async sendFeedback(id: string, feedback: Feedback, signal?: AbortSignal): Promise<void> {
+    await this.json(widgetEndpoints.sendFeedback, { id, body: feedback, signal });
   }
 
   async sendMessage(
-    token: string,
     body: { message: string; conversationId?: string; confirmation?: { callId: string; approved: boolean } },
     signal: AbortSignal,
   ): Promise<SendOutcome> {
-    const response = await this.fetch('/messages', {
-      method: 'POST',
-      headers: this.headers('POST', token, { Accept: 'text/event-stream, application/json', 'Content-Type': 'application/json' }),
-      body: JSON.stringify(body),
-      signal,
-      cache: 'no-store',
-    });
-    if (!response.ok) {
-      throw await toApiError(response);
-    }
-    const contentType = response.headers.get('Content-Type') ?? '';
-    if (response.status === 202 || !contentType.includes('text/event-stream')) {
-      let payload: unknown = null;
-      try {
-        payload = await response.json();
-      } catch {
-        // An empty 202 still means the message was accepted.
-      }
+    const scope = this.scope(signal);
+    const response = await this.authorized(widgetEndpoints.sendMessage, { body, accept: 'text/event-stream, application/json' }, scope);
+    if (response.status === 202 || !(response.headers.get('Content-Type') ?? '').includes('text/event-stream')) {
+      const payload: unknown = await response.json().catch(() => null);
       return { kind: 'relayed', message: normalizeMessage(payload) };
     }
-    if (!response.body) {
-      throw networkError(new Error('The answer stream is empty.'));
-    }
-    return { kind: 'stream', events: turnEvents(response.body, signal) };
+    return { kind: 'stream', events: turnEvents(streamOf(response), scope) };
   }
 
-  async *followConversation(token: string, id: string, { after, resume, signal, onOpen }: FollowOptions): AsyncGenerator<LiveEvent, void, undefined> {
-    const extra: Record<string, string> = { Accept: 'text/event-stream' };
-    let path = `/conversations/${encodeURIComponent(id)}/events`;
-    if (resume) {
-      extra['Last-Event-ID'] = String(after);
-    } else {
-      path += `?after=${after}`;
-    }
-    const response = await this.fetch(path, { method: 'GET', headers: this.headers('GET', token, extra), signal, cache: 'no-store' });
-    if (!response.ok) {
-      throw await toApiError(response);
-    }
-    if (!response.body) {
-      throw networkError(new Error('The event stream is empty.'));
-    }
+  async *followConversation(id: string, { after, resume, signal, onOpen }: FollowOptions): AsyncGenerator<LiveEvent, void, undefined> {
+    const scope = this.scope(signal);
+    const call: Call = resume ? { id, headers: { 'Last-Event-ID': String(after) } } : { id, query: { after } };
+    const body = streamOf(await this.authorized(widgetEndpoints.followConversation, { ...call, accept: 'text/event-stream' }, scope));
     onOpen?.();
-    for await (const message of readSseStream(response.body, signal)) {
+    for await (const message of readSseStream(body, scope)) {
       const event = parseLiveEvent(message.event, parseJson(message.data));
       if (event) {
         yield event;
       }
     }
   }
+
+  private async json(target: WidgetEndpoint, call: Call): Promise<unknown> {
+    const scope = this.scope(call.signal);
+    const value = await readJson(await this.authorized(target, call, scope));
+    scope.throwIfAborted();
+    return value;
+  }
+
+  private scope(signal: AbortSignal | undefined): AbortSignal {
+    const visitor = this.visitor().signal;
+    return signal ? AbortSignal.any([visitor, signal]) : visitor;
+  }
+
+  private async authorized(target: WidgetEndpoint, call: Call, scope: AbortSignal): Promise<Response> {
+    const visitor = this.visitor();
+    let response = await this.send(target, call, scope, await visitor.token());
+    if (response.status === 401) {
+      response = await this.send(target, call, scope, await visitor.renew());
+    }
+    return ok(response);
+  }
+
+  private async anonymous(target: WidgetEndpoint, call: Call): Promise<Response> {
+    return ok(await this.send(target, call, call.signal, null));
+  }
+
+  private async send(target: WidgetEndpoint, call: Call, signal: AbortSignal | undefined, token: string | null): Promise<Response> {
+    signal?.throwIfAborted();
+    const headers: Record<string, string> = { Accept: call.accept ?? 'application/json', ...call.headers };
+    if (call.body !== undefined) {
+      headers['Content-Type'] = 'application/json';
+    }
+    if (target.method === 'POST') {
+      headers['X-KA-Request'] = '1';
+    }
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    const url = pathOf(target as Endpoint, { key: this.key, ...(call.id === undefined ? {} : { id: call.id }) }, call.query);
+    try {
+      return await fetch(url, {
+        method: target.method,
+        headers,
+        body: call.body === undefined ? null : JSON.stringify(call.body),
+        signal: signal ?? null,
+        cache: 'no-store',
+      });
+    } catch (error) {
+      throw isAbortError(error) ? error : networkError(error);
+    }
+  }
+}
+
+async function ok(response: Response): Promise<Response> {
+  if (!response.ok) {
+    throw await toApiError(response);
+  }
+  return response;
+}
+
+async function readJson(response: Response): Promise<unknown> {
+  if (response.status === 204) {
+    return undefined;
+  }
+  const raw = await response.text();
+  try {
+    return raw.trim() ? JSON.parse(raw) : undefined;
+  } catch (error) {
+    throw new WidgetApiError({ status: response.status, message: 'The chat service sent an invalid response.', cause: error });
+  }
+}
+
+function streamOf(response: Response): ReadableStream<Uint8Array> {
+  if (!response.body) {
+    throw networkError(new Error('The stream is empty.'));
+  }
+  return response.body;
 }
 
 function parseJson(data: string): unknown {
@@ -317,13 +342,12 @@ export interface PreviewSession {
   config: unknown;
 }
 
-// "Test this widget": an admin's visitor session from the portal API. It needs the admin's session cookie,
-// which is sent because the preview is served from the portal's origin.
 export async function fetchPreviewSession(widgetId: string, signal?: AbortSignal): Promise<PreviewSession> {
   let response: Response;
   try {
-    response = await fetch(`/api/widgets/${encodeURIComponent(widgetId)}/preview-session`, {
-      method: 'POST',
+    const target = widgetEndpoints.previewSession;
+    response = await fetch(pathOf(target, { id: widgetId }), {
+      method: target.method,
       credentials: 'same-origin',
       headers: { Accept: 'application/json', 'X-KA-Request': '1' },
       signal: signal ?? null,

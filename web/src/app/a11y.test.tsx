@@ -24,7 +24,7 @@ import { TeamPage } from '../features/team/TeamPage';
 import { ToolsPage } from '../features/tools/ToolsPage';
 import { WidgetsPage } from '../features/widgets/WidgetsPage';
 import { axeViolations } from '../test/a11y';
-import { agentDto, agentGuid, agentsRoutes, builtInAgent } from '../test/agentsApi';
+import { agentDto, agentGuid, agentsRoutes, assistantAgent } from '../test/agentsApi';
 import { embeddingProfile, orchestratorProfile, providersFixture, supportUser, systemInfoFixture } from '../test/apiFixtures';
 import { evalDataset, evalDatasetList, evalRunDto, evalRunsRoutes, evalRunSummary, runGuid } from '../test/evalsApi';
 import { feedbackDto, feedbackSummary, portalRating } from '../test/feedbackApi';
@@ -85,7 +85,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
       'GET /api/models/providers': providersFixture,
       'GET /api/conversations': [],
       ...sourcesRoutes(() => [sourceDto()]),
-      ...agentsRoutes(() => [builtInAgent, agentDto(), agentDto({ id: agentGuid(3), key: 'support', name: 'Support desk' })]),
+      ...agentsRoutes(() => [assistantAgent, agentDto(), agentDto({ id: agentGuid(3), key: 'support', name: 'Support desk' })]),
     });
     renderWithProviders(
       <Routes>
@@ -235,7 +235,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
       },
       'GET /api/models/profiles': profiles,
       ...sourcesRoutes(() => [sourceDto()]),
-      ...agentsRoutes(() => [builtInAgent, agentDto()]),
+      ...agentsRoutes(() => [assistantAgent, agentDto()]),
       ...widgetsRoutes(() => [widgetDto()]),
       'GET /api/conversations': [inboxConversation()],
     });
@@ -253,7 +253,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
     const folders = [sourceFolder('legal', 'Legal'), sourceFolder('contracts', 'Contracts', 'legal')];
     const agent = agentDto({ folderIds: ['contracts'] });
     mockFetch({
-      ...agentsRoutes(() => [builtInAgent, agent]),
+      ...agentsRoutes(() => [assistantAgent, agent]),
       ...sourcesRoutes(
         () => [],
         () => folders,
@@ -532,7 +532,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
     const user = userEvent.setup();
     mockFetch({
       ...widgetsRoutes(() => [widgetDto(), widgetDto({ id: 'w2', name: 'Docs help', enabled: false })]),
-      ...agentsRoutes(() => [builtInAgent, agentDto()]),
+      ...agentsRoutes(() => [assistantAgent, agentDto()]),
       ...integrationsRoutes(() => ({ email: emailSettings(), slack: slackSettings() })),
       'POST /api/widgets': () =>
         problemResponse(
@@ -570,7 +570,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
   it('editor of a saved widget with its preview and embed code', async () => {
     mockFetch({
       ...widgetsRoutes(() => [widgetDto({ settings: widgetSettings({ appearance: { brandColor: '#8b5cf6' }, handover: { channel: 'slack' } }) })]),
-      ...agentsRoutes(() => [builtInAgent, agentDto()]),
+      ...agentsRoutes(() => [assistantAgent, agentDto()]),
       ...integrationsRoutes(() => ({ email: workingEmail, slack: slackSettings() })),
     });
     const user = userEvent.setup();
@@ -579,7 +579,6 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
     const frame = await screen.findByTitle('Widget preview');
     await fakePreview();
     const settings = screen.getByRole('region', { name: 'Settings' });
-    // axe can't reach into frames under jsdom; the preview has its own test.
     expect(await axeViolations(screen.getByRole('heading', { level: 1 }).closest('header')!)).toEqual([]);
     await user.click(within(settings).getByRole('tab', { name: 'Settings' }));
     await user.click(within(settings).getByRole('button', { name: 'Handover' }));
@@ -615,7 +614,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
       [`GET /api/conversations/${WIDGET_CONVERSATION_ID}/handover`]: handoverDto({ lastError: 'SMTP server refused the message.' }),
       [`GET /api/conversations/${WIDGET_CONVERSATION_ID}/history`]: { feedback: [], handovers: [handoverDto()], labels: [] },
       ...widgetsRoutes(() => [widgetDto()]),
-      ...agentsRoutes(() => [builtInAgent, agentDto()]),
+      ...agentsRoutes(() => [assistantAgent, agentDto()]),
     });
     renderWithProviders(<InboxPage />, { route: `/inbox?view=all&c=${WIDGET_CONVERSATION_ID}`, path: '/inbox/:conversationId?' });
 
@@ -632,7 +631,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
       'GET /api/conversations/search': { items: [searchItem({ match: 'Can I return shoes I wore once?' })], nextCursor: null },
       'GET /api/conversations/counts': countsDto(),
       ...widgetsRoutes(() => [widgetDto()]),
-      ...agentsRoutes(() => [builtInAgent, agentDto()]),
+      ...agentsRoutes(() => [assistantAgent, agentDto()]),
     });
     renderWithProviders(<InboxPage />, { route: '/inbox?view=all&q=shoes', path: '/inbox/:conversationId?' });
 
@@ -684,7 +683,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
         ],
       },
       ...widgetsRoutes(() => [widgetDto()]),
-      ...agentsRoutes(() => [builtInAgent, agentDto()]),
+      ...agentsRoutes(() => [assistantAgent, agentDto()]),
     });
     renderWithProviders(<AnalyticsPage />, { route: '/analytics', path: '/analytics' });
 
@@ -694,14 +693,14 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
 
   it('feedback page', async () => {
     mockFetch({
-      'GET /api/feedback/summary': [feedbackSummary(), feedbackSummary({ widgetId: null, agentId: null })],
+      'GET /api/feedback/summary': [feedbackSummary(), feedbackSummary({ widgetId: null, agentId: agentGuid(1) })],
       'GET /api/feedback': [
         feedbackDto(),
         portalRating,
         feedbackDto({ id: 'f3', kind: 'agent', rating: 0, reasons: [], comment: 'Asked for phone support.' }),
       ],
       ...widgetsRoutes(() => [widgetDto()]),
-      ...agentsRoutes(() => [builtInAgent, agentDto()]),
+      ...agentsRoutes(() => [assistantAgent, agentDto()]),
     });
     renderWithProviders(<FeedbackPage />);
 
@@ -826,7 +825,7 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
     expect(await axeViolations()).toEqual([]);
     unmount();
 
-    mockFetch({ ...agentsRoutes(() => [builtInAgent]), 'GET /api/models/profiles': profiles });
+    mockFetch({ ...agentsRoutes(() => [assistantAgent]), 'GET /api/models/profiles': profiles });
     renderWithProviders(<AgentPage />, { route: `/agents/${agentGuid(9)}`, path: '/agents/:agentId' });
     expect(await screen.findByRole('heading', { level: 1, name: 'This agent does not exist' })).toBeInTheDocument();
     expect(await axeViolations()).toEqual([]);
@@ -834,10 +833,10 @@ describe('accessibility (axe-core, WCAG 2.2 AA)', () => {
 
   it('an open actions menu and the delete confirmation it leads to', async () => {
     const user = userEvent.setup();
-    mockFetch({ ...agentsRoutes(() => [builtInAgent, agentDto()]), ...widgetsRoutes(() => [widgetDto()]) });
+    mockFetch({ ...agentsRoutes(() => [assistantAgent, agentDto()]), ...widgetsRoutes(() => [widgetDto()]) });
     renderWithProviders(<AgentsPage />, { route: '/agents' });
 
-    const trigger = await screen.findByRole('button', { name: /^Actions for / });
+    const trigger = await screen.findByRole('button', { name: 'Actions for Website helper' });
     await user.click(trigger);
     await screen.findByRole('menu');
     expect(await axeViolations()).toEqual([]);

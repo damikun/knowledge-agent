@@ -18,7 +18,6 @@ function fieldErrors(error: unknown, field: string): string[] | undefined {
   return error instanceof ApiError ? error.errorsFor(field) : undefined;
 }
 
-// Field errors shown next to an input are left out here.
 function OtherErrors({ error, shown }: { error: unknown; shown: readonly string[] }) {
   if (!error) {
     return null;
@@ -120,7 +119,6 @@ export function CreateFolderDialog({
   const create = useMutation({
     mutationFn: () => sourcesApi.createFolder({ name: name.trim(), parentId: location }),
     onSuccess: (folder) => {
-      // The caller opens the new folder right away, before the list is fetched again.
       queryClient.setQueryData<SourceFolderListDto>(sourceKeys.folders, (old) =>
         old ? { ...old, folders: [...old.folders, { ...folder, sourceCount: 0 }] } : old,
       );
@@ -219,7 +217,6 @@ export function MoveFolderDialog({ node, tree, onClose }: { node: FolderNode; tr
   );
 }
 
-// Either picked sources, or every source the list's filters match on all pages.
 export type SourcesToMove =
   | { kind: 'sources'; sources: readonly SourceDto[] }
   | { kind: 'matching'; params: SourceListParams; count: number };
@@ -294,7 +291,6 @@ function deleteFolderMessage(node: FolderNode): string {
   return `${deleted} ${kept} in the library, unfiled. Search is not affected.`;
 }
 
-/** Asks before a folder goes; its sources stay in the library. Mounted per folder, so an earlier failure never shows. */
 function DeleteFolderDialog({ node, onClose, onDeleted }: { node: FolderNode; onClose: () => void; onDeleted: (node: FolderNode) => void }) {
   const queryClient = useQueryClient();
   const remove = useMutation({
@@ -334,7 +330,6 @@ export interface FolderDialogHostProps {
   onDeleted: (node: FolderNode) => void;
 }
 
-/** The one folder dialog open on the Sources page. */
 export function FolderDialogHost({ dialog, tree, onClose, onCreated, onMoved, onDeleted }: FolderDialogHostProps) {
   switch (dialog.kind) {
     case 'create':

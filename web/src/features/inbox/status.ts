@@ -16,7 +16,6 @@ export const STATUS_TONES: Readonly<Record<ConversationStatus, BadgeTone>> = {
   closed: 'neutral',
 };
 
-/** Support users can't read widget names, so widgets show by id. */
 export function widgetLabel(widgetId: string | null, names: ReadonlyMap<string, string> | undefined): string {
   if (!widgetId) {
     return 'No widget';

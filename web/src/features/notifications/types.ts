@@ -1,6 +1,5 @@
 export type MailSecurity = 'auto' | 'none' | 'starttls' | 'ssl';
 
-/** Passwords are never returned, only whether they are set. */
 export interface EmailSettingsDto {
   enabled: boolean;
   smtpHost: string | null;
@@ -10,7 +9,6 @@ export interface EmailSettingsDto {
   hasSmtpPassword: boolean;
   fromAddress: string | null;
   fromName: string | null;
-  /** Used when the widget names no address. */
   supportAddress: string | null;
   replyAddress: string | null;
   plusAddressing: boolean;
@@ -22,11 +20,9 @@ export interface EmailSettingsDto {
   processedFolder: string;
   staffAddresses: string[];
   staffDomains: string[];
-  /** Used in links in the emails. */
   portalUrl: string | null;
   canSend: boolean;
   canReceive: boolean;
-  /** Saved in the portal; otherwise configuration applies. */
   saved: boolean;
 }
 
@@ -38,7 +34,6 @@ export interface SlackSettingsDto {
   canPost: boolean;
   canReceive: boolean;
   saved: boolean;
-  /** The Socket Mode connection is up. */
   connected: boolean;
 }
 
@@ -47,7 +42,6 @@ export interface IntegrationsDto {
   slack: SlackSettingsDto;
 }
 
-/** Secrets: null keeps the saved one, "" removes it, a value replaces it. */
 export interface SaveEmailSettingsRequest {
   enabled: boolean;
   smtpHost: string | null;
@@ -78,7 +72,6 @@ export interface SaveSlackSettingsRequest {
   channelId: string | null;
 }
 
-/** Ok only when the test reached the server and nothing is missing. */
 export interface IntegrationTestResultDto {
   ok: boolean;
   message: string;

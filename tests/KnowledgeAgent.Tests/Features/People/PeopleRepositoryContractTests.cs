@@ -13,7 +13,6 @@ using HandoverRequest = KnowledgeAgent.Features.Handover.Handover;
 
 namespace KnowledgeAgent.Tests.Features.People;
 
-// The database is shared per class, so every test uses widgets and people of its own.
 public abstract class PeopleRepositoryContractTests<TFixture>
     where TFixture : PersistenceFixture
 {
@@ -211,6 +210,55 @@ public abstract class PeopleRepositoryContractTests<TFixture>
     }
 
     [Fact]
+    public async Task A_visitor_lists_their_widget_conversations_with_the_last_message_they_may_see()
+    {
+        var widget = await AddWidgetAsync();
+        var visitor = await AddVisitorAsync(widget);
+        var sameUserElsewhere = await AddVisitorAsync(widget);
+        var contactId = await InScopeAsync(people => people.EnsureForVisitorAsync(sameUserElsewhere.Id, Now, Ct));
+        var stranger = await AddVisitorAsync(widget);
+        var older = new Conversation { Channel = ConversationChannel.Widget, WidgetId = widget.Id, VisitorId = visitor.Id, Status = ConversationStatus.Closed, CreatedAt = Now.AddDays(-2), UpdatedAt = Now.AddDays(-2) };
+        var latest = new Conversation { Channel = ConversationChannel.Widget, WidgetId = widget.Id, VisitorId = visitor.Id, CreatedAt = Now.AddHours(-1), UpdatedAt = Now.AddHours(-1) };
+        var fromContact = new Conversation { Channel = ConversationChannel.Widget, WidgetId = widget.Id, VisitorId = sameUserElsewhere.Id, ContactId = contactId, CreatedAt = Now.AddDays(-1), UpdatedAt = Now.AddDays(-1) };
+        var others = new Conversation { Channel = ConversationChannel.Widget, WidgetId = widget.Id, VisitorId = stranger.Id, CreatedAt = Now, UpdatedAt = Now };
+        await SeedAsync(db =>
+        {
+            db.Conversations.AddRange(older, latest, fromContact, others);
+            db.ConversationMessages.AddRange(
+                Message(latest.Id, 1, MessageAuthor.User, "Where is my order?"),
+                Message(latest.Id, 2, MessageAuthor.Assistant, "It ships tomorrow."),
+                Message(latest.Id, 3, MessageAuthor.System, "Handed to Billing. The visitor does not see this.", staffOnly: true),
+                Message(latest.Id, 4, MessageAuthor.System, "This conversation was closed."),
+                Message(fromContact.Id, 1, MessageAuthor.User, "Hello from my phone"));
+        });
+
+        await using var scope = Fixture.Services.CreateAsyncScope();
+        var conversations = scope.ServiceProvider.GetRequiredService<IConversationRepository>();
+
+        var own = await conversations.ListForVisitorAsync(widget.Id, visitor.Id, contactId: null, take: 20, Ct);
+        own.Select(summary => summary.Id).ShouldBe([latest.Id, older.Id]);
+        own[0].LastMessage.ShouldNotBeNull().Text.ShouldBe("It ships tomorrow.");
+        own[1].Status.ShouldBe(ConversationStatus.Closed);
+        own[1].LastMessage.ShouldBeNull();
+
+        (await conversations.ListForVisitorAsync(widget.Id, visitor.Id, contactId, take: 20, Ct)).Select(summary => summary.Id)
+            .ShouldBe([latest.Id, fromContact.Id, older.Id], "a verified visitor also sees the conversations of their contact");
+        (await conversations.ListForVisitorAsync(widget.Id, visitor.Id, contactId, take: 1, Ct)).ShouldHaveSingleItem().Id.ShouldBe(latest.Id);
+        (await conversations.ListForVisitorAsync(Guid.NewGuid(), visitor.Id, contactId, take: 20, Ct)).ShouldBeEmpty();
+    }
+
+    private static ConversationMessage Message(Guid conversationId, int sequence, MessageAuthor author, string text, bool staffOnly = false) => new()
+    {
+        Id = Guid.CreateVersion7(),
+        ConversationId = conversationId,
+        Sequence = sequence,
+        Author = author,
+        Text = text,
+        StaffOnly = staffOnly,
+        CreatedAt = Now.AddMinutes(sequence),
+    };
+
+    [Fact]
     public async Task Attribute_filters_work_the_same_for_every_type_on_both_stores()
     {
         var s = Guid.NewGuid().ToString("N")[..6];
@@ -270,7 +318,7 @@ public abstract class PeopleRepositoryContractTests<TFixture>
     {
         var s = Guid.NewGuid().ToString("N")[..6];
         var widget = await AddWidgetAsync();
-        var visitor = new WidgetVisitor { WidgetId = widget.Id, CreatedAt = Now.AddDays(-2), LastSeenAt = Now, SessionCount = 3, LastPageUrl = "https://shop.example.com/pricing", Language = "de-AT" };
+        var visitor = new WidgetVisitor { WidgetId = widget.Id, CreatedAt = Now.AddDays(-2), LastSeenAt = Now, VisitCount = 3, LastPageUrl = "https://shop.example.com/pricing", Language = "de-AT" };
         await SeedAsync(db => db.WidgetVisitors.Add(visitor));
 
         (await InScopeAsync(people => people.SetVisitorAttributesAsync(visitor.Id, Values(new() { ["Bad Key"] = "x" }), AttributeSources.Browser, Now, Ct))).Rejected.ShouldHaveSingleItem();
@@ -280,20 +328,19 @@ public abstract class PeopleRepositoryContractTests<TFixture>
         result.Applied.ShouldBe([$"campaign_{s}"]);
         var contactId = (await ReadAsync(db => db.WidgetVisitors.SingleAsync(item => item.Id == visitor.Id, Ct))).ContactId.ShouldNotBeNull();
         var contact = (await InScopeAsync(people => people.GetAsync(contactId, Ct))).ShouldNotBeNull();
-        contact.SessionCount.ShouldBe(3);
+        contact.VisitCount.ShouldBe(3);
         contact.LastPageUrl.ShouldBe("https://shop.example.com/pricing");
         contact.Language.ShouldBe("de-AT");
         contact.Returning.ShouldBeTrue();
         contact.AttributeSources[$"campaign_{s}"].Source.ShouldBe(AttributeSources.Browser);
 
         await InScopeAsync(people => people.RecordVisitAsync(contactId, new VisitorVisit(true, "https://shop.example.com/cart", null, null), Now.AddMinutes(10), Ct));
-        (await InScopeAsync(people => people.GetAsync(contactId, Ct)))!.SessionCount.ShouldBe(3, "ten minutes is the same session");
+        (await InScopeAsync(people => people.GetAsync(contactId, Ct)))!.VisitCount.ShouldBe(3, "ten minutes is the same visit");
         await InScopeAsync(people => people.RecordVisitAsync(contactId, new VisitorVisit(true, "https://shop.example.com/cart", null, null), Now.AddHours(2), Ct));
         var visited = (await InScopeAsync(people => people.GetAsync(contactId, Ct)))!;
-        visited.SessionCount.ShouldBe(4);
+        visited.VisitCount.ShouldBe(4);
         visited.LastPageUrl.ShouldBe("https://shop.example.com/cart");
 
-        // The website's server signs in the same user later: its values win over the browser's for good.
         var userId = $"user-{s}";
         var server = await InScopeAsync(people => people.UpsertFromServerAsync(userId, "Ada", null, Values(new() { [$"campaign_{s}"] = "spring", [$"mrr_{s}"] = 99 }), Now, Ct));
         server.Created.ShouldBeTrue();
@@ -303,7 +350,7 @@ public abstract class PeopleRepositoryContractTests<TFixture>
         user.Attributes[$"campaign_{s}"].GetString().ShouldBe("spring", "the browser value did not overwrite the server's when the histories merged");
         user.Attributes[$"mrr_{s}"].GetDecimal().ShouldBe(99, "identify() cannot overwrite a server value");
         user.Email.ShouldBe("ada@example.com");
-        user.SessionCount.ShouldBeGreaterThan(4);
+        user.VisitCount.ShouldBeGreaterThan(4);
     }
 
     [Fact]

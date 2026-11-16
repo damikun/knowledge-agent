@@ -5,7 +5,6 @@ export interface PersonWidget {
   name: string;
 }
 
-/** `name` falls back to e.g. "Visitor 4F2A" for anonymous people. */
 export interface PersonSummary {
   id: Guid;
   name: string;
@@ -16,11 +15,10 @@ export interface PersonSummary {
   lastSeenAt: IsoDateTime;
   conversationCount: number;
   widgets: PersonWidget[];
-  sessionCount: number;
+  visitCount: number;
   returning: boolean;
   language: string | null;
   lastPageUrl: string | null;
-  /** By key. */
   attributes: Record<string, AttributeValue>;
 }
 
@@ -51,11 +49,9 @@ export interface ContactAttribute {
   trust: AttributeTrust;
 }
 
-/** Built-in attributes are computed by the server. */
 export interface FilterAttribute {
   key: string;
   label: string;
-  /** 'widget' for the widget a contact used. */
   type: AttributeType | 'widget';
   builtIn: boolean;
   ops: string[];
@@ -67,7 +63,6 @@ export interface AttributeRegistry {
   ops: Record<string, string[]>;
 }
 
-/** A filter matches when all conditions do. */
 export interface ContactCondition {
   attr: string;
   op: string;
@@ -103,12 +98,9 @@ export interface PeoplePage {
 export interface PeopleFilters {
   q: string;
   widgetId: string;
-  /** '' for everyone. */
   identified: '' | 'true' | 'false';
   conditions?: ContactCondition[];
-  /** '' for none. */
   segmentId?: string;
-  /** Every contact, including those who never talked or signed in. */
   all?: boolean;
 }
 
@@ -125,7 +117,6 @@ export interface PersonStats {
   lastSeenAt: IsoDateTime;
 }
 
-/** `savedName` is what an edit changes. */
 export interface Person {
   id: Guid;
   name: string;
@@ -139,14 +130,13 @@ export interface Person {
   lastSeenAt: IsoDateTime;
   widgets: PersonWidgetUsage[];
   stats: PersonStats;
-  sessionCount: number;
+  visitCount: number;
   returning: boolean;
   lastPageUrl: string | null;
   lastReferrer: string | null;
   language: string | null;
 }
 
-/** Omitted fields stay; empty ones are cleared. */
 export interface UpdatePersonRequest {
   name?: string;
   email?: string;

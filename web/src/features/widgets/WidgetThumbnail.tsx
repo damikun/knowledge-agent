@@ -23,7 +23,6 @@ function usePortalScheme(): ColorMode {
   return useSyncExternalStore(subscribeScheme, portalScheme, () => 'light');
 }
 
-// A sample page behind the widget, so glass presets have something to show through.
 const SAMPLE_PAGE: Readonly<Record<ColorMode, { background: string; ink: string }>> = {
   light: { background: '#f4f4f5', ink: '#18181b' },
   dark: { background: '#09090b', ink: '#f4f4f5' },
@@ -34,13 +33,11 @@ const BLOBS = [
   { top: 80, side: 150, size: 340, color: 'rgb(20 184 166 / 0.4)' },
 ];
 
-// Drawn at a 4:3 browser window size and scaled down whole, so the 360 x 560 panel keeps its proportions.
 const STAGE = { width: 896, height: 672 } as const;
 const PANEL = { width: 360, height: 560 } as const;
 const EDGE = 24;
 const LAUNCHER = 56;
 const GAP = 16;
-// Until the card is measured (and in tests): about one card in a three-column grid.
 const DEFAULT_SCALE = 0.4;
 
 function initialOf(text: string): string {
@@ -50,7 +47,6 @@ function initialOf(text: string): string {
 function useStageScale(): [RefObject<HTMLDivElement | null>, number] {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(DEFAULT_SCALE);
-  // Layout effect, so the still never paints at the wrong size.
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) {

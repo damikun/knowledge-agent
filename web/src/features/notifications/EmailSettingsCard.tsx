@@ -41,7 +41,6 @@ function emailStatus(email: EmailSettingsDto): IntegrationStatus {
   return email.canReceive ? { tone: 'success', label: 'On' } : { tone: 'warning', label: 'Replies not set up' };
 }
 
-/** Mounted while open, so each opening starts from the saved settings. */
 function EmailSettingsSheet({ email, onClose }: { email: EmailSettingsDto; onClose: () => void }) {
   const queryClient = useQueryClient();
   const prefix = useId();
@@ -52,7 +51,6 @@ function EmailSettingsSheet({ email, onClose }: { email: EmailSettingsDto; onClo
 
   const save = useMutation({
     mutationFn: (body: SaveEmailSettingsRequest) => integrationsApi.saveEmail(body),
-    // The request may carry passwords, so don't keep it in the mutation cache.
     gcTime: 0,
     onSuccess: (saved) => {
       queryClient.setQueryData<IntegrationsDto>(integrationKeys.all, (old) => (old ? { ...old, email: saved } : old));
@@ -224,7 +222,6 @@ function EmailSettingsSheet({ email, onClose }: { email: EmailSettingsDto; onClo
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Mounted while open, so each opening starts from the support address. */
 function TestEmailDialog({
   email,
   onDone,

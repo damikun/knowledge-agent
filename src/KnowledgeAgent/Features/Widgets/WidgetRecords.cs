@@ -26,7 +26,7 @@ public sealed class WidgetVisitor
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset LastSeenAt { get; set; }
 
-    public int SessionCount { get; set; }
+    public int VisitCount { get; set; }
     public string? LastPageUrl { get; set; }
     public string? LastReferrer { get; set; }
     public string? Language { get; set; }

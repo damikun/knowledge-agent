@@ -89,7 +89,6 @@ internal sealed partial class WidgetService(
             throw new ValidationFailedException("file", $"The image must be at most {WidgetAsset.MaxBytes / 1024} KB.");
         }
 
-        // The content decides the type, never the file name or the declared type; SVG is refused because it can run script.
         var contentType = ImageTypes.Sniff(content)
             ?? throw new ValidationFailedException("file", "Upload a PNG, JPEG or WebP image.");
         var asset = await widgets.AddAssetAsync(
@@ -164,11 +163,6 @@ internal sealed partial class WidgetService(
         if (agent is null)
         {
             errors.Add("agentId", "Choose an agent for the widget.");
-        }
-        else if (agent.IsBuiltIn)
-        {
-            // The built-in agent may search every source; a public widget must use an agent scoped for visitors.
-            errors.Add("agentId", "The built-in agent is the portal's chat. Create an agent for this widget with the sources visitors may see.");
         }
 
         var settings = Normalize(request.Settings ?? new WidgetSettings(), errors);
@@ -405,7 +399,6 @@ internal sealed partial class WidgetService(
         return overrides;
     }
 
-    // wk_ and 24 random characters: unguessable, so a widget cannot be found by trying keys.
     private static string NewPublicKey()
     {
         const string alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";

@@ -48,7 +48,6 @@ export function ReplyBox({ conversationId, onSend, sending, error, note }: Reply
       }}
     >
       {error ? <ErrorMessage error={error} title="The reply was not sent" /> : null}
-      {/* Keyed, so a draft never carries over to another conversation. */}
       <SuggestReply key={conversationId} conversationId={conversationId} currentText={text} onDraft={setText} disabled={sending} />
       <ComposerBox>
         <label htmlFor={inputId} className="sr-only">

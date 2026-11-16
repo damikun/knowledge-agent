@@ -7,15 +7,12 @@ import type { ConversationLiveEvent } from './types';
 const RETRY_DELAYS_MS: readonly number[] = [1_000, 2_000, 5_000, 10_000];
 
 export interface ConversationEventHandlers {
-  /** Read before each connection. */
   afterSequence: () => number;
-  /** Each connection replays the turn in progress from its start. */
   onOpen?: () => void;
   onEvent: (event: ConversationLiveEvent) => void;
 }
 
 export interface ConversationEventOptions {
-  /** One delay per consecutive failure; the last one repeats. */
   retryDelaysMs?: readonly number[];
 }
 
@@ -66,21 +63,18 @@ async function follow(
       }
       failures += 1;
     }
-    // The server can also close the stream, e.g. on restart.
     resume = true;
     const delay = retryDelaysMs[Math.min(Math.max(failures - 1, 0), retryDelaysMs.length - 1)] ?? 1_000;
     await wait(delay, signal);
   }
 }
 
-/** Follows the conversation's event stream, reconnecting with Last-Event-ID after network errors. */
 export function useConversationEvents(
   conversationId: string | null,
   enabled: boolean,
   handlers: ConversationEventHandlers,
   options: ConversationEventOptions = {},
 ): void {
-  // Effect events, so new handlers don't reconnect.
   const afterSequence = useEffectEvent(() => handlers.afterSequence());
   const onOpen = useEffectEvent(() => handlers.onOpen?.());
   const onEvent = useEffectEvent((event: ConversationLiveEvent) => handlers.onEvent(event));

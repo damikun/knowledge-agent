@@ -44,7 +44,6 @@ export interface WidgetEditorProps {
   integrations: IntegrationsDto | undefined;
 }
 
-// Inside a text field, undo is the field's own.
 function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) {
     return false;
@@ -55,9 +54,7 @@ function isTyping(target: EventTarget | null): boolean {
   return target instanceof HTMLInputElement && !['checkbox', 'radio', 'button', 'submit', 'color', 'file'].includes(target.type);
 }
 
-// Room for the preview beside a 360 px panel; narrower workspaces get a bottom sheet.
 const WIDE_WORKSPACE = 900;
-// Estimated height of the sheet's search and tabs until they are measured.
 const SHEET_HEADER_HEIGHT = 96;
 
 export function WidgetEditor({ widget, options, agents, integrations }: WidgetEditorProps) {
@@ -76,7 +73,6 @@ export function WidgetEditor({ widget, options, agents, integrations }: WidgetEd
   const [colorScheme, setColorScheme] = useState<ColorScheme>(() => (document.documentElement.classList.contains('dark') ? 'dark' : 'light'));
   const [device, setDevice] = useState<Device>('desktop');
   const [selected, setSelected] = useState<EditTarget | null>(null);
-  // A counter, so picking the same element again still resets its view.
   const [reveal, setReveal] = useState<{ count: number; focusId: string | null }>({ count: 0, focusId: null });
   const [panels, setPanels] = useState<ReadonlySet<PanelId>>(() => new Set<PanelId>(['embed']));
   const [attempted, setAttempted] = useState(false);
@@ -84,13 +80,11 @@ export function WidgetEditor({ widget, options, agents, integrations }: WidgetEd
   const [notice, setNotice] = useState<string | null>(() => (location.state as { notice?: string } | null)?.notice ?? null);
   const [tab, setTab] = useState<PanelTab>(notice ? 'settings' : 'elements');
   const [confirmDelete, setConfirmDelete] = useState(false);
-  // The Playground links here with ?preview.
   const [previewOpen, setPreviewOpen] = useState(() => new URLSearchParams(location.search).has('preview'));
   const [workspace, setWorkspace] = useState<HTMLDivElement | null>(null);
   const [sheetHeader, setSheetHeader] = useState<HTMLDivElement | null>(null);
   const workspaceSize = useElementSize(workspace);
   const sheetHeaderSize = useElementSize(sheetHeader);
-  // Nothing to measure (jsdom): treat the workspace as wide.
   const wide = workspaceSize === null || workspaceSize.width >= WIDE_WORKSPACE;
   const [sheet, setSheet] = useState<SheetSnap>(notice ? 'half' : 'collapsed');
   const peek = SHEET_HANDLE_HEIGHT + (sheetHeaderSize?.height ?? SHEET_HEADER_HEIGHT);
@@ -112,10 +106,8 @@ export function WidgetEditor({ widget, options, agents, integrations }: WidgetEd
     },
   });
 
-  // The notice comes in history state; clear it so a reload doesn't show it again.
   useEffect(() => {
     if ((location.state as { notice?: string } | null)?.notice) {
-      // Drop the notice but keep the way back.
       const returnTo = readReturnTo(location.state);
       navigate(location.pathname, { replace: true, state: returnTo ? { returnTo } : null });
     }
@@ -191,7 +183,6 @@ export function WidgetEditor({ widget, options, agents, integrations }: WidgetEd
     }
   };
 
-  // Render the section synchronously so its field can take focus.
   const showInPanel = (panelTab: PanelTab, section: PanelId | null, focusId: string | null) => {
     flushSync(() => {
       pick(null);
@@ -256,7 +247,6 @@ export function WidgetEditor({ widget, options, agents, integrations }: WidgetEd
     if (!(event.metaKey || event.ctrlKey) || event.altKey) {
       return;
     }
-    // Ctrl+S works from any field; undo inside a field stays native.
     if (key === 's') {
       event.preventDefault();
       if (canSave) {
@@ -329,7 +319,6 @@ export function WidgetEditor({ widget, options, agents, integrations }: WidgetEd
         ref={setWorkspace}
         className={clsx('relative min-h-0 flex-1', wide && 'grid grid-cols-[minmax(0,1fr)_22.5rem] grid-rows-[minmax(0,1fr)] gap-3 px-4 pb-4 lg:px-6')}
       >
-        {/* One element in both layouts, so the preview iframe stays loaded across resizes. */}
         <div
           className={wide ? 'relative min-h-0' : 'absolute inset-x-0 top-0 px-4 lg:px-6'}
           style={wide ? undefined : { bottom: sheet === 'collapsed' && !target ? peek + 8 : 'calc(50% + 8px)' }}

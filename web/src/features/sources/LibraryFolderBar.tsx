@@ -36,12 +36,9 @@ export interface LibraryFolderBarProps {
   tree: readonly FolderNode[];
   hrefFor: (view: FolderView) => To;
   drop: FolderDrop;
-  /** Opens the folders in a drawer, below the width where they sit beside the list. */
   onShowFolders: () => void;
-  /** Whether the folder panel beside the list is hidden; it hides and shows from here. */
   foldersHidden: boolean;
   onToggleFolders: () => void;
-  /** At the end of the row, such as the search field. */
   end?: ReactNode;
   onNewSubfolder: (node: FolderNode) => void;
   onRename: (node: FolderNode) => void;
@@ -149,7 +146,6 @@ export function LibraryFolderBar({
         <nav aria-label="Breadcrumb" className={clsx('min-w-0', view === 'all' ? 'sr-only' : 'flex-1')}>
           <ol className="flex min-w-0 flex-wrap items-center gap-0.5 text-sm">
             {view !== 'all' ? (
-              // A folder dropped on "All sources" moves to the top level.
               <Crumb to={hrefFor('all')} folderId={null} drop={drop} accepts={isFolder}>
                 All sources
               </Crumb>
@@ -159,7 +155,6 @@ export function LibraryFolderBar({
                 {ancestor.folder.name}
               </Crumb>
             ))}
-            {/* The page title already says Sources; the bar names a folder only once one is open. */}
             <li className="min-w-0 px-1">
               <span aria-current="page" className="block truncate font-medium text-fg">
                 {current}
@@ -179,7 +174,6 @@ export function LibraryFolderBar({
             >
               New subfolder
             </Button>
-            {/* Rename, move and delete are rare, so they wait in a menu. The Internal folder is built in and has none. */}
             {locked ? null : (
               <Menu
                 label="Folder actions"

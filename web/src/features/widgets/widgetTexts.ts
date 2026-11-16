@@ -12,7 +12,6 @@ export const LAUNCHER_ICONS: Readonly<Record<string, { icon: LucideIcon; label: 
   headset: { icon: Headset, label: 'Headset' },
 };
 
-/** The stored `theme` setting is the mode; the UI's "theme" is the preset. */
 export const MODE_LABELS: Readonly<Record<string, string>> = {
   auto: "Follow the visitor's system",
   light: 'Light',
@@ -124,6 +123,9 @@ const TEXT_LABELS: Readonly<Record<string, string>> = {
   loading: 'Loading',
   newTab: 'Opens in a new tab, for screen readers',
   source: 'Source number for screen readers',
+  conversations: 'Conversations list title and menu item',
+  backToChat: 'Back to chat button',
+  conversationEnded: 'Ended conversation in the list',
 };
 
 const TEXT_HINTS: Readonly<Record<string, string>> = {
@@ -137,7 +139,6 @@ export function textHint(key: string): string | undefined {
   return TEXT_HINTS[key];
 }
 
-/** "talkToPerson" → "Talk to person" for keys this portal does not know. */
 export function textLabel(key: string): string {
   const known = TEXT_LABELS[key];
   if (known) {

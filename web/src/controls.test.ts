@@ -3,12 +3,8 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-// A native <select> draws its own arrow, cuts long labels off and shows a focus ring after a click.
-// Use Select or FilterSelect.
-
 const SRC = resolve(process.cwd(), 'src');
 
-// The shared controls are where the native elements may live, the widget has its own look, and tests may render anything.
 const SKIPPED = [/^components\/ui\//, /^widget\//, /^test\//, /\.test\.tsx$/];
 
 const NATIVE_SELECT = /<select(?![\w-])/g;

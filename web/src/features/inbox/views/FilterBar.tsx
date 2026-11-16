@@ -28,7 +28,6 @@ const KIND_NAMES: Readonly<Record<FilterKind, string>> = {
   handover: 'Asked for a person',
 };
 
-// Order of the + Filter menu. "Asked for a person" only appears as a chip from legacy links.
 const MENU_KINDS: readonly FilterKind[] = ['channel', 'widget', 'label', 'contact', 'assignee', 'rating', 'thumbs', 'period', 'segment'];
 
 const CHANNELS: Choices<'widget' | 'mcp' | 'api' | 'portal'> = [
@@ -91,7 +90,6 @@ function OptionList<T extends string>({
 export interface FilterBarProps {
   state: InboxState;
   onChange: (next: InboxState) => void;
-  /** By lower-case id; undefined for support users, who can't read widgets. */
   widgetNames: ReadonlyMap<string, string> | undefined;
   canFilterByWidget: boolean;
   labels: readonly Label[];
@@ -100,7 +98,6 @@ export interface FilterBarProps {
 
 export function FilterBar({ state, onChange, widgetNames, canFilterByWidget, labels, onManageLabels }: FilterBarProps) {
   const [editing, setEditing] = useState<FilterKind | null>(null);
-  // The chip or + Filter that opened the value picker, for anchoring.
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
   const addRef = useRef<HTMLButtonElement | null>(null);
   const contactName = usePersonName(state.contactId);
@@ -244,7 +241,6 @@ export function FilterBar({ state, onChange, widgetNames, canFilterByWidget, lab
           trigger={addTrigger}
           items={available.map((kind) => ({
             label: KIND_NAMES[kind],
-            // Deferred until the menu has closed and restored focus, so the picker keeps it.
             onSelect: () => window.setTimeout(() => open(kind, addRef.current), 0),
           }))}
         />
@@ -252,14 +248,12 @@ export function FilterBar({ state, onChange, widgetNames, canFilterByWidget, lab
       {chips.length >= 2 ? (
         <button
           type="button"
-          // The pin toggle isn't a chip, so Clear leaves it.
           onClick={() => onChange({ ...withoutFilters(state), pinned: state.pinned })}
           className="inline-flex h-6 items-center rounded-full px-2 text-xs font-medium text-fg-muted hover:bg-fill-hover hover:text-fg"
         >
           Clear
         </button>
       ) : null}
-      {/* Mounted per picker so it anchors to the element that opened it. */}
       {editing ? (
         <Popover key={editing} open onClose={() => setEditing(null)} anchor={anchor} label={KIND_NAMES[editing]} className="w-72 p-2">
           {editor}

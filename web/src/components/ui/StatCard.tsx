@@ -5,9 +5,7 @@ import { TONES } from './tone';
 
 export interface StatTrend {
   direction: 'up' | 'down' | 'flat';
-  /** Say the direction in words, e.g. "+12% on last week"; the arrow only repeats it. */
   label: ReactNode;
-  /** Whether the change is good news: fewer handovers going down is success. */
   tone?: 'success' | 'danger' | 'neutral';
 }
 

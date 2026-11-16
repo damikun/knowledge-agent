@@ -16,16 +16,12 @@ export function createTestQueryClient(): QueryClient {
 }
 
 export interface RenderOptions {
-  /** Initial URL. */
   route?: string;
-  /** Route pattern the element is mounted at. */
   path?: string;
   queryClient?: QueryClient;
-  /** Extra routes (e.g. targets of navigation). */
   extraRoutes?: ReactNode;
 }
 
-/** `rerender` keeps the providers. */
 export function renderWithProviders(ui: ReactElement, options: RenderOptions = {}): RenderResult & { queryClient: QueryClient } {
   const queryClient = options.queryClient ?? createTestQueryClient();
   const Wrapper = ({ children }: { children: ReactNode }) => (
@@ -42,7 +38,6 @@ export function renderWithProviders(ui: ReactElement, options: RenderOptions = {
   return { ...result, queryClient };
 }
 
-/** Renders route objects in a data router as the app does, so lazy routes and route guards work. */
 export function renderRouter(
   routes: RouteObject[],
   options: Pick<RenderOptions, 'route' | 'queryClient'> = {},
@@ -65,7 +60,6 @@ export function problemResponse(problem: Record<string, unknown>, status: number
   return jsonResponse({ status, ...problem }, status, 'application/problem+json');
 }
 
-/** The 401 of GET /api/auth/me when nobody is signed in. */
 export function signedOutResponse(): Response {
   return problemResponse({ title: 'Not signed in', detail: 'Sign in to use the portal.' }, 401);
 }
@@ -76,7 +70,6 @@ function sseBody(events: Array<{ event: string; data: unknown }>): string {
   return events.map(({ event, data }) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`).join('');
 }
 
-/** A ReadableStream that emits `text` in chunks of `chunkSize` bytes (to exercise chunk boundaries). */
 export function streamFromText(text: string, chunkSize = 7): ReadableStream<Uint8Array> {
   const bytes = encoder.encode(text);
   let offset = 0;
@@ -100,20 +93,14 @@ export function sseResponse(events: Array<{ event: string; data: unknown }>, chu
 }
 
 export interface ControlledEventStream {
-  /** Answers a request with a new open stream, which the methods below then write to. */
   respond: (init?: RequestInit) => Response;
   send: (event: string, data: unknown, id?: number) => void;
-  /** The server ends the stream. */
   close: () => void;
-  /** The connection drops. */
   fail: () => void;
-  /** Streams answered so far. */
   readonly opened: number;
-  /** Whether the latest stream is still open: not closed, failed, cancelled or aborted by the client. */
   readonly isOpen: boolean;
 }
 
-/** An event stream the test writes to, such as GET /api/conversations/{id}/events. */
 export function controlledEventStream(): ControlledEventStream {
   let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
   let opened = 0;
@@ -132,7 +119,6 @@ export function controlledEventStream(): ControlledEventStream {
           }
         },
       });
-      // The fetch mock does not abort; the client's signal stands for the closed connection.
       init?.signal?.addEventListener('abort', () => {
         if (controller === own) {
           controller = null;
@@ -162,11 +148,6 @@ export function controlledEventStream(): ControlledEventStream {
 
 export type FetchHandler = (url: URL, init: RequestInit) => Response | Promise<Response>;
 
-/**
- * Stubs global fetch with a route table keyed by "METHOD /path" (query string ignored).
- * Unknown routes answer 404 problem details so missing mocks are visible in assertions.
- * GET /api/auth/me answers a signed-in admin unless `routes` mocks it.
- */
 export function mockFetch(routes: Record<string, FetchHandler | unknown>): Mock {
   const table: Record<string, FetchHandler | unknown> = { 'GET /api/auth/me': adminUser, ...routes };
   const fn = vi.fn(async (input: RequestInfo | URL, init: RequestInit = {}) => {
@@ -186,7 +167,6 @@ export function mockFetch(routes: Record<string, FetchHandler | unknown>): Mock 
   return fn;
 }
 
-/** Calls recorded by a fetch mock as "METHOD /path". */
 export function fetchCalls(fn: Mock): string[] {
   return fn.mock.calls.map(([input, init]) => {
     const url = new URL(typeof input === 'string' ? input : (input as URL).href, 'http://localhost');
@@ -194,7 +174,6 @@ export function fetchCalls(fn: Mock): string[] {
   });
 }
 
-/** URLs (with query strings) of the calls a fetch mock received for a "METHOD /path" route. */
 export function requestUrls(fn: Mock, route: string): URL[] {
   return fn.mock.calls.flatMap(([input, init]) => {
     const url = new URL(typeof input === 'string' ? input : (input as URL).href, 'http://localhost');
@@ -203,7 +182,6 @@ export function requestUrls(fn: Mock, route: string): URL[] {
   });
 }
 
-/** The ApiError a promise rejects with; fails when it resolves or rejects with anything else. */
 export async function rejection(promise: Promise<unknown>): Promise<ApiError> {
   try {
     await promise;

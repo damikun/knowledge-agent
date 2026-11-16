@@ -16,7 +16,6 @@ afterEach(() => {
   localStorage.clear();
 });
 
-// Changes are confirmed in toasts, which the app shell renders.
 const renderWithProviders = (ui: ReactElement, options: Parameters<typeof renderPage>[1]) =>
   renderPage(
     <>
@@ -51,7 +50,6 @@ function descendants(db: Db, id: string): string[] {
   return [id, ...db.folders.filter((folder) => folder.parentId === id).flatMap((child) => descendants(db, child.id))];
 }
 
-// Serves the folders and sources of `db` and applies the folder changes the page sends.
 function serve(db: Db, extra: Record<string, FetchHandler> = {}) {
   const folderRoutes: Record<string, FetchHandler> = {};
   for (const id of ['legal', 'contracts', 'archive']) {
@@ -100,7 +98,6 @@ const lastFolderParam = (fetchMock: ReturnType<typeof mockFetch>) => requestUrls
 const lastListParams = (fetchMock: ReturnType<typeof mockFetch>) =>
   Object.fromEntries(requestUrls(fetchMock, 'GET /api/sources').at(-1)!.searchParams);
 const rowOf = (title: string) => screen.getByText(title).closest('tr')!;
-/** A click on the row outside its title, which opens the details instead. */
 const statusCellOf = (title: string) => rowOf(title).cells[2]!;
 const requestBodies = (fetchMock: ReturnType<typeof mockFetch>, method: string, path: string) =>
   fetchMock.mock.calls
@@ -127,13 +124,11 @@ const rowTitles = () =>
 const folders = () => screen.getByRole('navigation', { name: 'Folders' });
 const breadcrumb = () => screen.getByRole('navigation', { name: 'Breadcrumb' });
 
-/** Opens a Select by its name and chooses an option. */
 async function choose(user: ReturnType<typeof userEvent.setup>, select: string, option: string | RegExp) {
   await user.click(screen.getByRole('combobox', { name: select }));
   await user.click(within(screen.getByRole('listbox', { name: select })).getByRole('option', { name: option }));
 }
 
-/** Opens a menu, of the open folder or of a row, and chooses one of its actions; a dialog may open next. */
 async function chooseAction(user: ReturnType<typeof userEvent.setup>, menu: string, action: string) {
   await user.click(await screen.findByRole('button', { name: menu }));
   await user.click(within(screen.getByRole('menu', { name: menu })).getByRole('menuitem', { name: action }));
@@ -381,7 +376,6 @@ describe('Sources page folders', () => {
     expect(await within(folders()).findByRole('button', { name: 'Subfolders of Legal' })).toHaveAttribute('aria-expanded', 'true');
     expect(within(folders()).getByRole('link', { name: 'Contracts, 2 sources' })).toBeInTheDocument();
 
-    // Collapsing is remembered too.
     await user.click(within(folders()).getByRole('button', { name: 'Subfolders of Legal' }));
     expect(within(folders()).queryByRole('link', { name: /Contracts/ })).toBeNull();
     expect(JSON.parse(localStorage.getItem('ka.sources.expandedFolders')!)).toEqual([]);
@@ -587,7 +581,6 @@ describe('Sources page folders', () => {
 
     expect(await screen.findByText('Folder not found', { selector: 'div' })).toBeInTheDocument();
     expect(within(breadcrumb()).getByText('Folder not found')).toHaveAttribute('aria-current', 'page');
-    // New sources cannot go into a folder that is gone.
     await user.click(screen.getByRole('button', { name: 'Add source' }));
     expect(screen.getByRole('dialog', { name: 'Add a source' })).not.toHaveAccessibleDescription(/New sources go into/);
     await user.keyboard('{Escape}');
@@ -610,7 +603,6 @@ describe('Sources page folders', () => {
     expect(link.closest('[draggable]')).toHaveAttribute('draggable', 'false');
     expect(await screen.findByTestId('internal-folder-note')).toHaveTextContent('Only the help assistant searches these, for your team.');
     expect(screen.queryByRole('button', { name: 'Folder actions' })).toBeNull();
-    // Inside it, folders behave as anywhere else.
     expect(screen.getByRole('button', { name: 'New subfolder' })).toBeEnabled();
 
     await user.click(within(folders()).getByRole('link', { name: /^Legal/ }));

@@ -3,7 +3,6 @@ import { pluralize } from '../../lib/format';
 import { PROVIDERS_PATH } from '../models/providerSettings';
 import { useReturnState } from '../../lib/returnTo';
 
-/** Shared by the Sources page and the empty chat. */
 export function WaitingSourcesMessage({ count }: { count: number }) {
   const returnState = useReturnState();
   const one = count === 1;

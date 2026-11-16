@@ -24,7 +24,6 @@
   fill: var(--ka-fg-muted);
 }
 
-/* Frames take no clicks or focus; React Flow sets pointer-events inline, hence !important. */
 .ka-installation .react-flow__node-frame {
   cursor: default;
   pointer-events: none !important;

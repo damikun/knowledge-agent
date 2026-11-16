@@ -4,7 +4,6 @@ import { Select } from './Select';
 export interface FilterSelectProps<T extends string> {
   label: string;
   value: T;
-  /** The first choice names the filter, such as "All widgets", so the label is for screen readers only. */
   choices: ReadonlyArray<readonly [T, string]>;
   onChange: (value: T) => void;
   wide?: boolean;
